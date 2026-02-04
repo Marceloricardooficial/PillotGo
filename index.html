@@ -360,6 +360,219 @@
         font-size: 16px;
     }
 }
+
+/* Estilos para o modal de Relatórios */
+.modal-relatorios-header {
+    background: var(--action-dark);
+    padding: 25px 40px;
+    margin: -30px -30px 0;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    color: #fff;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 80px;
+}
+
+.relatorios-header-title {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: #fff;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.relatorios-filtro-container {
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+}
+
+.relatorios-filtro-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.relatorios-filtro-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--action-dark);
+}
+
+.relatorios-datas {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.relatorios-datas input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 2px solid #e2e8f0;
+    border-radius: 9999px;
+    background: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--action-dark);
+    box-sizing: border-box;
+}
+
+.relatorios-acoes {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.relatorios-acoes button {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.relatorios-acoes button.gerar {
+    background: var(--secondary);
+    color: #fff;
+}
+
+.relatorios-acoes button.limpar {
+    background: var(--action-dark);
+    color: #fff;
+}
+
+.relatorios-acoes button:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.relatorios-resultados {
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #e2e8f0;
+}
+
+.relatorios-resultados.show {
+    display: flex;
+}
+
+.relatorios-resultados-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    width: 100%;
+}
+
+.relatorios-resultado-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 15px 10px;
+    background: #f8fafc;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.relatorios-resultado-label {
+    font-size: 14px;
+    color: var(--action-dark);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+}
+
+.relatorios-resultado-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--action-dark);
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+}
+
+.relatorios-resultado-value.positive {
+    color: var(--secondary);
+}
+
+.relatorios-resultado-value.negative {
+    color: var(--action-red);
+}
+
+.relatorios-resultado-value .currency-symbol {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.relatorios-periodo-info {
+    text-align: center;
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 10px;
+}
+
+@media (max-width: 760px) {
+    .modal-relatorios-header {
+        padding: 20px 25px;
+        min-height: 70px;
+    }
+    
+    .relatorios-header-title {
+        font-size: 16px;
+    }
+    
+    .relatorios-resultados-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .relatorios-resultado-item {
+        padding: 12px 8px;
+    }
+    
+    .relatorios-resultado-label {
+        font-size: 12px;
+    }
+    
+    .relatorios-resultado-value {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .relatorios-resultados-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .relatorios-resultado-item {
+        padding: 10px 6px;
+    }
+    
+    .relatorios-resultado-label {
+        font-size: 11px;
+    }
+    
+    .relatorios-resultado-value {
+        font-size: 14px;
+    }
+}
 </style>
 </head>
 <body>
@@ -697,6 +910,56 @@
 </div>
 </div>
 </div>
+<!-- Modal de Relatórios (NOVO) -->
+<div class="modal-content" id="modalRelatorios" style="display:none">
+<div class="modal-relatorios-header">
+<span class="relatorios-header-title"><i class="fa-solid fa-chart-line"></i> Relatórios</span>
+<button class="close-meta-modal" onclick="fecharModalRelatorios()"><i class="fa-solid fa-xmark"></i></button>
+</div>
+<div class="relatorios-filtro-container">
+<div class="relatorios-filtro-row">
+<div class="relatorios-filtro-label">Período:</div>
+<div class="relatorios-datas">
+<input type="date" id="relatoriosDataInicio" value="">
+<span>até</span>
+<input type="date" id="relatoriosDataFim" value="">
+</div>
+</div>
+<div class="relatorios-acoes">
+<button class="gerar" onclick="gerarRelatorioPeriodo()">GERAR RELATÓRIO</button>
+<button class="limpar" onclick="limparFiltrosRelatorios()">LIMPAR</button>
+</div>
+</div>
+<div class="relatorios-resultados" id="relatoriosResultados">
+<div class="relatorios-periodo-info" id="relatoriosPeriodoInfo"></div>
+<div class="relatorios-resultados-grid">
+<div class="relatorios-resultado-item">
+<div class="relatorios-resultado-label"><i class="fa-solid fa-money-bill-wave"></i> Total Bruto</div>
+<div class="relatorios-resultado-value" id="relatoriosTotalBruto"><span class="currency-symbol">R$</span>0,00</div>
+</div>
+<div class="relatorios-resultado-item">
+<div class="relatorios-resultado-label"><i class="fa-solid fa-piggy-bank"></i> Lucro do Período</div>
+<div class="relatorios-resultado-value positive" id="relatoriosLucroPeriodo"><span class="currency-symbol">R$</span>0,00</div>
+</div>
+<div class="relatorios-resultado-item">
+<div class="relatorios-resultado-label"><i class="fa-solid fa-clock"></i> Reais por Hora</div>
+<div class="relatorios-resultado-value" id="relatoriosReaisPorHora"><span class="currency-symbol">R$</span>0,00</div>
+</div>
+<div class="relatorios-resultado-item">
+<div class="relatorios-resultado-label"><i class="fa-solid fa-road"></i> Reais por KM</div>
+<div class="relatorios-resultado-value" id="relatoriosReaisPorKm"><span class="currency-symbol">R$</span>0,00</div>
+</div>
+<div class="relatorios-resultado-item">
+<div class="relatorios-resultado-label"><i class="fa-solid fa-route"></i> Quilômetros Rodados</div>
+<div class="relatorios-resultado-value" id="relatoriosKmRodados">0</div>
+</div>
+<div class="relatorios-resultado-item">
+<div class="relatorios-resultado-label"><i class="fa-regular fa-clock"></i> Horas Dirigidas</div>
+<div class="relatorios-resultado-value" id="relatoriosHorasDirigidas">00:00</div>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div class="floating-button-container">
 <div class="floating-button" onclick="abrirModalRelatorio()"><i class="fa-solid fa-rocket"></i></div>
@@ -710,6 +973,8 @@
 <div class="drop-up-item" onclick="handleDropUpAction('metas')"><i class="fa-solid fa-bullseye"></i>Metas</div>
 <div class="drop-up-item" onclick="handleDropUpAction('despesas')"><i class="fa-solid fa-receipt"></i>Gastos e Despesas</div>
 <div class="drop-up-item" onclick="handleDropUpAction('temas')"><i class="fa-solid fa-palette"></i>Temas</div>
+<!-- NOVO ITEM DE MENU -->
+<div class="drop-up-item" onclick="handleDropUpAction('relatorios')"><i class="fa-solid fa-chart-line"></i>Relatórios</div>
 <div class="drop-up-item divider-top" onclick="handleDropUpAction('backup')"><i class="fa-solid fa-database"></i>Backup e Restauração</div>
 <div class="drop-up-item" onclick="handleDropUpAction('zerar')"><i class="fa-solid fa-trash"></i>Zerar APP</div>
 <div class="drop-up-item" onclick="handleDropUpAction('salvar_img')"><i class="fa-solid fa-download"></i>Salvar Imagem</div>
@@ -829,7 +1094,7 @@ function mostrarFlashTemporario(iconHtml,text,colorRGB){const flashOverlay=docum
 function toggleDropUpMenu(){const menu=document.getElementById('dropUpMenu');menu.classList.toggle('open');if(menu.classList.contains('open')){document.addEventListener('click',closeDropUpMenuOutside);}else{document.removeEventListener('click',closeDropUpMenuOutside);}}
 function closeDropUpMenu(){document.getElementById('dropUpMenu').classList.remove('open');document.removeEventListener('click',closeDropUpMenuOutside);}
 function closeDropUpMenuOutside(event){const container=document.getElementById('dropUpContainer');if(!container.contains(event.target))closeDropUpMenu();}
-function handleDropUpAction(action){closeDropUpMenu();switch(action){case'gnv':abrirModalConfiguracaoGNV('menu');break;case'metas':abrirModalMetas();break;case'despesas':abrirModalDespesas();break;case'temas':abrirModalTemas();break;case'backup':abrirModalBackup();break;case'zerar':abrirModalConscienciaZerar();break;case'salvar_img':salvarImagem();break;}}
+function handleDropUpAction(action){closeDropUpMenu();switch(action){case'gnv':abrirModalConfiguracaoGNV('menu');break;case'metas':abrirModalMetas();break;case'despesas':abrirModalDespesas();break;case'temas':abrirModalTemas();break;case'relatorios':abrirModalRelatorios();break;case'backup':abrirModalBackup();break;case'zerar':abrirModalConscienciaZerar();break;case'salvar_img':salvarImagem();break;}}
 function toggleSortOrder(){sortOrder=sortOrder==='recente'?'antiga':'recente';const sortBtn=document.getElementById('sortToggleBtn'),sortIcon=document.getElementById('sortIcon');if(sortOrder==='recente'){sortIcon.className='fa-solid fa-arrow-up';sortBtn.classList.remove('active');}else{sortIcon.className='fa-solid fa-arrow-down';sortBtn.classList.add('active');}
 atualizarDisplayTrechos();}
 function showDailyDetail(dateKey){const detailCard=document.getElementById('dailyDetailCard'),chartContainer=document.getElementById('weeklyProfitChartContainer');chartContainer.style.display='none';detailCard.classList.add('show');const dailyData=ensureDailyDataStructure(dateKey),totais=calcularTotaisDoDia(dailyData),metaDia=obterMetaDoDia(dateKey),bateuMeta=totais.lucroLiquido>=metaDia,dateObj=new Date(dateKey+'T00:00:00'),dia=String(dateObj.getDate()).padStart(2,'0'),mes=String(dateObj.getMonth()+1).padStart(2,'0'),ano=dateObj.getFullYear(),diasDaSemana=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'],diaSemana=diasDaSemana[dateObj.getDay()];document.getElementById('detailDateFormatted').textContent=`${dia}/${mes}/${ano} - ${diaSemana}`;document.getElementById('detailLucroHeader').textContent=`R$ ${totais.lucroLiquido.toFixed(2)}`;document.getElementById('detailReaisHora').textContent=`R$ ${totais.reaisPorHora.toFixed(2)}`;document.getElementById('detailReaisKm').textContent=`R$ ${totais.reaisPorKm.toFixed(2)}`;document.getElementById('detailHoras').textContent=decimalParaHorasHHMM(totais.horasTotalDecimal);document.getElementById('detailKm').textContent=totais.kmTotal.toFixed(0);document.getElementById('detailUber').textContent=`R$ ${totais.totalUber.toFixed(2)}`;document.getElementById('detail99').textContent=`R$ ${totais.total99.toFixed(2)}`;document.getElementById('detailIndrive').textContent=`R$ ${totais.totalIndrive.toFixed(2)}`;document.getElementById('detailPF').textContent=`R$ ${totais.totalPF.toFixed(2)}`;document.getElementById('detailBruto').textContent=`R$ ${totais.brutoTotal.toFixed(2)}`;document.getElementById('detailMeta').textContent=`R$ ${metaDia.toFixed(2)}`;const appsContainer=document.querySelector('.daily-detail-apps');const trofeuAnterior=appsContainer.querySelector('.daily-detail-trofeu');if(trofeuAnterior){trofeuAnterior.remove();}
@@ -1211,8 +1476,132 @@ function importarDados() {
     reader.readAsText(importFile);
 }
 
-// Restante do código JavaScript permanece igual...
-// ... (mantenha todas as outras funções existentes)
+// NOVAS FUNÇÕES PARA RELATÓRIOS
+function abrirModalRelatorios() {
+    const flashOverlay = document.getElementById('flashOverlay');
+    flashOverlay.classList.remove('flash-mode','modal-mode','modal-jornada','modal-config-gnv','modal-consciencia-zerar','modal-metas','modal-relatorio','modal-despesas','modal-pesquisa-despesas','modal-config-despesas-veiculo','modal-temas');
+    flashOverlay.classList.add('modal-mode');
+    document.getElementById('flashIcon').style.display = 'none';
+    document.getElementById('flashText').style.display = 'none';
+    document.getElementById('modalRegistroJornada').style.display = 'none';
+    document.getElementById('modalConfiguracao').style.display = 'none';
+    document.getElementById('modalConscienciaZerar').style.display = 'none';
+    document.getElementById('modalMetas').style.display = 'none';
+    document.getElementById('modalRelatorio').style.display = 'none';
+    document.getElementById('modalDespesas').style.display = 'none';
+    document.getElementById('modalPesquisaDespesas').style.display = 'none';
+    document.getElementById('modalConfigDespesasVeiculo').style.display = 'none';
+    document.getElementById('modalTemas').style.display = 'none';
+    document.getElementById('modalBackup').style.display = 'none';
+    document.getElementById('modalRelatorios').style.display = 'block';
+    
+    // Definir datas padrão (últimos 30 dias)
+    const dataFim = new Date();
+    const dataInicio = new Date();
+    dataInicio.setDate(dataInicio.getDate() - 30);
+    
+    document.getElementById('relatoriosDataInicio').value = formatDateToKey(dataInicio);
+    document.getElementById('relatoriosDataFim').value = formatDateToKey(dataFim);
+    
+    // Esconder resultados inicialmente
+    document.getElementById('relatoriosResultados').classList.remove('show');
+    
+    flashOverlay.style.display = 'flex';
+    setTimeout(() => flashOverlay.classList.add('show'), 10);
+}
+
+function fecharModalRelatorios() {
+    const flashOverlay = document.getElementById('flashOverlay');
+    flashOverlay.classList.remove('show');
+    setTimeout(() => {
+        flashOverlay.style.display = 'none';
+        document.getElementById('modalRelatorios').style.display = 'none';
+        flashOverlay.classList.remove('modal-mode');
+    }, 300);
+}
+
+function limparFiltrosRelatorios() {
+    const dataFim = new Date();
+    const dataInicio = new Date();
+    dataInicio.setDate(dataInicio.getDate() - 30);
+    
+    document.getElementById('relatoriosDataInicio').value = formatDateToKey(dataInicio);
+    document.getElementById('relatoriosDataFim').value = formatDateToKey(dataFim);
+    
+    // Esconder resultados
+    document.getElementById('relatoriosResultados').classList.remove('show');
+}
+
+function gerarRelatorioPeriodo() {
+    const dataInicio = document.getElementById('relatoriosDataInicio').value;
+    const dataFim = document.getElementById('relatoriosDataFim').value;
+    
+    if (!dataInicio || !dataFim) {
+        alert('Selecione as datas de início e fim');
+        return;
+    }
+    
+    if (new Date(dataInicio) > new Date(dataFim)) {
+        alert('A data de início deve ser anterior à data de fim');
+        return;
+    }
+    
+    // Carregar todos os dados
+    carregarDados();
+    carregarDespesas();
+    
+    // Inicializar totais
+    let totalBruto = 0;
+    let totalLucro = 0;
+    let totalKm = 0;
+    let totalHoras = 0;
+    let totalReaisPorHora = 0;
+    let totalReaisPorKm = 0;
+    
+    // Contadores para cálculo de médias
+    let diasComDados = 0;
+    
+    // Percorrer todos os dias no intervalo
+    const dataInicioObj = new Date(dataInicio + 'T00:00:00');
+    const dataFimObj = new Date(dataFim + 'T00:00:00');
+    
+    for (let data = new Date(dataInicioObj); data <= dataFimObj; data.setDate(data.getDate() + 1)) {
+        const dateKey = formatDateToKey(data);
+        const dailyData = ensureDailyDataStructure(dateKey);
+        const totaisDoDia = calcularTotaisDoDia(dailyData);
+        
+        // Somar apenas se houver dados no dia
+        if (totaisDoDia.kmTotal > 0 || totaisDoDia.horasTotalDecimal > 0) {
+            totalBruto += totaisDoDia.brutoTotal;
+            totalLucro += totaisDoDia.lucroLiquido;
+            totalKm += totaisDoDia.kmTotal;
+            totalHoras += totaisDoDia.horasTotalDecimal;
+            totalReaisPorHora += totaisDoDia.reaisPorHora;
+            totalReaisPorKm += totaisDoDia.reaisPorKm;
+            diasComDados++;
+        }
+    }
+    
+    // Calcular médias
+    const mediaReaisPorHora = diasComDados > 0 ? totalReaisPorHora / diasComDados : 0;
+    const mediaReaisPorKm = diasComDados > 0 ? totalReaisPorKm / diasComDados : 0;
+    
+    // Atualizar interface
+    document.getElementById('relatoriosTotalBruto').innerHTML = `<span class="currency-symbol">R$</span> ${totalBruto.toFixed(2).replace('.',',')}`;
+    document.getElementById('relatoriosLucroPeriodo').innerHTML = `<span class="currency-symbol">R$</span> ${totalLucro.toFixed(2).replace('.',',')}`;
+    document.getElementById('relatoriosReaisPorHora').innerHTML = `<span class="currency-symbol">R$</span> ${mediaReaisPorHora.toFixed(2).replace('.',',')}`;
+    document.getElementById('relatoriosReaisPorKm').innerHTML = `<span class="currency-symbol">R$</span> ${mediaReaisPorKm.toFixed(2).replace('.',',')}`;
+    document.getElementById('relatoriosKmRodados').textContent = totalKm.toFixed(0);
+    document.getElementById('relatoriosHorasDirigidas').textContent = decimalParaHorasHHMM(totalHoras);
+    
+    // Atualizar informação do período
+    const inicioFormatado = formatDateToDisplay(dataInicio);
+    const fimFormatado = formatDateToDisplay(dataFim);
+    document.getElementById('relatoriosPeriodoInfo').textContent = `Período: ${inicioFormatado} até ${fimFormatado} (${diasComDados} dias com dados)`;
+    
+    // Mostrar resultados
+    document.getElementById('relatoriosResultados').classList.add('show');
+}
 
 function abrirModalTemas(){const flashOverlay=document.getElementById('flashOverlay');flashOverlay.classList.remove('flash-mode','modal-mode','modal-jornada','modal-config-gnv','modal-consciencia-zerar','modal-metas','modal-relatorio','modal-despesas','modal-pesquisa-despesas','modal-config-despesas-veiculo');flashOverlay.classList.add('modal-temas');document.getElementById('flashIcon').style.display='none';document.getElementById('flashText').style.display='none';document.getElementById('modalRegistroJornada').style.display='none';document.getElementById('modalConfiguracao').style.display='none';document.getElementById('modalConscienciaZerar').style.display='none';document.getElementById('modalMetas').style.display='none';document.getElementById('modalRelatorio').style.display='none';document.getElementById('modalDespesas').style.display='none';document.getElementById('modalPesquisaDespesas').style.display='none';document.getElementById('modalConfigDespesasVeiculo').style.display='none';document.getElementById('modalTemas').style.display='block';const temaAtual=localStorage.getItem(TEMA_STORAGE_KEY)||'padrao';document.querySelectorAll('.tema-option').forEach(option=>{option.classList.remove('selecionado');});const elementoAtual=document.querySelector(`.tema-${temaAtual}`);if(elementoAtual){elementoAtual.classList.add('selecionado');}
 flashOverlay.style.display='flex';setTimeout(()=>flashOverlay.classList.add('show'),10);}
