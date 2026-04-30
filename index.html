@@ -1885,5 +1885,520 @@ function mostrarBarraOnline(){document.getElementById('onlineStatusBar').style.d
 function esconderBarraOnline(){document.getElementById('onlineStatusBar').style.display='none';}
 function verificarJornadaEmAndamento(){const dadosHoje=relatoriosDiarios[TODAY_DATE_STRING];if(dadosHoje&&dadosHoje.trechos){const temRascunho=dadosHoje.trechos.some(trecho=>trecho.rascunho&&!trecho.publicado);if(temRascunho){mostrarBarraOnline();}else{esconderBarraOnline();}}else{esconderBarraOnline();}}
 </script>
+<style>
+/* FIX 4: Barra ONLINE - altura maior + slide-up + cursor */
+#onlineStatusBar {
+  height: 80px !important;
+  cursor: pointer !important;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.34, 1.2, 0.64, 1) !important;
+}
+#onlineStatusBar.online-visivel {
+  transform: translateY(0) !important;
+}
+/* FIX 5: Botão flutuante some quando modal de jornada abre */
+.floating-button-container.fab-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: scale(0.7) !important;
+  transition: opacity 0.2s ease, transform 0.2s ease !important;
+}
+.floating-button-container {
+  transition: bottom 0.35s ease, opacity 0.2s ease, transform 0.2s ease !important;
+}
+
+/* Estilo para placeholder hint - total acumulado do dia */
+.input-moeda::placeholder {
+  color: #9ca3af !important;
+  font-style: italic;
+  font-size: 13px;
+  font-weight: 400 !important;
+  opacity: 1;
+}
+.input-moeda.tem-hint::placeholder {
+  color: #6b7280 !important;
+  font-weight: 500 !important;
+  font-style: normal;
+}
+</style>
+<script>
+// ================================================================
+// PATCH MOTORIZZE v2 - 3 Correções
+// FIX 1: Duplo clique no KM Final
+// FIX 2: Campos mostram TOTAL DO DIA como valor atual (hint em cinza)
+//         Ao salvar, calcula automaticamente só o ganho daquela jornada
+// FIX 3: Vírgula automática nos campos de ganho
+// ================================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+  ['ganhoUber','ganho99','ganhoIndrive','ganhoPF'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.type = 'text';
+    el.setAttribute('inputmode', 'decimal');
+    el.classList.add('input-moeda');
+    el.autocomplete = 'off';
+  });
+  inicializarInputsMoeda();
+});
+
+// ── FIX 3: VÍRGULA AUTOMÁTICA ────────────────────────────────────
+function parseMoeda(valor) {
+  if (!valor || valor === '') return 0;
+  const limpo = String(valor).replace(/\./g, '').replace(',', '.');
+  const num = parseFloat(limpo);
+  return isNaN(num) ? 0 : num;
+}
+function onInputMoeda(e) {
+  const input = e.target;
+  let digits = input.value.replace(/\D/g, '');
+  if (!digits) { input.value = ''; return; }
+  input.value = (parseInt(digits, 10) / 100).toFixed(2).replace('.', ',');
+}
+function onFocusMoeda(e) {
+  const input = e.target;
+  if (input.dataset.hintAtivo === 'true') {
+    input.value = '';
+    input.dataset.hintAtivo = 'false';
+    input.classList.remove('tem-hint');
+  }
+  setTimeout(() => input.select(), 10);
+}
+function onBlurMoeda(e) {
+  const el = e.target;
+  if (!el.value) el.value = '';
+}
+function inicializarInputsMoeda() {
+  document.querySelectorAll('.input-moeda').forEach(input => {
+    input.removeEventListener('input', onInputMoeda);
+    input.removeEventListener('focus', onFocusMoeda);
+    input.removeEventListener('blur', onBlurMoeda);
+    input.addEventListener('input', onInputMoeda);
+    input.addEventListener('focus', onFocusMoeda);
+    input.addEventListener('blur', onBlurMoeda);
+  });
+}
+function lerGanho(id) {
+  const el = document.getElementById(id);
+  if (!el || el.dataset.hintAtivo === 'true' || !el.value || el.value === '') return 0;
+  return parseMoeda(el.value);
+}
+function definirHintMoeda(el, totalDia, ph) {
+  // Mostra o total acumulado do dia como placeholder em cinza
+  el.value = '';
+  if (totalDia && totalDia > 0) {
+    el.placeholder = totalDia.toFixed(2).replace('.', ',');
+    el.dataset.hintAtivo = 'true';
+    el.classList.add('tem-hint');
+  } else {
+    el.placeholder = ph || '0,00';
+    el.dataset.hintAtivo = 'false';
+    el.classList.remove('tem-hint');
+  }
+}
+function definirValorMoeda(el, v) {
+  el.value = v && v > 0 ? v.toFixed(2).replace('.', ',') : '';
+  el.placeholder = '0,00';
+  el.dataset.hintAtivo = 'false';
+  el.classList.remove('tem-hint');
+}
+
+// ── FIX 2: Calcula o total acumulado do dia por app ──────────────
+// Soma todos os trechos publicados DO DIA (exceto o que está sendo editado)
+// Isso representa o total que o motorista recebeu hoje em cada app
+function calcularTotalDiaPorApp(trechos, indexEditando) {
+  let uber = 0, n99 = 0, indrive = 0, pf = 0;
+  trechos.forEach((t, i) => {
+    if (!t.publicado) return;
+    if (i === indexEditando) return; // exclui a jornada sendo editada
+    uber    += t.uber    || 0;
+    n99     += t.n99     || 0;
+    indrive += t.indrive || 0;
+    pf      += t.pf      || 0;
+  });
+  return { uber, n99, indrive, pf };
+}
+
+// ── FIX 1 + 2 + 3: Override abrirModalRegistro ──────────────────
+window.abrirModalRegistro = function(index) {
+  const flashOverlay = document.getElementById('flashOverlay');
+  flashOverlay.classList.remove('show');
+  setTimeout(() => {
+    document.getElementById('originalExibitionDay').value = diaExibido;
+    const jornada = index !== -1 ? dadosDoDiaExibido.trechos[index] : null;
+    document.getElementById('trechoIndexToEdit').value = index;
+    document.getElementById('dataJornada').value = diaExibido;
+    document.getElementById('kmInicialTrecho').value = '';
+    document.getElementById('horaInicialTrecho').value = '';
+    document.getElementById('kmFinalTrecho').value = '';
+    document.getElementById('horaFinalTrecho').value = '';
+    const now = new Date();
+    document.getElementById('horaInicialTrecho').value = now.toTimeString().slice(0,5);
+
+    const btnPublicar  = document.getElementById('btnPublicarJornada');
+    const btnRascunho  = document.getElementById('btnSalvarRascunho');
+    const titulo       = document.querySelector('.modal-jornada-header-title');
+    const camposExtras = document.getElementById('camposExtras');
+    const camposGanhos = document.getElementById('camposGanhos');
+
+    // Total acumulado do dia (sem contar a jornada em edição)
+    const acumulado = calcularTotalDiaPorApp(dadosDoDiaExibido.trechos, index);
+
+    if (index === -1) {
+      // ── MODO INSERÇÃO (novo rascunho) ──
+      camposExtras.classList.add('hidden-field');
+      camposGanhos.classList.add('hidden-field');
+      btnPublicar.classList.add('hidden-field');
+      btnRascunho.textContent = 'INICIAR';
+      flashOverlay.classList.remove('modal-edicao');
+      titulo.textContent = 'INSERIR JORNADA';
+
+      // Hint: total acumulado do dia em cada app (em cinza)
+      definirHintMoeda(document.getElementById('ganhoUber'),    acumulado.uber,    '0,00');
+      definirHintMoeda(document.getElementById('ganho99'),      acumulado.n99,     '0,00');
+      definirHintMoeda(document.getElementById('ganhoIndrive'), acumulado.indrive, '0,00');
+      definirHintMoeda(document.getElementById('ganhoPF'),      acumulado.pf,      '0,00');
+
+    } else {
+      // ── MODO EDIÇÃO (encerrar jornada existente) ──
+      // FIX 1: bloqueia pointer-events durante animação
+      camposExtras.classList.remove('hidden-field');
+      camposExtras.style.pointerEvents = 'none';
+      camposGanhos.classList.remove('hidden-field');
+      camposGanhos.style.pointerEvents = 'none';
+      btnPublicar.classList.remove('hidden-field');
+      btnRascunho.textContent = 'GUARDAR';
+      flashOverlay.classList.add('modal-edicao');
+      titulo.textContent = 'EDITAR JORNADA';
+
+      // FIX 1: Reabilita após animação
+      setTimeout(() => {
+        camposExtras.style.pointerEvents = '';
+        camposGanhos.style.pointerEvents = '';
+      }, 400);
+
+      // Preenche KM e horários
+      if (jornada) {
+        document.getElementById('kmInicialTrecho').value  = jornada.kmInicial  || '';
+        document.getElementById('horaInicialTrecho').value = jornada.horaInicial || '';
+        document.getElementById('kmFinalTrecho').value    = jornada.kmFinal    || '';
+        document.getElementById('horaFinalTrecho').value  = jornada.horaFinal  || '';
+      }
+
+      // FIX 2: Total do dia = acumulado das outras jornadas + ganho desta jornada
+      // Isso é o que o motorista vai digitar (o total do app no dia)
+      const totalDia = {
+        uber:    acumulado.uber    + (jornada ? (jornada.uber    || 0) : 0),
+        n99:     acumulado.n99     + (jornada ? (jornada.n99     || 0) : 0),
+        indrive: acumulado.indrive + (jornada ? (jornada.indrive || 0) : 0),
+        pf:      acumulado.pf      + (jornada ? (jornada.pf      || 0) : 0),
+      };
+
+      // Se já havia valor total, mostra preenchido (não como hint)
+      // Se era zero, mostra hint do acumulado para o usuário saber de onde vem
+      const ganhoEstaJornada = jornada ? ((jornada.uber||0)+(jornada.n99||0)+(jornada.indrive||0)+(jornada.pf||0)) : 0;
+
+      if (totalDia.uber > 0)
+        definirValorMoeda(document.getElementById('ganhoUber'), totalDia.uber);
+      else
+        definirHintMoeda(document.getElementById('ganhoUber'), 0, '0,00');
+
+      if (totalDia.n99 > 0)
+        definirValorMoeda(document.getElementById('ganho99'), totalDia.n99);
+      else
+        definirHintMoeda(document.getElementById('ganho99'), 0, '0,00');
+
+      if (totalDia.indrive > 0)
+        definirValorMoeda(document.getElementById('ganhoIndrive'), totalDia.indrive);
+      else
+        definirHintMoeda(document.getElementById('ganhoIndrive'), 0, '0,00');
+
+      if (totalDia.pf > 0)
+        definirValorMoeda(document.getElementById('ganhoPF'), totalDia.pf);
+      else
+        definirHintMoeda(document.getElementById('ganhoPF'), 0, '0,00');
+    }
+
+    flashOverlay.classList.remove('flash-mode','modal-mode','modal-config-gnv','modal-consciencia-zerar','modal-metas','modal-relatorio','modal-despesas','modal-pesquisa-despesas','modal-config-despesas-veiculo','modal-temas');
+    flashOverlay.classList.add('modal-jornada');
+    document.getElementById('flashIcon').style.display = 'none';
+    document.getElementById('flashText').style.display = 'none';
+    ['modalConfiguracao','modalConscienciaZerar','modalMetas','modalRelatorio','modalDespesas','modalPesquisaDespesas','modalConfigDespesasVeiculo','modalTemas'].forEach(id => document.getElementById(id).style.display = 'none');
+    document.getElementById('modalRegistroJornada').style.display = 'block';
+    flashOverlay.style.display = 'flex';
+    setTimeout(() => flashOverlay.classList.add('show'), 50);
+    // FIX 5: Esconde botão flutuante quando modal de jornada abre
+    const _fab = document.querySelector('.floating-button-container');
+    if (_fab) _fab.classList.add('fab-hidden');
+    setTimeout(() => inicializarInputsMoeda(), 100);
+  }, 10);
+};
+
+// ── Override fecharModalRegistro ─────────────────────────────────
+window.fecharModalRegistro = function() {
+  const flashOverlay = document.getElementById('flashOverlay');
+  const originalDay  = document.getElementById('originalExibitionDay').value;
+  flashOverlay.classList.remove('show');
+  setTimeout(() => {
+    flashOverlay.style.display = 'none';
+    document.getElementById('modalRegistroJornada').style.display = 'none';
+    flashOverlay.classList.remove('modal-jornada','modal-edicao');
+    document.getElementById('trechoIndexToEdit').value = '-1';
+    document.getElementById('originalExibitionDay').value = '';
+    document.getElementById('camposExtras').style.pointerEvents = '';
+    document.getElementById('camposGanhos').style.pointerEvents = '';
+    document.getElementById('camposExtras').classList.remove('hidden-field');
+    document.getElementById('camposGanhos').classList.remove('hidden-field');
+    document.getElementById('btnPublicarJornada').classList.remove('hidden-field');
+    // FIX 5: Reexibe botão flutuante ao fechar modal de jornada
+    const _fab2 = document.querySelector('.floating-button-container');
+    if (_fab2) _fab2.classList.remove('fab-hidden');
+    carregarEExibirDados(originalDay);
+  }, 300);
+};
+
+// ── FIX 2+3: Override salvarRascunho ────────────────────────────
+window.salvarRascunho = function() {
+  const index          = parseInt(document.getElementById('trechoIndexToEdit').value);
+  const dataSelecionada = document.getElementById('dataJornada').value;
+  const originalDay    = document.getElementById('originalExibitionDay').value;
+  if (!dataSelecionada) { alert("Selecione a data."); return; }
+
+  const targetDailyData = ensureDailyDataStructure(dataSelecionada);
+  const sourceDailyData = relatoriosDiarios[originalDay];
+  const kmI = parseFloat(document.getElementById('kmInicialTrecho').value);
+  const hI  = document.getElementById('horaInicialTrecho').value;
+  const kmF = parseFloat(document.getElementById('kmFinalTrecho').value) || 0;
+  const hF  = document.getElementById('horaFinalTrecho').value || '';
+
+  if (!kmI || !hI) { alert("KM Inicial e Horário Inicial são obrigatórios."); return; }
+  if (kmF > 0 && kmF <= kmI) { alert("KM Final deve ser maior que KM Inicial."); return; }
+
+  // FIX 2+3: lê o TOTAL DO DIA digitado e subtrai o acumulado das outras jornadas
+  const uTotal   = lerGanho('ganhoUber');
+  const nTotal   = lerGanho('ganho99');
+  const indTotal = lerGanho('ganhoIndrive');
+  const pfTotal  = lerGanho('ganhoPF');
+
+  const acumulado = calcularTotalDiaPorApp(targetDailyData.trechos, index);
+
+  const uJornada   = Math.max(0, uTotal   - acumulado.uber);
+  const nJornada   = Math.max(0, nTotal   - acumulado.n99);
+  const indJornada = Math.max(0, indTotal - acumulado.indrive);
+  const pfJornada  = Math.max(0, pfTotal  - acumulado.pf);
+
+  const rascunho = {
+    kmInicial: kmI, kmFinal: kmF > 0 ? kmF : null,
+    horaInicial: hI, horaFinal: hF || null,
+    uber: uJornada, n99: nJornada, indrive: indJornada, pf: pfJornada,
+    publicado: false, rascunho: true
+  };
+
+  if (index !== -1 && dataSelecionada !== originalDay) {
+    if (sourceDailyData?.trechos[index]) sourceDailyData.trechos.splice(index, 1);
+    targetDailyData.trechos.push(rascunho);
+    relatoriosDiarios[originalDay] = sourceDailyData;
+  } else if (index !== -1) {
+    targetDailyData.trechos[index] = rascunho;
+  } else {
+    targetDailyData.trechos.push(rascunho);
+  }
+
+  dadosDoDiaExibido = dataSelecionada !== originalDay ? relatoriosDiarios[originalDay] : targetDailyData;
+  if (dataSelecionada !== originalDay) { diaExibido = originalDay; relatoriosDiarios[dataSelecionada] = targetDailyData; }
+
+  salvarDados();
+  fecharModalRegistro();
+  mostrarBarraOnline();
+};
+
+// ── FIX 2+3: Override publicarJornada ───────────────────────────
+window.publicarJornada = function() {
+  const index          = parseInt(document.getElementById('trechoIndexToEdit').value);
+  const dataSelecionada = document.getElementById('dataJornada').value;
+  const originalDay    = document.getElementById('originalExibitionDay').value;
+  if (!dataSelecionada) { alert("Selecione a data."); return; }
+
+  const targetDailyData = ensureDailyDataStructure(dataSelecionada);
+  const sourceDailyData = relatoriosDiarios[originalDay];
+  const kmI = parseFloat(document.getElementById('kmInicialTrecho').value);
+  const hI  = document.getElementById('horaInicialTrecho').value;
+  const kmF = parseFloat(document.getElementById('kmFinalTrecho').value);
+  const hF  = document.getElementById('horaFinalTrecho').value;
+
+  if (!kmI || !hI || !kmF || !hF) { alert("KM Final e Horário Final são obrigatórios para encerrar."); return; }
+  if (kmF <= kmI) { alert("KM Final deve ser maior que KM Inicial."); return; }
+  if (calcularDiferencaHoras(hI, hF) <= 0) { alert("Hora Final deve ser posterior à Hora Inicial."); return; }
+
+  // FIX 2+3: total do dia digitado → subtrai acumulado das outras jornadas
+  const uTotal   = lerGanho('ganhoUber');
+  const nTotal   = lerGanho('ganho99');
+  const indTotal = lerGanho('ganhoIndrive');
+  const pfTotal  = lerGanho('ganhoPF');
+
+  const acumulado = calcularTotalDiaPorApp(targetDailyData.trechos, index);
+
+  const uJornada   = Math.max(0, uTotal   - acumulado.uber);
+  const nJornada   = Math.max(0, nTotal   - acumulado.n99);
+  const indJornada = Math.max(0, indTotal - acumulado.indrive);
+  const pfJornada  = Math.max(0, pfTotal  - acumulado.pf);
+
+  const jornadaPublicada = {
+    kmInicial: kmI, kmFinal: kmF,
+    horaInicial: hI, horaFinal: hF,
+    uber: uJornada, n99: nJornada, indrive: indJornada, pf: pfJornada,
+    publicado: true, rascunho: false
+  };
+
+  if (index !== -1 && dataSelecionada !== originalDay) {
+    if (sourceDailyData?.trechos[index]) sourceDailyData.trechos.splice(index, 1);
+    targetDailyData.trechos.push(jornadaPublicada);
+    relatoriosDiarios[originalDay] = sourceDailyData;
+  } else if (index !== -1) {
+    targetDailyData.trechos[index] = jornadaPublicada;
+  } else {
+    targetDailyData.trechos.push(jornadaPublicada);
+  }
+
+  dadosDoDiaExibido = dataSelecionada !== originalDay ? relatoriosDiarios[originalDay] : targetDailyData;
+  if (dataSelecionada !== originalDay) { diaExibido = originalDay; relatoriosDiarios[dataSelecionada] = targetDailyData; }
+
+  salvarDados();
+  fecharModalRegistro();
+  esconderBarraOnline();
+};
+
+
+// ================================================================
+// FIX 4: Barra ONLINE clicável → abre edição da jornada ativa
+// FIX 5: Botão flutuante sempre visível, sobe quando barra aparece
+// ================================================================
+
+// Override mostrarBarraOnline: torna clicável + sobe o botão flutuante
+window.mostrarBarraOnline = function() {
+  const bar = document.getElementById('onlineStatusBar');
+  // Primeiro exibe (display flex), depois adiciona classe para animar slide-up
+  bar.style.display = 'flex';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => bar.classList.add('online-visivel'));
+  });
+
+  // Sobe botão flutuante (barra agora tem 80px + 20px margem)
+  const fab = document.querySelector('.floating-button-container');
+  if (fab) fab.style.bottom = '120px';
+};
+
+// Override esconderBarraOnline: volta o botão à posição original
+window.esconderBarraOnline = function() {
+  const bar = document.getElementById('onlineStatusBar');
+  bar.classList.remove('online-visivel'); // anima slide-down
+  setTimeout(() => bar.style.display = 'none', 380); // espera animação acabar
+
+  const fab = document.querySelector('.floating-button-container');
+  if (fab) fab.style.bottom = '20px';
+};
+
+// Garante que o botão flutuante fique sempre ACIMA de tudo
+(function fixFloatingButton() {
+  const fab = document.querySelector('.floating-button-container');
+  if (fab) {
+    fab.style.zIndex = '10000'; // acima da barra (9999)
+  }
+})();
+
+// Abre a jornada ativa (rascunho) ao clicar na barra ONLINE
+function abrirJornadaAtiva() {
+  // Garante que os dados do dia atual estão carregados
+  const dados = relatoriosDiarios[TODAY_DATE_STRING] || dadosDoDiaExibido;
+  if (!dados || !dados.trechos) return;
+
+  const idx = dados.trechos.findIndex(t => t.rascunho && !t.publicado);
+  if (idx >= 0) {
+    // Muda para o dia atual se não estiver nele
+    if (diaExibido !== TODAY_DATE_STRING) {
+      carregarEExibirDados(TODAY_DATE_STRING);
+    }
+    // Pequeno delay para garantir que dadosDoDiaExibido foi atualizado
+    setTimeout(() => abrirModalRegistro(idx), 50);
+  }
+}
+
+// Adiciona listener de clique na barra ao carregar
+document.addEventListener('DOMContentLoaded', function() {
+  const bar = document.getElementById('onlineStatusBar');
+  if (bar) {
+    bar.addEventListener('click', abrirJornadaAtiva);
+    bar.style.cursor = 'pointer';
+
+    // Adiciona ícone de lápis ao lado do texto ONLINE para indicar que é clicável
+    const content = bar.querySelector('.online-bar__content');
+    if (content) {
+      content.innerHTML = 'ONLINE <i class="fa-solid fa-chevron-up" style="margin-left:8px;font-size:16px;opacity:0.8"></i>';
+    }
+
+    // Garante z-index correto do botão flutuante ao iniciar
+    const fab = document.querySelector('.floating-button-container');
+    if (fab) fab.style.zIndex = '10000';
+  }
+});
+
+// Override verificarJornadaEmAndamento para garantir o estado correto do botão
+window.verificarJornadaEmAndamento = function() {
+  const dadosHoje = relatoriosDiarios[TODAY_DATE_STRING];
+  if (dadosHoje && dadosHoje.trechos) {
+    const temRascunho = dadosHoje.trechos.some(t => t.rascunho && !t.publicado);
+    if (temRascunho) mostrarBarraOnline();
+    else esconderBarraOnline();
+  } else {
+    esconderBarraOnline();
+  }
+};
+
+
+
+// ================================================================
+// FIX 6: Deletar jornada ativa esconde a barra ONLINE
+// ================================================================
+window.removerTrecho = function(index) {
+  const trechos = dadosDoDiaExibido.trechos;
+  const trechoParaRemover = trechos[index];
+  const status = trechoParaRemover.publicado ? 'Jornada Publicada' : 'Rascunho';
+  if (!confirm(`Tem certeza que deseja remover este ${status} (Jornada ${index + 1})?`)) return;
+  trechos.splice(index, 1);
+  salvarDados();
+  atualizarUI();
+  // Verifica se ainda existe algum rascunho ativo após a remoção
+  const temRascunho = dadosDoDiaExibido.trechos.some(t => t.rascunho && !t.publicado);
+  if (!temRascunho) esconderBarraOnline();
+};
+
+// ================================================================
+// FIX 7: Label do lucro → só 'Lucro' ou 'Bruto' (sem 'Atual')
+// ================================================================
+window.atualizarDisplayLucro = function() {
+  const lucroEl   = document.getElementById('lucroLiquidoTotal');
+  const lucroLabel = document.getElementById('lucroLabel');
+  const toggleBtn  = document.getElementById('toggleLucroBtn');
+  const totais     = calcularTotaisDoDia(dadosDoDiaExibido);
+
+  if (isLucroVisible) {
+    if (isShowingLucroLiquido) {
+      lucroEl.innerHTML = `<span class="currency">R$</span> ${totais.lucroLiquido.toFixed(2).replace('.', ',')}`;
+      lucroLabel.innerText = 'Lucro';
+      toggleBtn.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
+    } else {
+      lucroEl.innerHTML = `<span class="currency">R$</span> ${totais.brutoTotal.toFixed(2).replace('.', ',')}`;
+      lucroLabel.innerText = 'Bruto';
+      toggleBtn.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
+    }
+  } else {
+    lucroEl.innerText = '••••';
+    lucroLabel.innerText = isShowingLucroLiquido ? 'Lucro' : 'Bruto';
+    toggleBtn.innerHTML = '<i class="fa-solid fa-eye"></i>';
+  }
+};
+
+</script>
+
 </body>
 </html>
