@@ -10387,6 +10387,76 @@ var _eficIv2 = setInterval(function(){
   obs.observe(document.body, { childList: true, subtree: true });
 })();
 
+// ============================================
+// THEME-COLOR DINÂMICO - barra de status acompanha o tema do app
+// ============================================
+(function(){
+  function getCorTema(){
+    // Lê a cor --secondary atual do CSS (muda conforme tema escolhido)
+    var cor = getComputedStyle(document.documentElement).getPropertyValue('--secondary');
+    cor = (cor || '').trim();
+    return cor || '#22c55e';
+  }
+
+  function aplicarThemeColor(){
+    var cor = getCorTema();
+
+    // Atualiza/cria a meta theme-color (Android Chrome)
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if(!meta){
+      meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      document.head.appendChild(meta);
+    }
+    meta.content = cor;
+
+    // msapplication-TileColor (Windows)
+    var tile = document.querySelector('meta[name="msapplication-TileColor"]');
+    if(tile) tile.content = cor;
+
+    console.log('[PWA] theme-color atualizado para:', cor);
+  }
+
+  // Aplica no load
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(aplicarThemeColor, 300); });
+  } else {
+    setTimeout(aplicarThemeColor, 300);
+  }
+
+  // Hook na função selecionarTema do app - atualiza ao trocar tema
+  function hookTema(){
+    if(typeof window.selecionarTema !== 'function') return false;
+    if(window.selecionarTema._hookedThemeColor) return true;
+    var _orig = window.selecionarTema;
+    window.selecionarTema = function(){
+      var r = _orig.apply(this, arguments);
+      // Aguarda o CSS aplicar e atualiza a barra
+      setTimeout(aplicarThemeColor, 50);
+      return r;
+    };
+    window.selecionarTema._hookedThemeColor = true;
+    console.log('[PWA] hook selecionarTema OK');
+    return true;
+  }
+
+  var _tt = 0;
+  var _ti = setInterval(function(){
+    _tt++;
+    if(hookTema() || _tt > 30) clearInterval(_ti);
+  }, 300);
+
+  // Fallback: observa mudanças no style do documentElement (caso o tema mude por outro caminho)
+  var _lastCor = '';
+  setInterval(function(){
+    var c = getCorTema();
+    if(c && c !== _lastCor){
+      _lastCor = c;
+      aplicarThemeColor();
+    }
+  }, 1500);
+})();
+
 </script>
 
 <!-- ============ PWA SETUP ============ -->
@@ -10436,13 +10506,11 @@ var _eficIv2 = setInterval(function(){
 
   // Meta tags PWA (iOS + Android)
   var metas = [
-    { name: 'theme-color', content: '#000000' },
     { name: 'mobile-web-app-capable', content: 'yes' },
     { name: 'apple-mobile-web-app-capable', content: 'yes' },
     { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
     { name: 'apple-mobile-web-app-title', content: 'Dirija com Meta' },
     { name: 'application-name', content: 'Dirija com Meta' },
-    { name: 'msapplication-TileColor', content: '#000000' },
     { name: 'format-detection', content: 'telephone=no' }
   ];
   metas.forEach(function(m){
@@ -10696,4 +10764,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-</html>
+    </html>
