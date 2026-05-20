@@ -8980,11 +8980,13 @@ function cfgRestaurarBackup(input) {
       if(!d) return null;
       var totais = (typeof calcularTotaisDoDia === 'function') ? calcularTotaisDoDia(d) : null;
       if(!totais) return null;
-      var bruto = totais.brutoTotal || 0;
+      // Mesma fórmula nativa do app: lucroLiquido / meta * 100, limitado 0-100
+      var lucro = totais.lucroLiquido || 0;
       var meta = (typeof obterMetaDoDia === 'function') ? obterMetaDoDia(key) : 0;
       if(!meta || meta <= 0) return null;
-      var pct = Math.round((bruto / meta) * 100);
-      return pct;
+      var pct = (lucro / meta) * 100;
+      pct = Math.min(Math.max(pct, 0), 100);
+      return Math.round(pct);
     } catch(e){ return null; }
   }
 
@@ -9049,7 +9051,7 @@ function cfgRestaurarBackup(input) {
         + 'opacity:0;'
         + 'transition:opacity 0.4s ease;';
 
-      // Pontinha (triangle) no canto inferior esquerdo, apontando pra baixo
+      // Pontinha (triangle) - fica FORA do overflow do balão (z-index alto)
       var ponta = document.createElement('div');
       ponta.style.cssText = ''
         + 'position:absolute;'
@@ -9059,13 +9061,15 @@ function cfgRestaurarBackup(input) {
         + 'border-left:7px solid transparent;'
         + 'border-right:7px solid transparent;'
         + 'border-top:7px solid var(--secondary);'
-        + 'filter:drop-shadow(0 2px 1px rgba(0,0,0,0.1));';
+        + 'filter:drop-shadow(0 2px 1px rgba(0,0,0,0.1));'
+        + 'z-index:3;';
       balao.appendChild(ponta);
 
       var textoSpan = document.createElement('span');
       textoSpan.id = 'onlineBalaoTxt';
       textoSpan.style.position = 'relative';
-      textoSpan.style.zIndex = '1';
+      textoSpan.style.zIndex = '2';
+      textoSpan.style.display = 'inline-block';
       balao.appendChild(textoSpan);
 
       content.appendChild(balao);
@@ -9087,10 +9091,49 @@ function cfgRestaurarBackup(input) {
 
     function renderInfo(modo){
       if(!txtSpan) return;
+
+      // Camada de preenchimento do FUNDO do balão (barra de progresso)
+      var fill = document.getElementById('balaoFill');
+      if(!fill){
+        // Wrapper que clipa o preenchimento respeitando o border-radius do balão
+        var clip = document.createElement('div');
+        clip.id = 'balaoClip';
+        clip.style.cssText = ''
+          + 'position:absolute;'
+          + 'top:0;left:0;right:0;bottom:0;'
+          + 'border-radius:12px;'
+          + 'overflow:hidden;'
+          + 'z-index:0;'
+          + 'pointer-events:none;';
+        fill = document.createElement('div');
+        fill.id = 'balaoFill';
+        fill.style.cssText = ''
+          + 'position:absolute;'
+          + 'top:0;left:0;bottom:0;'
+          + 'width:0%;'
+          + 'background:#000;'
+          + 'transition:width 0.8s cubic-bezier(0.34,1.2,0.64,1);';
+        clip.appendChild(fill);
+        // Insere o clip como primeiro filho do balão (atrás do texto)
+        balao.insertBefore(clip, balao.firstChild);
+      }
+
       if(modo === 'meta' && pct !== null){
-        txtSpan.innerHTML = '<i class="fa-solid fa-bullseye" style="margin-right:5px;font-size:13px;"></i>' + pct + '% meta';
+        // Preenche o fundo do balão (preto) conforme a %, sobre o verde do tema
+        txtSpan.innerHTML = '<i class="fa-solid fa-bullseye" style="margin-right:5px;font-size:13px;"></i>' + pct + '% da meta';
+        // Anima preenchimento (reset depois aplica)
+        fill.style.transition = 'none';
+        fill.style.width = '0%';
+        // Força reflow e anima
+        void fill.offsetWidth;
+        fill.style.transition = 'width 0.8s cubic-bezier(0.34,1.2,0.64,1)';
+        fill.style.width = pct + '%';
+        fill.style.opacity = '1';
       } else {
+        // Modo tempo: esconde o preenchimento
         txtSpan.innerHTML = '<i class="fa-regular fa-clock" style="margin-right:5px;font-size:13px;"></i>' + txt;
+        fill.style.transition = 'width 0.4s ease, opacity 0.3s ease';
+        fill.style.width = '0%';
       }
     }
 
