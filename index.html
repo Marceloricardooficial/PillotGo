@@ -10298,32 +10298,44 @@ var _eficIv2 = setInterval(function(){
   // Cria manifest.json dinamicamente via Blob URL (caso não exista o arquivo)
   // Mas preferimos usar arquivo real para o iOS reconhecer melhor
   // Se já existir <link rel="manifest"> não injeta de novo
-  if(!document.querySelector('link[rel="manifest"]')){
-    var manifest = {
-      "name": "Dirija com Meta",
-      "short_name": "Dirija com Meta",
-      "description": "Controle de jornadas, ganhos e metas para motoristas de aplicativo",
-      "start_url": "/PillotGo/",
-      "scope": "/PillotGo/",
-      "display": "standalone",
-      "orientation": "portrait",
-      "background_color": "#22c55e",
-      "theme_color": "#000000",
-      "icons": [
-        { "src": "/PillotGo/192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-        { "src": "/PillotGo/512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
-      ],
-      "categories": ["productivity", "finance", "utilities"],
-      "lang": "pt-BR",
-      "dir": "ltr"
-    };
-    var blob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
-    var manifestUrl = URL.createObjectURL(blob);
-    var link = document.createElement('link');
-    link.rel = 'manifest';
-    link.href = manifestUrl;
-    document.head.appendChild(link);
-  }
+  // Detecta a pasta atual (/PillotGo/) e o arquivo atual (index.html, 395.html, etc)
+  // start_url aponta para a PÁGINA ATUAL para instalar funcionar em qualquer arquivo
+  var currentPath = window.location.pathname; // ex: /PillotGo/395.html ou /PillotGo/
+  var basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1); // /PillotGo/
+  var startUrl = currentPath; // página atual exata
+  if(startUrl.endsWith('/')) startUrl = currentPath; // raiz
+
+  // Remove manifest antigo (caso recarregue)
+  var oldM = document.querySelector('link[rel="manifest"]');
+  if(oldM) oldM.remove();
+
+  var manifest = {
+    "name": "Dirija com Meta",
+    "short_name": "Dirija com Meta",
+    "description": "Controle de jornadas, ganhos e metas para motoristas de aplicativo",
+    "start_url": startUrl,
+    "scope": basePath,
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#22c55e",
+    "theme_color": "#000000",
+    "icons": [
+      { "src": basePath + "192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+      { "src": basePath + "192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+      { "src": basePath + "512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+      { "src": basePath + "512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    ],
+    "categories": ["productivity", "finance", "utilities"],
+    "lang": "pt-BR",
+    "dir": "ltr"
+  };
+  var blob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
+  var manifestUrl = URL.createObjectURL(blob);
+  var link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = manifestUrl;
+  document.head.appendChild(link);
+  console.log('[PWA] Manifest dinâmico - start_url:', startUrl, 'scope:', basePath);
 
   // Meta tags PWA (iOS + Android)
   var metas = [
@@ -10346,9 +10358,13 @@ var _eficIv2 = setInterval(function(){
   });
 
   // Apple touch icons (iOS precisa de tag separada)
+  var _bp = (function(){
+    var p = window.location.pathname;
+    return p.substring(0, p.lastIndexOf('/') + 1);
+  })();
   var appleIcons = [
-    { sizes: '192x192', href: '/PillotGo/192.png' },
-    { sizes: '512x512', href: '/PillotGo/512.png' }
+    { sizes: '192x192', href: _bp + '192.png' },
+    { sizes: '512x512', href: _bp + '512.png' }
   ];
   appleIcons.forEach(function(i){
     var l = document.createElement('link');
@@ -10360,7 +10376,7 @@ var _eficIv2 = setInterval(function(){
   // Sem sizes (fallback iOS)
   var lDef = document.createElement('link');
   lDef.rel = 'apple-touch-icon';
-  lDef.href = '/PillotGo/192.png';
+  lDef.href = _bp + '192.png';
   document.head.appendChild(lDef);
 
   // ============================================
@@ -10368,7 +10384,7 @@ var _eficIv2 = setInterval(function(){
   // ============================================
   if('serviceWorker' in navigator){
     window.addEventListener('load', function(){
-      navigator.serviceWorker.register('/PillotGo/sw.js')
+      navigator.serviceWorker.register((function(){ var p=window.location.pathname; return p.substring(0,p.lastIndexOf('/')+1)+'sw.js'; })())
         .then(function(reg){
           console.log('[PWA] SW registrado:', reg.scope);
 
@@ -10442,7 +10458,7 @@ var _eficIv2 = setInterval(function(){
       + '</div>'
       + '<div style="padding:14px 16px;">'
       +   '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">'
-      +     '<img src="/PillotGo/192.png" style="width:48px;height:48px;border-radius:12px;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.15);" onerror="this.style.display=\'none\'">'
+      +     '<img src="' + _bp + '192.png" style="width:48px;height:48px;border-radius:12px;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.15);" onerror="this.style.display=\'none\'">'
       +     '<div style="flex:1;min-width:0;">'
       +       '<div style="font-size:14px;font-weight:900;color:#1e293b;">Dirija com Meta</div>'
       +       '<div style="font-size:11px;color:#64748b;margin-top:2px;line-height:1.4;">Instale o app para acesso rápido na tela inicial e uso offline</div>'
@@ -10462,6 +10478,11 @@ var _eficIv2 = setInterval(function(){
 
     document.getElementById('pwaInstalar').onclick = function(){
       if(deferredPrompt){
+        // Desabilita o botão pra evitar duplo clique
+        var btn = this;
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i>Instalando...';
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then(function(choice){
           if(choice.outcome === 'accepted'){
@@ -10483,7 +10504,10 @@ var _eficIv2 = setInterval(function(){
     localStorage.setItem('pwa_installed_v1', '1');
     var b = document.getElementById('pwaInstallBanner');
     if(b) b.remove();
-    console.log('[PWA] App instalado');
+    var b2 = document.getElementById('pwaIOSGuide');
+    if(b2) b2.remove();
+    deferredPrompt = null;
+    console.log('[PWA] App instalado - banner desativado permanentemente');
   });
 
   // iOS - banner com instruções manuais (Safari não suporta beforeinstallprompt)
@@ -10542,7 +10566,7 @@ var _eficIv2 = setInterval(function(){
         + '</div>'
         + '<div style="padding:14px 16px;">'
         +   '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">'
-        +     '<img src="/PillotGo/192.png" style="width:48px;height:48px;border-radius:12px;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.15);" onerror="this.style.display=\'none\'">'
+        +     '<img src="' + _bp + '192.png" style="width:48px;height:48px;border-radius:12px;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.15);" onerror="this.style.display=\'none\'">'
         +     '<div style="flex:1;min-width:0;">'
         +       '<div style="font-size:14px;font-weight:900;color:#1e293b;">Dirija com Meta</div>'
         +       '<div style="font-size:11px;color:#64748b;margin-top:2px;line-height:1.4;">Instale o app na tela inicial do seu iPhone</div>'
@@ -10575,4 +10599,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-  </html>
+                                                                                                                                         </html>
