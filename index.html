@@ -1884,7 +1884,13 @@ function mostrarAlertaOleo(kmRestantes){if(kmRestantes<=0){mostrarFlashTemporari
 function mostrarBarraOnline(){document.getElementById('onlineStatusBar').style.display='flex';}
 function esconderBarraOnline(){document.getElementById('onlineStatusBar').style.display='none';}
 function verificarJornadaEmAndamento(){const dadosHoje=relatoriosDiarios[TODAY_DATE_STRING];if(dadosHoje&&dadosHoje.trechos){const temRascunho=dadosHoje.trechos.some(trecho=>trecho.rascunho&&!trecho.publicado);if(temRascunho){mostrarBarraOnline();}else{esconderBarraOnline();}}else{esconderBarraOnline();}}
-</script><style>
+</script>// ================================================================
+// VERSÃO DO APP - atualizada a cada patch
+// ================================================================
+window.APP_VERSAO = 'v402';
+
+
+<style>
 /* FIX 4: Barra ONLINE - altura maior + slide-up + cursor */
 #onlineStatusBar {
   height: 80px !important;
@@ -4589,7 +4595,7 @@ window.verificarJornadaEmAndamento = function() {
         el.innerHTML = '<strong style="color:#000">DIRIJA</strong>'
           + '<span style="font-weight:300;color:var(--secondary)">COM</span>'
           + '<strong style="color:var(--secondary)">META</strong>'
-          + '<span style="font-size:10px;opacity:0.4;margin-left:4px">v126</span>';
+          + '<span style="font-size:10px;opacity:0.4;margin-left:4px">' + (window.APP_VERSAO || 'v126') + '</span>';
       }
     });
     // Também tenta por texto direto
@@ -4598,7 +4604,7 @@ window.verificarJornadaEmAndamento = function() {
         el.innerHTML = '<strong style="color:#000">DIRIJA</strong>'
           + '<span style="font-weight:300;color:var(--secondary)">COM</span>'
           + '<strong style="color:var(--secondary)">META</strong>'
-          + '<span style="font-size:10px;opacity:0.4;margin-left:4px">v126</span>';
+          + '<span style="font-size:10px;opacity:0.4;margin-left:4px">' + (window.APP_VERSAO || 'v126') + '</span>';
       }
     });
   }
@@ -7019,7 +7025,7 @@ function abrirModalSistema() {
   // Versão
   var versEl = document.createElement('div');
   versEl.style.cssText = 'font-size:16px;font-weight:800;color:#1e293b;';
-  versEl.textContent = 'v126';
+  versEl.textContent = window.APP_VERSAO || 'v126';
   body.appendChild(row('Versão', versEl, true));
 
   // Dev
