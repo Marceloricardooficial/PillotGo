@@ -3715,6 +3715,11 @@ header {
 </style>
 <script>
 // ================================================================
+// VERSÃO DO APP - atualizada a cada patch
+// ================================================================
+window.APP_VERSAO = 'v403';
+
+// ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
 // FIX 1: Duplo clique no KM Final
 // FIX 2: Campos mostram TOTAL DO DIA como valor atual (hint em cinza)
@@ -4589,7 +4594,7 @@ window.verificarJornadaEmAndamento = function() {
         el.innerHTML = '<strong style="color:#000">DIRIJA</strong>'
           + '<span style="font-weight:300;color:var(--secondary)">COM</span>'
           + '<strong style="color:var(--secondary)">META</strong>'
-          + '<span style="font-size:10px;opacity:0.4;margin-left:4px">v126</span>';
+          + '<span style="font-size:10px;opacity:0.4;margin-left:4px">' + (window.APP_VERSAO || 'v126') + '</span>';
       }
     });
     // Também tenta por texto direto
@@ -4598,7 +4603,7 @@ window.verificarJornadaEmAndamento = function() {
         el.innerHTML = '<strong style="color:#000">DIRIJA</strong>'
           + '<span style="font-weight:300;color:var(--secondary)">COM</span>'
           + '<strong style="color:var(--secondary)">META</strong>'
-          + '<span style="font-size:10px;opacity:0.4;margin-left:4px">v126</span>';
+          + '<span style="font-size:10px;opacity:0.4;margin-left:4px">' + (window.APP_VERSAO || 'v126') + '</span>';
       }
     });
   }
@@ -7019,7 +7024,7 @@ function abrirModalSistema() {
   // Versão
   var versEl = document.createElement('div');
   versEl.style.cssText = 'font-size:16px;font-weight:800;color:#1e293b;';
-  versEl.textContent = 'v126';
+  versEl.textContent = window.APP_VERSAO || 'v126';
   body.appendChild(row('Versão', versEl, true));
 
   // Dev
@@ -10764,4 +10769,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-</html>
+    </html>
