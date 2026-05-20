@@ -8972,6 +8972,22 @@ function cfgRestaurarBackup(input) {
     return diff;
   }
 
+  function getPctMeta(){
+    try {
+      var hoje = new Date();
+      var key = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'-'+String(hoje.getDate()).padStart(2,'0');
+      var d = (typeof relatoriosDiarios !== 'undefined') ? relatoriosDiarios[key] : null;
+      if(!d) return null;
+      var totais = (typeof calcularTotaisDoDia === 'function') ? calcularTotaisDoDia(d) : null;
+      if(!totais) return null;
+      var bruto = totais.brutoTotal || 0;
+      var meta = (typeof obterMetaDoDia === 'function') ? obterMetaDoDia(key) : 0;
+      if(!meta || meta <= 0) return null;
+      var pct = Math.round((bruto / meta) * 100);
+      return pct;
+    } catch(e){ return null; }
+  }
+
   function atualizar(){
     var bar = document.getElementById('onlineStatusBar');
     if(!bar) return;
@@ -9017,10 +9033,10 @@ function cfgRestaurarBackup(input) {
         + 'transform:translateX(-50%);'
         + 'background:var(--secondary);'
         + 'color:#fff;'
-        + 'font-size:13px;'
+        + 'font-size:15px;'
         + 'font-weight:700;'
         + 'letter-spacing:0.3px;'
-        + 'padding:7px 13px;'
+        + 'padding:8px 14px;'
         + 'border-radius:12px;'
         + 'box-shadow:0 6px 16px rgba(0,0,0,0.25), 0 2px 4px rgba(0,0,0,0.18);'
         + 'white-space:nowrap;'
@@ -9064,14 +9080,52 @@ function cfgRestaurarBackup(input) {
     }
 
     var txtSpan = document.getElementById('onlineBalaoTxt');
-    if(txtSpan) txtSpan.textContent = txt;
+
+    // Intercala tempo online <-> % da meta a cada 5s
+    var pct = getPctMeta();
+    if(balao._cicloTimer) clearInterval(balao._cicloTimer);
+
+    function renderInfo(modo){
+      if(!txtSpan) return;
+      if(modo === 'meta' && pct !== null){
+        txtSpan.innerHTML = '<i class="fa-solid fa-bullseye" style="margin-right:5px;font-size:13px;"></i>' + pct + '% meta';
+      } else {
+        txtSpan.innerHTML = '<i class="fa-regular fa-clock" style="margin-right:5px;font-size:13px;"></i>' + txt;
+      }
+    }
+
+    // Começa mostrando o tempo
+    var modoAtual = 'tempo';
+    renderInfo(modoAtual);
+
+    // Se tem meta, alterna a cada 5s
+    if(pct !== null){
+      balao._cicloTimer = setInterval(function(){
+        // Só alterna se o balão estiver visível
+        if(balao.style.opacity === '0'){ return; }
+        modoAtual = (modoAtual === 'tempo') ? 'meta' : 'tempo';
+        // Recalcula tempo/pct na hora de trocar (mantém atualizado)
+        var jorAtual = getJornadaAberta();
+        if(jorAtual){ txt = fmtTempo(calcMinutos(jorAtual.horaInicial)); }
+        pct = getPctMeta();
+        // Fade rápido na troca
+        txtSpan.style.transition = 'opacity 0.25s';
+        txtSpan.style.opacity = '0';
+        setTimeout(function(){
+          renderInfo(modoAtual);
+          txtSpan.style.opacity = '1';
+        }, 250);
+      }, 5000);
+    }
 
     // Mostra o balão por 7s, depois fade out
     balao.style.opacity = '1';
     if(balao._hideTimer) clearTimeout(balao._hideTimer);
     balao._hideTimer = setTimeout(function(){
       balao.style.opacity = '0';
-    }, 7000);
+      // Para o ciclo quando esconde
+      if(balao._cicloTimer){ clearInterval(balao._cicloTimer); balao._cicloTimer = null; }
+    }, 16000);
 
     // Remove o texto antigo (sub) se ainda existir de versões anteriores
     var subAntigo = document.getElementById('onlineTempo');
@@ -10599,4 +10653,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-                                                                                                                                         </html>
+</html>
