@@ -3712,12 +3712,86 @@ header {
   50% { transform: scale(1.15); opacity: 0.85; }
 }
 
+/* ============ TIMELINE DESPESAS VEÍCULO ============ */
+#vLista.vTimeline {
+  position: relative;
+  padding: 8px 0 24px;
+  display: block;
+}
+.vEvent {
+  position: relative;
+  padding: 0 0 26px 50px;
+}
+.vEvent:last-child { padding-bottom: 8px; }
+/* Marcador circular (igual jornada) */
+.vEvent .vMarker {
+  position: absolute;
+  left: 14px;
+  top: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  background: var(--secondary);
+  color: #fff;
+  z-index: 10;
+}
+/* Linha pontilhada PRETA conectando */
+.vEvent::after {
+  content: '';
+  position: absolute;
+  left: 27px;
+  top: 34px;
+  bottom: -4px;
+  width: 2px;
+  border-left: 2px dotted #000;
+  z-index: 5;
+}
+.vEvent:last-child::after { display: none; }
+/* Card da despesa - SOLTO no ambiente (sem fundo/borda/sombra) */
+.vEvent .vCard {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0 0 0 4px;
+  box-shadow: none;
+  animation: vFadeIn .25s ease;
+}
+@keyframes vFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.vEvent .vBadge {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 7px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.vEvent .vActBtn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .15s, filter .15s;
+}
+.vEvent .vActBtn:active { transform: scale(0.92); }
+
 </style>
 <script>
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v405';
+window.APP_VERSAO = 'v413';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -5885,6 +5959,78 @@ window.tnAplicar = function() {
   var PAGAMENTOS = ['Dinheiro','PIX','Débito','Crédito à vista','Crédito parcelado'];
   var CAT_PES = ['Café','Crédito Celular','Almoço','Bebida','Lanche','Combustível','Farmácia','Outros'];
   var CAT_VEI = ['Troca de óleo','Pastilha de freio','Disco de freio','Amortecedor','Pneus','Lavação','Bucha','Suspensão','Alinhamento','Balanceamento','Revisão','Filtro de óleo','Filtro de ar','Outros'];
+
+  // ============================================================
+  // ESTRUTURA DE CATEGORIAS E SUBCATEGORIAS - DESPESAS VEÍCULO
+  // ============================================================
+  var CATEGORIAS_VEI = {
+    'Combustível': { ic:'fa-gas-pump', cor:'#22c55e', subs:['Gasolina','Etanol','Diesel','GNV','Aditivos'] },
+    'Mecânica': { ic:'fa-gears', cor:'#f59e0b', subs:['Troca de óleo','Filtro de óleo','Filtro de ar','Filtro de combustível','Velas','Correias','Motor','Câmbio','Embreagem','Sistema de arrefecimento','Escapamento','Outros mecânicos'] },
+    'Pneus e Rodas': { ic:'fa-circle-dot', cor:'#1e293b', subs:['Pneus','Alinhamento','Balanceamento','Rodízio','Conserto de pneu','Rodas','Outros'] },
+    'Suspensão e Direção': { ic:'fa-car-burst', cor:'#8b5cf6', subs:['Amortecedores','Molas','Bandejas','Buchas','Pivôs','Terminais','Caixa de direção','Outros'] },
+    'Sistema Elétrico': { ic:'fa-car-battery', cor:'#eab308', subs:['Bateria','Alternador','Motor de partida','Fusíveis','Iluminação','Sensores','Vidros elétricos','Outros'] },
+    'Freios': { ic:'fa-record-vinyl', cor:'#ef4444', subs:['Pastilhas','Discos','Fluido de freio','Tambores','Lonas','Outros'] },
+    'Ar-condicionado': { ic:'fa-snowflake', cor:'#06b6d4', subs:['Recarga de gás','Compressor','Higienização','Filtro de cabine','Outros'] },
+    'Documentação e Impostos': { ic:'fa-file-lines', cor:'#64748b', subs:['IPVA','Licenciamento','Multas','Vistorias','Despachante','Outros'] },
+    'Seguro e Proteção': { ic:'fa-shield-halved', cor:'#0ea5e9', subs:['Seguro','Proteção veicular','Rastreador','Franquia','Outros'] },
+    'Limpeza e Estética': { ic:'fa-droplet', cor:'#3b82f6', subs:['Lava-rápido','Higienização interna','Polimento','Cristalização','Aspiração','Outros'] },
+    'Equipamentos e Acessórios': { ic:'fa-plug', cor:'#a855f7', subs:['Suporte de celular','Carregador','Cabos','Dashcam','Películas','Acessórios diversos','Outros'] },
+    'Funilaria e Pintura': { ic:'fa-spray-can', cor:'#ec4899', subs:['Para-choque','Pintura','Lanternagem','Martelinho de ouro','Vidros','Outros'] },
+    'Operacionais': { ic:'fa-road', cor:'#14b8a6', subs:['Pedágio','Estacionamento','Balsa','Taxas diversas','Outros'] },
+    'Outros': { ic:'fa-ellipsis', cor:'#6b7280', subs:['Despesas gerais'] }
+  };
+
+  // Subcategorias personalizadas: { "Categoria": ["Sub1","Sub2"] }
+  function getSubcatExtra(){
+    try { return JSON.parse(localStorage.getItem('subcatExtraVei_v1')) || {}; }
+    catch(e){ return {}; }
+  }
+  function saveSubcatExtra(obj){
+    try { localStorage.setItem('subcatExtraVei_v1', JSON.stringify(obj)); } catch(e){}
+  }
+  // Lista subcategorias de uma categoria (padrão + personalizadas)
+  function subcatsDaCategoria(cat){
+    var base = (CATEGORIAS_VEI[cat] && CATEGORIAS_VEI[cat].subs) ? CATEGORIAS_VEI[cat].subs.slice() : [];
+    var extra = getSubcatExtra()[cat] || [];
+    extra.forEach(function(s){ if(base.indexOf(s)<0) base.push(s); });
+    return base;
+  }
+  // Ícone e cor de uma categoria principal
+  function infoCategoria(cat){
+    if(CATEGORIAS_VEI[cat]) return CATEGORIAS_VEI[cat];
+    return { ic:'fa-wrench', cor:'#6b7280', subs:[] };
+  }
+  // Migra categorias antigas -> nova estrutura {categoria, subcategoria}
+  function migrarCategoriaAntiga(catAntiga){
+    if(!catAntiga) return { categoria:'Outros', subcategoria:'Despesas gerais' };
+    // Se já é uma categoria principal nova, mantém
+    if(CATEGORIAS_VEI[catAntiga]) return { categoria:catAntiga, subcategoria:'' };
+    // Procura em qual categoria a antiga se encaixa como subcategoria
+    var mapaAntigo = {
+      'Troca de óleo':['Mecânica','Troca de óleo'],
+      'Filtro de óleo':['Mecânica','Filtro de óleo'],
+      'Filtro de ar':['Mecânica','Filtro de ar'],
+      'Pastilha de freio':['Freios','Pastilhas'],
+      'Disco de freio':['Freios','Discos'],
+      'Amortecedor':['Suspensão e Direção','Amortecedores'],
+      'Bucha':['Suspensão e Direção','Buchas'],
+      'Suspensão':['Suspensão e Direção','Outros'],
+      'Alinhamento':['Pneus e Rodas','Alinhamento'],
+      'Balanceamento':['Pneus e Rodas','Balanceamento'],
+      'Revisão':['Mecânica','Outros mecânicos'],
+      'Lavação':['Limpeza e Estética','Lava-rápido'],
+      'Pneus':['Pneus e Rodas','Pneus'],
+      'Filtro de combustível':['Mecânica','Filtro de combustível']
+    };
+    if(mapaAntigo[catAntiga]) return { categoria:mapaAntigo[catAntiga][0], subcategoria:mapaAntigo[catAntiga][1] };
+    // Procura se a antiga é subcategoria de alguma categoria nova
+    for(var c in CATEGORIAS_VEI){
+      if(CATEGORIAS_VEI[c].subs.indexOf(catAntiga)>-1) return { categoria:c, subcategoria:catAntiga };
+    }
+    // Não encontrou - joga em Outros mantendo o nome como subcategoria personalizada
+    return { categoria:'Outros', subcategoria:catAntiga };
+  }
+
   var BANDEIRAS = ['Visa','Mastercard','Elo','Amex','Hipercard','Outros'];
 
   // --- Helpers storage nativo do app ---
@@ -5916,6 +6062,20 @@ window.tnAplicar = function() {
   function saveCatExtra(tipo, v) { try { localStorage.setItem('catExtra_'+tipo, JSON.stringify(v)); } catch(e){} }
 
   function fmtR(v) { return 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',','); }
+  function fmtNum(v) { return parseFloat(v||0).toFixed(2).replace('.',','); }
+  function iconeCategoriaVei(cat){
+    var c = (cat||'').toLowerCase();
+    if(c.indexOf('óleo')>-1||c.indexOf('oleo')>-1||c.indexOf('filtro')>-1||c.indexOf('revis')>-1) return {ic:'fa-oil-can', cor:'#f59e0b'};
+    if(c.indexOf('freio')>-1||c.indexOf('pastilha')>-1||c.indexOf('disco')>-1) return {ic:'fa-record-vinyl', cor:'#ef4444'};
+    if(c.indexOf('pneu')>-1) return {ic:'fa-circle-dot', cor:'#1e293b'};
+    if(c.indexOf('amortec')>-1||c.indexOf('suspens')>-1||c.indexOf('bucha')>-1) return {ic:'fa-car-burst', cor:'#8b5cf6'};
+    if(c.indexOf('alinha')>-1||c.indexOf('balance')>-1) return {ic:'fa-arrows-left-right', cor:'#06b6d4'};
+    if(c.indexOf('lav')>-1) return {ic:'fa-droplet', cor:'#3b82f6'};
+    if(c.indexOf('combust')>-1||c.indexOf('gasolina')>-1||c.indexOf('gnv')>-1) return {ic:'fa-gas-pump', cor:'#22c55e'};
+    if(c.indexOf('seguro')>-1) return {ic:'fa-shield-halved', cor:'#0ea5e9'};
+    if(c.indexOf('document')>-1||c.indexOf('ipva')>-1||c.indexOf('licenc')>-1) return {ic:'fa-file-lines', cor:'#64748b'};
+    return {ic:'fa-wrench', cor:'#6b7280'};
+  }
   function uid() { return Date.now() + '_' + Math.random().toString(36).slice(2,7); }
   function hoje() { return new Date().toISOString().split('T')[0]; }
   function fmtData(d) { return d ? d.split('-').reverse().join('/') : ''; }
@@ -6029,45 +6189,64 @@ window.tnAplicar = function() {
     m.style.cssText='display:flex;position:fixed;inset:0;z-index:99996;background:#fff;align-items:flex-start;justify-content:center;overflow-y:auto;';
 
     var passado=new Date(); passado.setDate(passado.getDate()-30);
-    var cats=CAT_VEI.concat(getCatExtra('vei'));
+    var cats=Object.keys(CATEGORIAS_VEI);
     var catOpts=cats.map(function(c){ return '<option>'+c+'</option>'; }).join('');
 
     m.innerHTML=`
       <div style="background:#fff;width:100%;max-width:100%;border-radius:0;overflow:hidden;min-height:100vh;">
-        <div style="background:#000;background-image:url('https://marceloricardooficial.github.io/PillotGo/fundos.png');background-size:cover;background-position:center;position:relative;padding:22px 20px 18px;text-align:center;">
-          <div style="position:absolute;inset:0;background:rgba(0,0,0,.78)"></div>
-          <button onclick="document.getElementById('modalDespVeiculo').remove()" style="position:absolute;top:12px;right:12px;z-index:3;width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-xmark"></i></button>
+        <div style="background:#000;position:relative;padding:22px 20px 18px;text-align:center;">
+          <div style="position:absolute;inset:0;background:radial-gradient(circle at 80% 20%,rgba(34,197,94,.18),transparent 55%);"></div>
+          <button onclick="document.getElementById('modalDespVeiculo').remove()" style="position:absolute;top:12px;right:12px;z-index:3;width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-xmark"></i></button>
           <div style="position:relative;z-index:1">
             <div style="font-size:18px;font-weight:900;color:var(--secondary);text-transform:uppercase;letter-spacing:2px">Despesas do Veículo</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.55);margin-top:3px">Manutenção, peças e serviços</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:3px">Manutenção, peças e serviços</div>
           </div>
         </div>
-        <div style="padding:12px 16px 0;display:flex;gap:8px;">
-          <button onclick="abrirAddDesp('vei')" style="flex:1;padding:11px;background:var(--secondary);color:#fff;border:none;border-radius:0;font-size:12px;font-weight:700;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+
+        <div style="padding:16px 16px 0;display:flex;gap:10px;">
+          <button onclick="abrirAddDesp('vei')" style="flex:1;padding:12px;background:var(--secondary);color:#fff;border:none;border-radius:0;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
             <i class="fa-solid fa-plus"></i> Adicionar
           </button>
-          <button onclick="abrirGerenciarCartoes()" style="flex:1;padding:11px;background:#1e293b;color:#fff;border:none;border-radius:0;font-size:12px;font-weight:700;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <button onclick="abrirGerenciarCartoes()" style="flex:1;padding:12px;background:#000;color:#fff;border:none;border-radius:0;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
             <i class="fa-solid fa-credit-card"></i> Cartões
           </button>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #f1f5f9;margin-top:12px;">
-          <div style="text-align:center;padding:9px 4px;border-right:1px solid #f1f5f9;"><div style="font-size:8px;font-weight:700;text-transform:uppercase;color:#94a3b8;">Total</div><div style="font-size:16px;font-weight:900;color:var(--secondary);" id="vTotal">R$0</div></div>
-          <div style="text-align:center;padding:9px 4px;border-right:1px solid #f1f5f9;"><div style="font-size:8px;font-weight:700;text-transform:uppercase;color:#94a3b8;">Parcelado</div><div style="font-size:16px;font-weight:900;color:#1e293b;" id="vParc">R$0</div></div>
-          <div style="text-align:center;padding:9px 4px;border-right:1px solid #f1f5f9;"><div style="font-size:8px;font-weight:700;text-transform:uppercase;color:#94a3b8;">Registros</div><div style="font-size:16px;font-weight:900;color:#1e293b;" id="vQtd">0</div></div>
-          <div style="text-align:center;padding:9px 4px;"><div style="font-size:8px;font-weight:700;text-transform:uppercase;color:#94a3b8;">Em aberto</div><div style="font-size:16px;font-weight:900;color:#ef4444;" id="vAberto">R$0</div></div>
-        </div>
-        <div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-            <div><div style="font-size:12px;font-weight:700;color:#475569;margin-bottom:3px;">De</div><input type="date" id="vFI" value="${passado.toISOString().split('T')[0]}" onchange="renderDesp('vei')" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:0;font-size:12px;box-sizing:border-box;"></div>
-            <div><div style="font-size:12px;font-weight:700;color:#475569;margin-bottom:3px;">Até</div><input type="date" id="vFF" value="${hoje()}" onchange="renderDesp('vei')" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:0;font-size:12px;box-sizing:border-box;"></div>
+
+        <div style="position:relative;margin-top:14px;background:#000;background-image:url('https://marceloricardooficial.github.io/PillotGo/fundo3.png');background-size:cover;background-position:center;overflow:hidden;">
+          <div style="position:absolute;inset:0;background:rgba(0,0,0,.82);"></div>
+          <div style="position:relative;z-index:1;">
+            <div style="padding:16px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                <div><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;">De</div><input type="date" id="vFI" value="${passado.toISOString().split('T')[0]}" onchange="renderDesp('vei')" style="width:100%;padding:10px;border:1px solid rgba(255,255,255,.2);border-radius:0;font-size:14px;box-sizing:border-box;color:#fff;background:rgba(255,255,255,.08);"></div>
+                <div><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;">Até</div><input type="date" id="vFF" value="${hoje()}" onchange="renderDesp('vei')" style="width:100%;padding:10px;border:1px solid rgba(255,255,255,.2);border-radius:0;font-size:14px;box-sizing:border-box;color:#fff;background:rgba(255,255,255,.08);"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%;">
+                <select id="vFC" onchange="onFiltroCatChange()" style="width:100%;min-width:0;padding:10px 6px;border:1px solid rgba(255,255,255,.2);border-radius:0;font-size:12px;background:rgba(255,255,255,.08);color:#fff;box-sizing:border-box;-webkit-appearance:none;appearance:none;text-overflow:ellipsis;"><option value="" style="color:#000;">Categorias</option>${catOpts}</select>
+                <select id="vFSub" onchange="renderDesp('vei')" style="width:100%;min-width:0;padding:10px 6px;border:1px solid rgba(255,255,255,.2);border-radius:0;font-size:12px;background:rgba(255,255,255,.08);color:#fff;box-sizing:border-box;-webkit-appearance:none;appearance:none;text-overflow:ellipsis;"><option value="" style="color:#000;">Subcat.</option></select>
+                <select id="vFP" onchange="renderDesp('vei')" style="width:100%;min-width:0;padding:10px 6px;border:1px solid rgba(255,255,255,.2);border-radius:0;font-size:12px;background:rgba(255,255,255,.08);color:#fff;box-sizing:border-box;-webkit-appearance:none;appearance:none;text-overflow:ellipsis;"><option value="" style="color:#000;">Pagamento</option>${PAGAMENTOS.map(function(p){ return '<option style=\"color:#000;\">'+p+'</option>'; }).join('')}</select>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:0 16px 16px;">
+              <div style="text-align:center;">
+                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.5px;">À vista</div>
+                <div style="font-size:19px;font-weight:800;color:var(--secondary);margin-top:4px;letter-spacing:-.4px;" id="vAvista"><span style="font-size:11px;">R$</span>0</div>
+              </div>
+              <div style="text-align:center;border-left:1px solid rgba(255,255,255,.12);border-right:1px solid rgba(255,255,255,.12);">
+                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.5px;">Parcelado</div>
+                <div style="font-size:19px;font-weight:800;color:#fff;margin-top:4px;letter-spacing:-.4px;" id="vParc"><span style="font-size:11px;">R$</span>0</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.5px;">Total</div>
+                <div style="font-size:19px;font-weight:800;color:var(--secondary);margin-top:4px;letter-spacing:-.4px;" id="vTotal"><span style="font-size:11px;">R$</span>0</div>
+              </div>
+            </div>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <select id="vFC" onchange="renderDesp('vei')" style="padding:8px;border:1px solid #e5e7eb;border-radius:0;font-size:12px;background:#fff;"><option value="">Todas cats</option>${catOpts}</select>
-            <select id="vFP" onchange="renderDesp('vei')" style="padding:8px;border:1px solid #e5e7eb;border-radius:0;font-size:12px;background:#fff;"><option value="">Todas formas pag.</option>${PAGAMENTOS.map(function(p){ return '<option>'+p+'</option>'; }).join('')}</select>
-          </div>
         </div>
-        <div id="vLista" style="max-height:360px;overflow-y:auto;"></div>
+
+        <div id="vLista" class="vTimeline" style="max-height:none;overflow-y:visible;padding:18px 16px 0;"></div>
       </div>`;
+
     document.body.appendChild(m);
     renderDesp('vei');
   };
@@ -6094,11 +6273,27 @@ window.tnAplicar = function() {
     var cat = document.getElementById(isPes?'dpFC':'vFC')?.value||'';
     var pag = isPes ? '' : (document.getElementById('vFP')?.value||'');
 
+    var sub = isPes ? '' : (document.getElementById('vFSub')?.value||'');
     todos = todos.filter(function(item){
       if (ini && item._data < ini) return false;
       if (fim && item._data > fim) return false;
-      if (cat && item.categoria !== cat) return false;
       if (pag && item.pagamento !== pag) return false;
+      // Categoria: para veículo, compara com a categoria migrada
+      if (cat) {
+        var itemCat = item.categoria;
+        if (!isPes && typeof CATEGORIAS_VEI!=='undefined' && !CATEGORIAS_VEI[itemCat]) {
+          itemCat = migrarCategoriaAntiga(item.categoria).categoria;
+        }
+        if (itemCat !== cat) return false;
+      }
+      // Subcategoria (só veículo)
+      if (sub) {
+        var itemSub = item.subcategoria || '';
+        if (!isPes && !itemSub && typeof migrarCategoriaAntiga!=='undefined') {
+          itemSub = migrarCategoriaAntiga(item.categoria).subcategoria;
+        }
+        if (itemSub !== sub) return false;
+      }
       return true;
     }).sort(function(a,b){ return b._data.localeCompare(a._data); });
 
@@ -6125,29 +6320,56 @@ window.tnAplicar = function() {
       }).join('');;
     } else {
       var parc=todos.filter(function(i){ return i.pagamento==='Crédito parcelado'; }).reduce(function(s,i){ return s+parseFloat(i.valor||0); },0);
-      var aberto=todos.filter(function(i){ return i.pagamento&&i.pagamento.startsWith('Crédito'); }).reduce(function(s,i){ return s+parseFloat(i.valor||0); },0);
-      var s=function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
-      s('vTotal',fmtR(total)); s('vParc',fmtR(parc)); s('vQtd',todos.length); s('vAberto',fmtR(aberto));
+      var avista=todos.filter(function(i){ return i.pagamento!=='Crédito parcelado'; }).reduce(function(s,i){ return s+parseFloat(i.valor||0); },0);
+      var s=function(id,v){ var el=document.getElementById(id); if(el) el.innerHTML=v; };
+      var rs=function(v){ return '<span style="font-size:11px;">R$</span> '+fmtNum(v); };
+      s('vAvista',rs(avista)); s('vParc',rs(parc)); s('vTotal',rs(total));
       var lista=document.getElementById('vLista');
       if (!lista) return;
-      if (!todos.length) { lista.innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px;">Nenhum registro encontrado</div>'; return; }
+      if (!todos.length) { lista.innerHTML='<div style="text-align:center;padding:44px 20px;color:#94a3b8;"><div style="width:60px;height:60px;border-radius:50%;background:#fff;border:1px solid #eef2f7;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 1px 4px rgba(16,24,40,0.05);"><i class="fa-solid fa-car-side" style="font-size:24px;color:#cbd5e1;"></i></div><div style="font-size:14px;font-weight:600;color:#6B7280;">Nenhuma despesa registrada</div><div style="font-size:12px;color:#94a3b8;margin-top:4px;">Toque em Adicionar para incluir um gasto</div></div>'; return; }
       lista.innerHTML = todos.map(function(item){
-        var parcInfo=item.pagamento==='Crédito parcelado'&&item.parcelas ? item.parcelas+'x de '+fmtR(parseFloat(item.valor)/parseInt(item.parcelas)) : '';
-        var kmInfo=item.kmTroca ? 'KM '+item.kmTroca+(item.kmProxima?' → '+item.kmProxima:'') : '';
-        return '<div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;">'
-          +'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
-          +'<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#1e293b;">'+(item.descricao||item.categoria)+'</div>'
-          +'<div style="font-size:10px;color:#94a3b8;margin-top:2px;">'+item.categoria+' · '+fmtData(item._data)+'</div>'
-          +'<div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">'
-          +(kmInfo?'<span style="font-size:10px;background:#f1f5f9;padding:2px 6px;color:#475569;">'+kmInfo+'</span>':'')
-          +(item.pagamento?'<span style="font-size:10px;background:#f1f5f9;padding:2px 6px;color:#475569;">'+item.pagamento+'</span>':'')
-          +(parcInfo?'<span style="font-size:10px;background:#dbeafe;padding:2px 6px;color:#1d4ed8;">'+parcInfo+'</span>':'')
-          +(item.cartao?'<span style="font-size:10px;background:#f0fdf4;padding:2px 6px;color:#166534;">'+item.cartao+'</span>':'')
-          +'</div></div>'
-          +'<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:8px;">'
-          +'<div style="font-size:14px;font-weight:900;color:var(--secondary);">'+fmtR(item.valor)+'</div>'
-          +'<button onclick="deleteDesp(\''+tipo+'\',\''+item._data+'\','+item._idx+')" style="width:26px;height:26px;border-radius:50%;border:none;background:#fee2e2;color:#ef4444;font-size:11px;cursor:pointer;"><i class="fa-solid fa-trash"></i></button>'
-          +'</div></div></div>';
+        var ehParcelado = item.pagamento==='Crédito parcelado';
+        var parcInfo = ehParcelado && item.parcelas ? item.parcelas+'x de '+fmtR(parseFloat(item.valor)/parseInt(item.parcelas)) : '';
+        var badges = '';
+        // Badges só em verde/preto/cinza (cores do tema)
+        if(item.kmTroca) badges += '<span class="vBadge" style="background:#f1f5f9;color:#475569;"><i class="fa-solid fa-gauge-high" style="font-size:9px;"></i>KM '+item.kmTroca+(item.kmProxima?' → '+item.kmProxima:'')+'</span>';
+        if(ehParcelado){
+          badges += '<span class="vBadge" style="background:#000;color:#fff;">Crédito Parcelado</span>';
+          if(parcInfo) badges += '<span class="vBadge" style="background:#f1f5f9;color:#1e293b;">'+item.parcelas+'x de '+fmtR(parseFloat(item.valor)/parseInt(item.parcelas))+'</span>';
+        } else if(item.pagamento){
+          badges += '<span class="vBadge" style="background:#f0fdf4;color:#166534;">'+item.pagamento+'</span>';
+        }
+        if(item.cartao) badges += '<span class="vBadge" style="background:#f1f5f9;color:#475569;"><i class="fa-solid fa-credit-card" style="font-size:9px;"></i>'+item.cartao+'</span>';
+
+        // Migra categoria antiga para exibição se necessário
+        var catExib = item.categoria;
+        var subExib = item.subcategoria || '';
+        if(typeof CATEGORIAS_VEI!=='undefined' && !CATEGORIAS_VEI[catExib]){
+          var migR = migrarCategoriaAntiga(item.categoria);
+          catExib = migR.categoria;
+          if(!subExib) subExib = migR.subcategoria;
+        }
+        var infoCat = (typeof infoCategoria==='function') ? infoCategoria(catExib) : {ic:'fa-wrench'};
+        var catLinha = catExib + (subExib ? ' › ' + subExib : '');
+        // Categoria /// Subcategoria
+        var catTitulo = '<span style="color:#111827;font-weight:700;">'+catExib+'</span>';
+        if(subExib) catTitulo += '<span style="color:var(--secondary);font-weight:700;"> /// </span><span style="color:var(--secondary);font-weight:400;">'+subExib+'</span>';
+        return '<div class="vEvent">'
+          +'<div class="vMarker"><i class="fa-solid '+infoCat.ic+'"></i></div>'
+          +'<div class="vCard">'
+          +  '<div style="font-size:15px;letter-spacing:-.2px;line-height:1.3;">'+catTitulo+'</div>'
+          +  (item.descricao?'<div style="font-size:12px;color:#475569;font-weight:400;margin-top:3px;">'+item.descricao+'</div>':'')
+          +  '<div style="font-size:11px;color:#cbd5e1;margin-top:4px;font-weight:500;">'+fmtData(item._data)+'</div>'
+          +  (badges?'<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">'+badges+'</div>':'')
+          +  '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">'
+          +    '<div style="display:flex;align-items:baseline;gap:5px;"><span style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;">Valor</span><span style="font-size:19px;font-weight:800;color:var(--secondary);letter-spacing:-.4px;"><span style="font-size:11px;color:var(--secondary);">R$</span> '+fmtNum(item.valor)+'</span></div>'
+          +    '<div style="display:flex;gap:8px;">'
+          +      '<button onclick="editDesp(\''+tipo+'\',\''+item._data+'\','+item._idx+')" class="vActBtn" style="background:var(--secondary);color:#fff;"><i class="fa-solid fa-pen"></i></button>'
+          +      '<button onclick="deleteDesp(\''+tipo+'\',\''+item._data+'\','+item._idx+')" class="vActBtn" style="background:#000;color:#fff;"><i class="fa-solid fa-trash"></i></button>'
+          +    '</div>'
+          +  '</div>'
+          +'</div>'
+          +'</div>';
       }).join('');
     }
   };
@@ -6168,14 +6390,37 @@ window.tnAplicar = function() {
       set('addDesc',   item.descricao);
       set('addData',   item.data || data);
       set('addValor',  item.valor ? String(item.valor).replace('.',',') : '');
-      // Set category
+      // Set category (com migração de categorias antigas para veículo)
       var catEl = document.getElementById('addCat');
       if (catEl) {
+        var catParaUsar = item.categoria;
+        var subParaUsar = item.subcategoria || '';
+        // Se for veículo e a categoria não estiver na estrutura nova, migra
+        if(tipo!=='pes' && typeof CATEGORIAS_VEI!=='undefined' && !CATEGORIAS_VEI[catParaUsar]){
+          var mig = migrarCategoriaAntiga(item.categoria);
+          catParaUsar = mig.categoria;
+          if(!subParaUsar) subParaUsar = mig.subcategoria;
+        }
         var found = false;
         for(var i=0;i<catEl.options.length;i++){
-          if(catEl.options[i].value===item.categoria){ catEl.selectedIndex=i; found=true; break; }
+          if(catEl.options[i].value===catParaUsar){ catEl.selectedIndex=i; found=true; break; }
         }
-        if(!found){ catEl.value='__nova__'; toggleCatNova(); set('addCatNova',item.categoria); }
+        if(!found && tipo==='pes'){ catEl.value='__nova__'; toggleCatNova(); set('addCatNova',item.categoria); }
+        // Carrega subcategorias e seleciona
+        if(tipo!=='pes' && typeof onCatVeiChange==='function'){
+          onCatVeiChange();
+          var subEl = document.getElementById('addSubcat');
+          if(subEl && subParaUsar){
+            // Se a subcat não existir na lista, adiciona como personalizada
+            var existe=false;
+            for(var j=0;j<subEl.options.length;j++){ if(subEl.options[j].value===subParaUsar){existe=true;break;} }
+            if(!existe){
+              var ex=getSubcatExtra(); if(!ex[catParaUsar])ex[catParaUsar]=[]; 
+              if(ex[catParaUsar].indexOf(subParaUsar)<0){ ex[catParaUsar].push(subParaUsar); saveSubcatExtra(ex); onCatVeiChange(); }
+            }
+            subEl.value = subParaUsar;
+          }
+        }
       }
       // Incluir no cálculo toggle
       var chk=document.getElementById('addIncCalc');
@@ -6210,7 +6455,7 @@ window.tnAplicar = function() {
   window.abrirAddDesp = function(tipo) {
     var old=document.getElementById('modalAddDesp'); if(old) old.remove();
     var isPes = tipo==='pes';
-    var cats = (isPes ? CAT_PES : CAT_VEI).concat(getCatExtra(tipo));
+    var cats = isPes ? CAT_PES.concat(getCatExtra(tipo)) : Object.keys(CATEGORIAS_VEI);
     var catOpts = cats.map(function(c){ return '<option>'+c+'</option>'; }).join('');
     var cartoes = getCartoes();
     var cartaoOpts = cartoes.map(function(c){ return '<option>'+c.nome+'</option>'; }).join('');
@@ -6279,12 +6524,20 @@ window.tnAplicar = function() {
           </div>
           <div>
             <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:4px;">Categoria *</div>
-            <select id="addCat" onchange="toggleCatNova()" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:0;font-size:13px;background:#fff;box-sizing:border-box;">
+            <select id="addCat" onchange="${isPes?'toggleCatNova()':'onCatVeiChange()'}" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:0;font-size:13px;background:#fff;box-sizing:border-box;">
               ${catOpts}
-              <option value="__nova__">+ Nova categoria...</option>
+              ${isPes?'<option value="__nova__">+ Nova categoria...</option>':''}
             </select>
             <input id="addCatNova" placeholder="Nome da nova categoria" style="width:100%;padding:10px;border:1px solid var(--secondary);border-radius:0;font-size:13px;box-sizing:border-box;margin-top:6px;display:none;">
           </div>
+          ${isPes?'':`<div>
+            <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:4px;">Subcategoria</div>
+            <div style="display:flex;gap:6px;">
+              <select id="addSubcat" style="flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:0;font-size:13px;background:#fff;box-sizing:border-box;"></select>
+              <button type="button" onclick="abrirNovaSubcat()" style="padding:0 14px;background:var(--secondary);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;" title="Nova subcategoria"><i class="fa-solid fa-plus"></i></button>
+              <button type="button" onclick="gerenciarSubcats()" style="padding:0 12px;background:#000;color:#fff;border:none;font-size:12px;cursor:pointer;" title="Gerenciar subcategorias"><i class="fa-solid fa-gear"></i></button>
+            </div>
+          </div>`}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <div>
               <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:4px;">Data *</div>
@@ -6301,6 +6554,8 @@ window.tnAplicar = function() {
       </div>`;
 
     document.body.appendChild(m);
+    // Inicializa subcategorias se for veículo
+    if(tipo!=='pes' && typeof onCatVeiChange==='function'){ setTimeout(onCatVeiChange, 30); }
     m.addEventListener('click', function(e){ if(e.target===m) m.remove(); });
   };
 
@@ -6321,6 +6576,119 @@ window.tnAplicar = function() {
     if(el) el.textContent=fmtR(valor/n);
   };
 
+
+  // ============================================================
+  // FUNÇÕES DE SUBCATEGORIA (despesas veículo)
+  // ============================================================
+  window.onFiltroCatChange = function(){
+    var catEl = document.getElementById('vFC');
+    var subEl = document.getElementById('vFSub');
+    if(!catEl || !subEl) { if(typeof renderDesp==='function') renderDesp('vei'); return; }
+    var cat = catEl.value;
+    if(!cat){
+      subEl.innerHTML = '<option value="" style="color:#000;">Todas subcategorias</option>';
+    } else {
+      var subs = subcatsDaCategoria(cat);
+      subEl.innerHTML = '<option value="" style="color:#000;">Todas subcategorias</option>' + subs.map(function(s){ return '<option style="color:#000;">'+s+'</option>'; }).join('');
+    }
+    renderDesp('vei');
+  };
+  window.onCatVeiChange = function(){
+    var catEl = document.getElementById('addCat');
+    var subEl = document.getElementById('addSubcat');
+    if(!catEl || !subEl) return;
+    var cat = catEl.value;
+    var subs = subcatsDaCategoria(cat);
+    subEl.innerHTML = '<option value="">— Selecione —</option>' + subs.map(function(s){ return '<option>'+s+'</option>'; }).join('');
+  };
+
+  window.abrirNovaSubcat = function(){
+    var catEl = document.getElementById('addCat');
+    if(!catEl){ return; }
+    var cat = catEl.value;
+    if(!cat || cat==='__nova__'){ alert('Selecione uma categoria primeiro.'); return; }
+    var nome = prompt('Nova subcategoria para "' + cat + '":');
+    if(!nome) return;
+    nome = nome.trim();
+    if(!nome) return;
+    // Verifica duplicada
+    if(subcatsDaCategoria(cat).indexOf(nome) > -1){ alert('Essa subcategoria já existe.'); return; }
+    var extra = getSubcatExtra();
+    if(!extra[cat]) extra[cat] = [];
+    extra[cat].push(nome);
+    saveSubcatExtra(extra);
+    // Recarrega o select e seleciona a nova
+    onCatVeiChange();
+    var subEl = document.getElementById('addSubcat');
+    if(subEl) subEl.value = nome;
+  };
+
+  window.gerenciarSubcats = function(){
+    var catEl = document.getElementById('addCat');
+    if(!catEl){ return; }
+    var cat = catEl.value;
+    if(!cat || cat==='__nova__'){ alert('Selecione uma categoria primeiro.'); return; }
+
+    var old = document.getElementById('modalSubcats'); if(old) old.remove();
+    var m = document.createElement('div');
+    m.id = 'modalSubcats';
+    m.style.cssText = 'display:flex;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px;';
+
+    var padrao = (CATEGORIAS_VEI[cat] && CATEGORIAS_VEI[cat].subs) ? CATEGORIAS_VEI[cat].subs : [];
+    var extra = getSubcatExtra()[cat] || [];
+
+    var listaHtml = '';
+    padrao.forEach(function(s){
+      listaHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9;"><span style="font-size:13px;color:#1e293b;">'+s+'</span><span style="font-size:10px;color:#94a3b8;text-transform:uppercase;">Padrão</span></div>';
+    });
+    extra.forEach(function(s){
+      listaHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9;"><span style="font-size:13px;color:#1e293b;font-weight:600;">'+s+'</span><div style="display:flex;gap:6px;">'
+        + '<button onclick="renomearSubcat(\'' + cat.replace(/'/g,"\\'") + '\',\'' + s.replace(/'/g,"\\'") + '\')" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--secondary);color:#fff;font-size:11px;cursor:pointer;"><i class="fa-solid fa-pen"></i></button>'
+        + '<button onclick="excluirSubcat(\'' + cat.replace(/'/g,"\\'") + '\',\'' + s.replace(/'/g,"\\'") + '\')" style="width:28px;height:28px;border-radius:50%;border:none;background:#000;color:#fff;font-size:11px;cursor:pointer;"><i class="fa-solid fa-trash"></i></button>'
+        + '</div></div>';
+    });
+    if(!extra.length) listaHtml += '<div style="font-size:11px;color:#94a3b8;text-align:center;padding:10px;">Nenhuma subcategoria personalizada ainda.</div>';
+
+    m.innerHTML = '<div style="background:#fff;width:100%;max-width:380px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4);">'
+      + '<div style="background:#000;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;">'
+      +   '<div style="color:var(--secondary);font-size:13px;font-weight:700;text-transform:uppercase;">'+cat+'</div>'
+      +   '<button onclick="document.getElementById(\'modalSubcats\').remove()" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>'
+      + '</div>'
+      + '<div style="padding:16px;">'
+      +   '<div style="font-size:11px;color:#64748b;margin-bottom:10px;">Subcategorias padrão não podem ser removidas. As personalizadas você pode editar/excluir.</div>'
+      +   listaHtml
+      +   '<button onclick="abrirNovaSubcat();document.getElementById(\'modalSubcats\').remove();" style="width:100%;margin-top:14px;padding:11px;background:var(--secondary);color:#fff;border:none;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;"><i class="fa-solid fa-plus" style="margin-right:6px;"></i>Nova Subcategoria</button>'
+      + '</div>'
+      + '</div>';
+    document.body.appendChild(m);
+    m.addEventListener('click', function(e){ if(e.target===m) m.remove(); });
+  };
+
+  window.renomearSubcat = function(cat, sub){
+    var novo = prompt('Renomear subcategoria:', sub);
+    if(!novo) return;
+    novo = novo.trim();
+    if(!novo || novo===sub) return;
+    var extra = getSubcatExtra();
+    if(extra[cat]){
+      var i = extra[cat].indexOf(sub);
+      if(i>-1){ extra[cat][i] = novo; saveSubcatExtra(extra); }
+    }
+    gerenciarSubcats();
+    onCatVeiChange();
+  };
+
+  window.excluirSubcat = function(cat, sub){
+    if(!confirm('Excluir a subcategoria "'+sub+'"?')) return;
+    var extra = getSubcatExtra();
+    if(extra[cat]){
+      extra[cat] = extra[cat].filter(function(s){ return s!==sub; });
+      saveSubcatExtra(extra);
+    }
+    gerenciarSubcats();
+    onCatVeiChange();
+  };
+
   window.salvarDesp = function(tipo) {
     var desc  = document.getElementById('addDesc')?.value.trim();
     var catSel= document.getElementById('addCat')?.value;
@@ -6338,9 +6706,10 @@ window.tnAplicar = function() {
     }
 
     var incCalc = isPes ? (document.getElementById('addIncCalc')?.checked !== false) : true;
+    var subSel = document.getElementById('addSubcat')?.value || '';
     var item = {
       tipo:         isPes ? 'pessoal' : 'veiculo',
-      categoria:    isPes ? cat : categoriaNativa(cat),
+      categoria:    cat,
       descricao:    desc,
       valor:        valor,
       data:         data,
@@ -6348,6 +6717,8 @@ window.tnAplicar = function() {
     };
 
     if (!isPes) {
+      item.subcategoria = subSel;
+      item._catNativa = categoriaNativa(cat);
       item.pagamento = document.getElementById('addPag')?.value||'Dinheiro';
       item.kmTroca   = document.getElementById('addKmT')?.value||'';
       item.kmProxima = document.getElementById('addKmP')?.value||'';
@@ -10888,4 +11259,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-                                                                                                                                                                                                                                  </html>
+    </html>
