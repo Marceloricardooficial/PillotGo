@@ -3791,7 +3791,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v413';
+window.APP_VERSAO = 'v426';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -6000,6 +6000,13 @@ window.tnAplicar = function() {
     if(CATEGORIAS_VEI[cat]) return CATEGORIAS_VEI[cat];
     return { ic:'fa-wrench', cor:'#6b7280', subs:[] };
   }
+  // Expõe globalmente para o módulo de seleção múltipla
+  window.CATEGORIAS_VEI = CATEGORIAS_VEI;
+  window.subcatsDaCategoria = subcatsDaCategoria;
+  window.getSubcatExtra = getSubcatExtra;
+  window.saveSubcatExtra = saveSubcatExtra;
+  window.infoCategoria = infoCategoria;
+  window.migrarCategoriaAntiga = migrarCategoriaAntiga;
   // Migra categorias antigas -> nova estrutura {categoria, subcategoria}
   function migrarCategoriaAntiga(catAntiga){
     if(!catAntiga) return { categoria:'Outros', subcategoria:'Despesas gerais' };
@@ -6204,13 +6211,14 @@ window.tnAplicar = function() {
         </div>
 
         <div style="padding:16px 16px 0;display:flex;gap:10px;">
-          <button onclick="abrirAddDesp('vei')" style="flex:1;padding:12px;background:var(--secondary);color:#fff;border:none;border-radius:0;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-            <i class="fa-solid fa-plus"></i> Adicionar
+          <button id="vBtnAdd" onclick="toggleAddInline()" style="flex:1;padding:12px;background:var(--secondary);color:#fff;border:none;border-radius:0;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <i class="fa-solid fa-plus" id="vBtnAddIcon"></i> <span id="vBtnAddTxt">Adicionar</span>
           </button>
-          <button onclick="abrirGerenciarCartoes()" style="flex:1;padding:12px;background:#000;color:#fff;border:none;border-radius:0;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-            <i class="fa-solid fa-credit-card"></i> Cartões
+          <button id="vBtnCartoes" onclick="toggleCartoesInline()" style="flex:1;padding:12px;background:#000;color:#fff;border:none;border-radius:0;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <i class="fa-solid fa-credit-card"></i> <span>Cartões</span>
           </button>
         </div>
+        <div id="vAddInline" style="max-height:0;overflow:hidden;transition:max-height .35s ease;padding:0 16px;"></div>
 
         <div style="position:relative;margin-top:14px;background:#000;background-image:url('https://marceloricardooficial.github.io/PillotGo/fundo3.png');background-size:cover;background-position:center;overflow:hidden;">
           <div style="position:absolute;inset:0;background:rgba(0,0,0,.82);"></div>
@@ -6220,10 +6228,10 @@ window.tnAplicar = function() {
                 <div><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;">De</div><input type="date" id="vFI" value="${passado.toISOString().split('T')[0]}" onchange="renderDesp('vei')" style="width:100%;padding:10px;border:1px solid rgba(255,255,255,.2);border-radius:0;font-size:14px;box-sizing:border-box;color:#fff;background:rgba(255,255,255,.08);"></div>
                 <div><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;">Até</div><input type="date" id="vFF" value="${hoje()}" onchange="renderDesp('vei')" style="width:100%;padding:10px;border:1px solid rgba(255,255,255,.2);border-radius:0;font-size:14px;box-sizing:border-box;color:#fff;background:rgba(255,255,255,.08);"></div>
               </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%;">
-                <select id="vFC" onchange="onFiltroCatChange()" style="width:100%;min-width:0;padding:10px 6px;border:1px solid rgba(255,255,255,.2);border-radius:0;font-size:12px;background:rgba(255,255,255,.08);color:#fff;box-sizing:border-box;-webkit-appearance:none;appearance:none;text-overflow:ellipsis;"><option value="" style="color:#000;">Categorias</option>${catOpts}</select>
-                <select id="vFSub" onchange="renderDesp('vei')" style="width:100%;min-width:0;padding:10px 6px;border:1px solid rgba(255,255,255,.2);border-radius:0;font-size:12px;background:rgba(255,255,255,.08);color:#fff;box-sizing:border-box;-webkit-appearance:none;appearance:none;text-overflow:ellipsis;"><option value="" style="color:#000;">Subcat.</option></select>
-                <select id="vFP" onchange="renderDesp('vei')" style="width:100%;min-width:0;padding:10px 6px;border:1px solid rgba(255,255,255,.2);border-radius:0;font-size:12px;background:rgba(255,255,255,.08);color:#fff;box-sizing:border-box;-webkit-appearance:none;appearance:none;text-overflow:ellipsis;"><option value="" style="color:#000;">Pagamento</option>${PAGAMENTOS.map(function(p){ return '<option style=\"color:#000;\">'+p+'</option>'; }).join('')}</select>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;">
+                <div id="vFCcampo" onclick="abrirFiltroCat()" style="width:100%;min-width:0;padding:10px 8px;border:1px solid rgba(255,255,255,.2);font-size:13px;background:rgba(255,255,255,.08);color:#fff;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:4px;overflow:hidden;"><span id="vFCtxt" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Categorias</span><i class="fa-solid fa-chevron-down" style="font-size:10px;opacity:.7;flex-shrink:0;"></i></div>
+                <select id="vFC" onchange="renderDesp('vei')" style="display:none;"><option value="">Categorias</option>${catOpts}</select>
+                <select id="vFP" onchange="renderDesp('vei')" style="width:100%;min-width:0;padding:10px 8px;border:1px solid rgba(255,255,255,.2);border-radius:0;font-size:13px;background:rgba(255,255,255,.08);color:#fff;box-sizing:border-box;-webkit-appearance:none;appearance:none;text-overflow:ellipsis;"><option value="" style="color:#000;">Pagamento</option>${PAGAMENTOS.map(function(p){ return '<option style=\"color:#000;\">'+p+'</option>'; }).join('')}</select>
               </div>
             </div>
 
@@ -6273,7 +6281,7 @@ window.tnAplicar = function() {
     var cat = document.getElementById(isPes?'dpFC':'vFC')?.value||'';
     var pag = isPes ? '' : (document.getElementById('vFP')?.value||'');
 
-    var sub = isPes ? '' : (document.getElementById('vFSub')?.value||'');
+    var sub = '';
     todos = todos.filter(function(item){
       if (ini && item._data < ini) return false;
       if (fim && item._data > fim) return false;
@@ -6351,9 +6359,22 @@ window.tnAplicar = function() {
         }
         var infoCat = (typeof infoCategoria==='function') ? infoCategoria(catExib) : {ic:'fa-wrench'};
         var catLinha = catExib + (subExib ? ' › ' + subExib : '');
-        // Categoria /// Subcategoria
-        var catTitulo = '<span style="color:#111827;font-weight:700;">'+catExib+'</span>';
-        if(subExib) catTitulo += '<span style="color:var(--secondary);font-weight:700;"> /// </span><span style="color:var(--secondary);font-weight:400;">'+subExib+'</span>';
+        // Categoria /// Subcategoria(s)
+        var catTitulo;
+        if(item.subcategorias && item.subcategorias.length){
+          // Múltiplos serviços: agrupa por categoria
+          var grupos = {};
+          item.subcategorias.forEach(function(o){ if(!grupos[o.cat])grupos[o.cat]=[]; grupos[o.cat].push(o.sub); });
+          var linhas = Object.keys(grupos).map(function(c){
+            return '<span style="color:#111827;font-weight:700;">'+c+'</span>'
+              + '<span style="color:var(--secondary);font-weight:700;"> /// </span>'
+              + '<span style="color:var(--secondary);font-weight:400;">'+grupos[c].join(', ')+'</span>';
+          });
+          catTitulo = linhas.join('<br>');
+        } else {
+          catTitulo = '<span style="color:#111827;font-weight:700;">'+catExib+'</span>';
+          if(subExib) catTitulo += '<span style="color:var(--secondary);font-weight:700;"> /// </span><span style="color:var(--secondary);font-weight:400;">'+subExib+'</span>';
+        }
         return '<div class="vEvent">'
           +'<div class="vMarker"><i class="fa-solid '+infoCat.ic+'"></i></div>'
           +'<div class="vCard">'
@@ -6383,43 +6404,58 @@ window.tnAplicar = function() {
     var item = obj[data] && obj[data][idx];
     if (!item) return;
     _editMode = { tipo:tipo, data:data, idx:idx };
-    abrirAddDesp(tipo);
+    if(tipo!=='pes' && document.getElementById('vAddInline')){
+      var box=document.getElementById('vAddInline');
+      window._addInlineAberto = true;
+      var ic=document.getElementById('vBtnAddIcon'); var tx=document.getElementById('vBtnAddTxt');
+      if(ic) ic.className='fa-solid fa-xmark'; if(tx) tx.textContent='Fechar';
+      montarFormInline(box);
+    } else {
+      abrirAddDesp(tipo);
+    }
     // Fill fields after modal renders
     setTimeout(function() {
       var set = function(id,v){ var el=document.getElementById(id); if(el) el.value=v||''; };
       set('addDesc',   item.descricao);
       set('addData',   item.data || data);
       set('addValor',  item.valor ? String(item.valor).replace('.',',') : '');
-      // Set category (com migração de categorias antigas para veículo)
-      var catEl = document.getElementById('addCat');
-      if (catEl) {
-        var catParaUsar = item.categoria;
-        var subParaUsar = item.subcategoria || '';
-        // Se for veículo e a categoria não estiver na estrutura nova, migra
-        if(tipo!=='pes' && typeof CATEGORIAS_VEI!=='undefined' && !CATEGORIAS_VEI[catParaUsar]){
-          var mig = migrarCategoriaAntiga(item.categoria);
-          catParaUsar = mig.categoria;
-          if(!subParaUsar) subParaUsar = mig.subcategoria;
-        }
-        var found = false;
-        for(var i=0;i<catEl.options.length;i++){
-          if(catEl.options[i].value===catParaUsar){ catEl.selectedIndex=i; found=true; break; }
-        }
-        if(!found && tipo==='pes'){ catEl.value='__nova__'; toggleCatNova(); set('addCatNova',item.categoria); }
-        // Carrega subcategorias e seleciona
-        if(tipo!=='pes' && typeof onCatVeiChange==='function'){
-          onCatVeiChange();
-          var subEl = document.getElementById('addSubcat');
-          if(subEl && subParaUsar){
-            // Se a subcat não existir na lista, adiciona como personalizada
-            var existe=false;
-            for(var j=0;j<subEl.options.length;j++){ if(subEl.options[j].value===subParaUsar){existe=true;break;} }
-            if(!existe){
-              var ex=getSubcatExtra(); if(!ex[catParaUsar])ex[catParaUsar]=[]; 
-              if(ex[catParaUsar].indexOf(subParaUsar)<0){ ex[catParaUsar].push(subParaUsar); saveSubcatExtra(ex); onCatVeiChange(); }
-            }
-            subEl.value = subParaUsar;
+      // Set category - veículo usa seleção múltipla (_selCats)
+      if(tipo!=='pes'){
+        window._selCats = {};
+        // Se tem subcategorias múltiplas salvas, usa elas
+        if(item.subcategorias && item.subcategorias.length){
+          item.subcategorias.forEach(function(o){
+            if(!window._selCats[o.cat]) window._selCats[o.cat] = [];
+            if(window._selCats[o.cat].indexOf(o.sub)<0) window._selCats[o.cat].push(o.sub);
+          });
+        } else {
+          // Compat: lançamento antigo (categoria + subcategoria simples ou migração)
+          var catP = item.categoria;
+          var subP = item.subcategoria || '';
+          if(typeof CATEGORIAS_VEI!=='undefined' && !CATEGORIAS_VEI[catP]){
+            var migr = migrarCategoriaAntiga(item.categoria);
+            catP = migr.categoria;
+            if(!subP) subP = migr.subcategoria;
           }
+          if(catP){
+            window._selCats[catP] = subP ? [subP] : [];
+            // Garante que a subcat exista na estrutura
+            if(subP && subcatsDaCategoria(catP).indexOf(subP)<0){
+              var exx=getSubcatExtra(); if(!exx[catP])exx[catP]=[]; 
+              if(exx[catP].indexOf(subP)<0){ exx[catP].push(subP); saveSubcatExtra(exx); }
+            }
+          }
+        }
+        if(typeof _atualizarCampoCats==='function') setTimeout(_atualizarCampoCats, 30);
+      } else {
+        // Pessoal: mantém lógica de select antiga
+        var catEl = document.getElementById('addCat');
+        if (catEl) {
+          var found = false;
+          for(var i=0;i<catEl.options.length;i++){
+            if(catEl.options[i].value===item.categoria){ catEl.selectedIndex=i; found=true; break; }
+          }
+          if(!found){ catEl.value='__nova__'; if(typeof toggleCatNova==='function')toggleCatNova(); set('addCatNova',item.categoria); }
         }
       }
       // Incluir no cálculo toggle
@@ -6438,7 +6474,9 @@ window.tnAplicar = function() {
       // Change save button text
       var btn=document.querySelector('#modalAddDesp button[onclick*="salvarDesp"]');
       if(btn) btn.textContent='Salvar Alterações';
-    }, 80);
+      var btnIn=document.querySelector('#vAddInline button[onclick*="salvarDesp"]');
+      if(btnIn) btnIn.textContent='Salvar Alterações';
+    }, 150);
   };
 
   window.deleteDesp = function(tipo, data, idx) {
@@ -6452,7 +6490,7 @@ window.tnAplicar = function() {
   // ================================================================
   // MODAL ADICIONAR (pessoal ou veículo)
   // ================================================================
-  window.abrirAddDesp = function(tipo) {
+  window.abrirAddDesp = function(tipo, inlineMode) {
     var old=document.getElementById('modalAddDesp'); if(old) old.remove();
     var isPes = tipo==='pes';
     var cats = isPes ? CAT_PES.concat(getCatExtra(tipo)) : Object.keys(CATEGORIAS_VEI);
@@ -6514,7 +6552,7 @@ window.tnAplicar = function() {
       <div style="background:#fff;width:92%;max-width:420px;border-radius:0;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);animation:popIn .25s cubic-bezier(.34,1.56,.64,1);margin:auto;">
         <div style="background:#000;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;">
           <div style="color:var(--secondary);font-size:13px;font-weight:700;text-transform:uppercase;">${isPes?'Nova Despesa Pessoal':'Nova Despesa do Veículo'}</div>
-          <button onclick="document.getElementById('modalAddDesp').remove()" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:14px;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+          <button onclick="if(window._addInlineAberto){fecharAddInline()}else{document.getElementById('modalAddDesp').remove()}" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:14px;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
         </div>
         ${incCalcInfo}
         <div style="padding:16px;display:flex;flex-direction:column;gap:10px;">
@@ -6553,11 +6591,129 @@ window.tnAplicar = function() {
         </div>
       </div>`;
 
-    document.body.appendChild(m);
-    // Inicializa subcategorias se for veículo
-    if(tipo!=='pes' && typeof onCatVeiChange==='function'){ setTimeout(onCatVeiChange, 30); }
-    m.addEventListener('click', function(e){ if(e.target===m) m.remove(); });
+    if(inlineMode){
+      // Renderiza o conteúdo do form dentro do container inline
+      var box = document.getElementById('vAddInline');
+      if(box){
+        // Pega só o card interno do modal (sem o overlay)
+        var cardInterno = m.querySelector('div'); // primeiro filho = card branco
+        if(cardInterno){
+          // Remove o estilo de modal do card e ajusta pra inline
+          cardInterno.style.width='100%';
+          cardInterno.style.maxWidth='100%';
+          cardInterno.style.boxShadow='none';
+          cardInterno.style.animation='none';
+          cardInterno.style.margin='12px 0 0';
+          box.innerHTML='';
+          box.appendChild(cardInterno);
+        }
+        box.style.maxHeight = '2200px';
+        if(tipo!=='pes' && typeof onCatVeiChange==='function'){ setTimeout(onCatVeiChange, 30); }
+        setTimeout(function(){ box.scrollIntoView({behavior:'smooth', block:'nearest'}); }, 120);
+      }
+    } else {
+      document.body.appendChild(m);
+      if(tipo!=='pes' && typeof onCatVeiChange==='function'){ setTimeout(onCatVeiChange, 30); }
+      m.addEventListener('click', function(e){ if(e.target===m) m.remove(); });
+    }
   };
+
+  // ============================================================
+  // FORMULÁRIO INLINE
+  // ============================================================
+  window._addInlineAberto = false;
+  window.toggleAddInline = function(){
+    var box = document.getElementById('vAddInline');
+    if(!box){ return; }
+    if(window._cartoesInlineAberto){ fecharCartoesInline(); }
+    if(window._addInlineAberto){ fecharAddInline(); return; }
+
+    // Loading rápido na cor do sistema
+    box.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:30px;"><div style="width:30px;height:30px;border:3px solid rgba(34,197,94,.2);border-top-color:var(--secondary);border-radius:50%;animation:splashSpin .7s linear infinite;"></div></div>';
+    box.style.maxHeight = '120px';
+    window._addInlineAberto = true;
+    var icon=document.getElementById('vBtnAddIcon'); var txt=document.getElementById('vBtnAddTxt');
+    if(icon) icon.className='fa-solid fa-xmark';
+    if(txt) txt.textContent='Fechar';
+
+    setTimeout(function(){ montarFormInline(box); }, 280);
+  };
+
+  function montarFormInline(box){
+    var cats = Object.keys(CATEGORIAS_VEI);
+    var catOpts = cats.map(function(c){ return '<option>'+c+'</option>'; }).join('');
+    var cartoes = getCartoes();
+    var cartaoOpts = cartoes.map(function(c){ return '<option>'+c.nome+'</option>'; }).join('');
+    var pagOpts = PAGAMENTOS.map(function(p){ return '<option>'+p+'</option>'; }).join('');
+    var hojeStr = hoje();
+
+    var lbl = 'font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:4px;';
+    var inp = 'width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:0;font-size:13px;box-sizing:border-box;background:#fff;';
+
+    var h = '<div style="padding:14px 0 18px;display:flex;flex-direction:column;gap:10px;">';
+
+    // Linha 1: Descrição | Data
+    h += '<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:8px;">'
+      + '<div><div style="'+lbl+'">Descrição *</div><input id="addDesc" placeholder="Ex: 2 pneus" style="'+inp+'"></div>'
+      + '<div><div style="'+lbl+'">Data</div><input id="addData" type="date" value="'+hojeStr+'" style="'+inp+'"></div>'
+      + '</div>';
+
+    // Linha 2: Campo único de Categorias/Serviços (abre seletor múltiplo)
+    h += '<div><div style="'+lbl+'">Serviços / Categorias *</div>'
+      + '<div id="addCatCampo" onclick="abrirMultiSel()" style="'+inp+'display:flex;align-items:center;justify-content:space-between;cursor:pointer;min-height:40px;">'
+      +   '<span class="catCampoTxt" style="color:#94a3b8;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Toque para selecionar</span>'
+      +   '<span class="catCampoBadge" style="display:none;min-width:22px;height:22px;border-radius:11px;background:var(--secondary);color:#fff;font-size:11px;font-weight:700;align-items:center;justify-content:center;padding:0 6px;margin-left:8px;flex-shrink:0;"></span>'
+      +   '<i class="fa-solid fa-chevron-down" style="color:#94a3b8;font-size:12px;margin-left:8px;flex-shrink:0;"></i>'
+      + '</div></div>'
+      + '<input type="hidden" id="addCat"><input type="hidden" id="addSubcat">';
+
+    // Linha 3: KM Troca | KM Próxima | Valor
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'
+      + '<div><div style="'+lbl+'">KM da Troca</div><input id="addKmT" type="number" placeholder="120000" style="'+inp+'"></div>'
+      + '<div><div style="'+lbl+'">KM Próxima</div><input id="addKmP" type="number" placeholder="125000" style="'+inp+'"></div>'
+      + '<div><div style="'+lbl+'">Valor *</div><input id="addValor" placeholder="0,00" style="'+inp+'"></div>'
+      + '</div>';
+
+    // Linha 4: Forma de pagamento
+    h += '<div><div style="'+lbl+'">Forma de Pagamento</div><select id="addPag" onchange="toggleParcAdd()" style="'+inp+'">'+pagOpts+'</select></div>';
+
+    // Box de parcelas (escondido)
+    h += '<div id="addParcBox" style="display:none;background:#f8fafc;padding:12px;flex-direction:column;gap:8px;">'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+      +   '<div><div style="'+lbl+'">Parcelas</div><input id="addParcN" type="number" min="2" max="48" placeholder="6" oninput="calcParcAdd()" style="'+inp+'"></div>'
+      +   '<div><div style="'+lbl+'">Valor/Parcela</div><div id="addParcVal" style="padding:10px;border:1px solid #e5e7eb;font-size:13px;font-weight:700;color:var(--secondary);">R$ 0,00</div></div>'
+      + '</div>'
+      + '<div><div style="'+lbl+'">Cartão</div><select id="addCartao" style="'+inp+'"><option value="">Sem cartão</option>'+cartaoOpts+'</select></div>'
+      + '</div>';
+
+    // Checkbox incluir no cálculo (escondido pro veiculo, mantém compat)
+    h += '<input type="hidden" id="addIncCalc" value="true">';
+
+    // Botão salvar
+    h += '<button onclick="salvarDesp(\'vei\')" style="width:100%;padding:13px;background:var(--secondary);color:#fff;border:none;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;margin-top:4px;">Salvar</button>';
+
+    h += '</div>';
+
+    box.innerHTML = h;
+    box.style.maxHeight = '2200px';
+
+    // Se não está editando, zera a seleção
+    if(!_editMode){ window._selCats = {}; }
+    // Atualiza o campo de categorias selecionadas
+    if(typeof _atualizarCampoCats==='function'){ setTimeout(_atualizarCampoCats, 20); }
+    setTimeout(function(){ box.scrollIntoView({behavior:'smooth', block:'nearest'}); }, 120);
+  }
+
+  window.fecharAddInline = function(){
+    var box=document.getElementById('vAddInline');
+    if(box){ box.style.maxHeight='0'; setTimeout(function(){ box.innerHTML=''; }, 350); }
+    window._addInlineAberto=false;
+    _editMode=null;
+    var icon=document.getElementById('vBtnAddIcon'); var txt=document.getElementById('vBtnAddTxt');
+    if(icon) icon.className='fa-solid fa-plus';
+    if(txt) txt.textContent='Adicionar';
+  };
+
 
   window.toggleCatNova = function() {
     var el=document.getElementById('addCatNova');
@@ -6691,22 +6847,37 @@ window.tnAplicar = function() {
 
   window.salvarDesp = function(tipo) {
     var desc  = document.getElementById('addDesc')?.value.trim();
-    var catSel= document.getElementById('addCat')?.value;
-    var catNova=document.getElementById('addCatNova')?.value.trim();
-    var cat   = catSel==='__nova__' ? catNova : catSel;
+    var isPes = tipo==='pes';
     var data  = document.getElementById('addData')?.value;
     var valor = parseFloat((document.getElementById('addValor')?.value||'').replace(',','.'));
-    var isPes = tipo==='pes';
 
-    if (!desc||!cat||!data||isNaN(valor)||valor<=0) { alert('Preencha todos os campos obrigatórios.'); return; }
-
-    // Salva nova categoria
-    if (catSel==='__nova__' && catNova) {
-      var extra=getCatExtra(tipo); if(!extra.includes(catNova)){ extra.push(catNova); saveCatExtra(tipo,extra); }
+    var cat, catNova, catSel;
+    var subsMultiplas = []; // lista de "Categoria › Sub" para veículo
+    if(!isPes){
+      // Veículo: usa seleção múltipla de _selCats
+      var sel = window._selCats || {};
+      var catKeys = Object.keys(sel);
+      if(!catKeys.length){ alert('Selecione pelo menos um serviço/categoria.'); return; }
+      // Categoria principal = a primeira categoria selecionada
+      cat = catKeys[0];
+      // Monta lista de subcategorias selecionadas (de todas as categorias)
+      catKeys.forEach(function(c){
+        (sel[c]||[]).forEach(function(s){ subsMultiplas.push({cat:c, sub:s}); });
+      });
+      if (!desc||!data||isNaN(valor)||valor<=0) { alert('Preencha descrição, data e valor.'); return; }
+    } else {
+      catSel= document.getElementById('addCat')?.value;
+      catNova=document.getElementById('addCatNova')?.value.trim();
+      cat   = catSel==='__nova__' ? catNova : catSel;
+      if (!desc||!cat||!data||isNaN(valor)||valor<=0) { alert('Preencha todos os campos obrigatórios.'); return; }
+      if (catSel==='__nova__' && catNova) {
+        var extraP=getCatExtra(tipo); if(!extraP.includes(catNova)){ extraP.push(catNova); saveCatExtra(tipo,extraP); }
+      }
     }
 
     var incCalc = isPes ? (document.getElementById('addIncCalc')?.checked !== false) : true;
-    var subSel = document.getElementById('addSubcat')?.value || '';
+    // Subcategoria principal (primeira selecionada) + lista completa
+    var subSel = (!isPes && subsMultiplas.length) ? subsMultiplas[0].sub : '';
     var item = {
       tipo:         isPes ? 'pessoal' : 'veiculo',
       categoria:    cat,
@@ -6718,6 +6889,7 @@ window.tnAplicar = function() {
 
     if (!isPes) {
       item.subcategoria = subSel;
+      item.subcategorias = subsMultiplas; // [{cat, sub}, ...] - múltiplos serviços
       item._catNativa = categoriaNativa(cat);
       item.pagamento = document.getElementById('addPag')?.value||'Dinheiro';
       item.kmTroca   = document.getElementById('addKmT')?.value||'';
@@ -6743,6 +6915,7 @@ window.tnAplicar = function() {
 
     setDespesas(d);
     document.getElementById('modalAddDesp')?.remove();
+    if(window._addInlineAberto && typeof fecharAddInline==='function'){ fecharAddInline(); }
     renderDesp(tipo);
   };
 
@@ -6800,23 +6973,96 @@ window.tnAplicar = function() {
     var cartoes=getCartoes();
     if(!cartoes.length){ lista.innerHTML='<div style="text-align:center;padding:20px;color:#94a3b8;font-size:12px;">Nenhum cartão cadastrado</div>'; return; }
     lista.innerHTML=cartoes.map(function(c){
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid #f1f5f9;">'
-        +'<div><div style="font-size:13px;font-weight:700;color:#1e293b;">'+c.nome+'</div>'
-        +'<div style="font-size:10px;color:#94a3b8;">'+c.bandeira+(c.banco?' · '+c.banco:'')+(c.limite?' · '+fmtR(c.limite):'')+'</div></div>'
-        +'<button onclick="deleteCartao(\''+c.id+'\')" style="width:26px;height:26px;border-radius:50%;border:none;background:#fee2e2;color:#ef4444;font-size:11px;cursor:pointer;"><i class="fa-solid fa-trash"></i></button>'
+      var dias='';
+      if(c.diaFechamento||c.diaVencimento){
+        dias='<div style="display:flex;gap:5px;margin-top:5px;">';
+        if(c.diaFechamento) dias+='<span style="font-size:9px;background:#f1f5f9;color:#475569;padding:2px 7px;font-weight:600;"><i class="fa-solid fa-lock" style="font-size:8px;margin-right:3px;"></i>Fecha '+c.diaFechamento+'</span>';
+        if(c.diaVencimento) dias+='<span style="font-size:9px;background:#f0fdf4;color:#166534;padding:2px 7px;font-weight:600;"><i class="fa-solid fa-calendar-check" style="font-size:8px;margin-right:3px;"></i>Vence '+c.diaVencimento+'</span>';
+        dias+='</div>';
+      }
+      return '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 12px;border-bottom:1px solid #f1f5f9;">'
+        +'<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#1e293b;">'+c.nome+'</div>'
+        +'<div style="font-size:10px;color:#94a3b8;">'+c.bandeira+(c.banco?' · '+c.banco:'')+(c.limite?' · '+fmtR(c.limite):'')+'</div>'
+        +dias+'</div>'
+        +'<button onclick="deleteCartao(\''+c.id+'\')" style="width:30px;height:30px;border-radius:50%;border:none;background:#000;color:#fff;font-size:11px;cursor:pointer;flex-shrink:0;margin-left:8px;"><i class="fa-solid fa-trash"></i></button>'
         +'</div>';
     }).join('');
   }
+
+  // ============================================================
+  // GERENCIADOR DE CARTÕES INLINE (mesmo container do form)
+  // ============================================================
+  window._cartoesInlineAberto = false;
+  window.toggleCartoesInline = function(){
+    var box = document.getElementById('vAddInline');
+    if(!box){ return; }
+    // Se o form de add estiver aberto, fecha primeiro
+    if(window._addInlineAberto){ fecharAddInline(); }
+    if(window._cartoesInlineAberto){ fecharCartoesInline(); return; }
+
+    // Loading
+    box.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:30px;"><div style="width:30px;height:30px;border:3px solid rgba(34,197,94,.2);border-top-color:var(--secondary);border-radius:50%;animation:splashSpin .7s linear infinite;"></div></div>';
+    box.style.maxHeight = '120px';
+    window._cartoesInlineAberto = true;
+    // Botao cartoes vira fechar
+    var bc = document.getElementById('vBtnCartoes');
+    if(bc){ bc.querySelector('span') && (bc.querySelector('span').textContent='Fechar'); var ic=bc.querySelector('i'); if(ic) ic.className='fa-solid fa-xmark'; }
+
+    setTimeout(function(){ montarCartoesInline(box); }, 280);
+  };
+
+  function montarCartoesInline(box){
+    var bandOpts = BANDEIRAS.map(function(b){ return '<option>'+b+'</option>'; }).join('');
+    var lbl = 'font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:4px;';
+    var inp = 'width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:0;font-size:13px;box-sizing:border-box;background:#fff;';
+
+    var h = '<div style="padding:14px 0 18px;display:flex;flex-direction:column;gap:12px;">';
+
+    // Lista de cartões cadastrados
+    h += '<div><div style="'+lbl+'">Cartões cadastrados</div><div id="cartoesLista" style="border:1px solid #e5e7eb;max-height:200px;overflow-y:auto;"></div></div>';
+
+    // Form novo cartão
+    h += '<div style="background:#f8fafc;padding:14px;display:flex;flex-direction:column;gap:8px;">'
+      + '<div style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;">Novo Cartão</div>'
+      + '<input id="cNome" placeholder="Nome (ex: Nubank)" style="'+inp+'">'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+      +   '<select id="cBand" style="'+inp+'">'+bandOpts+'</select>'
+      +   '<input id="cBanco" placeholder="Banco" style="'+inp+'">'
+      + '</div>'
+      + '<input id="cLimite" type="number" placeholder="Limite (opcional)" style="'+inp+'">'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+      +   '<div><div style="'+lbl+'">Fechamento</div><input id="cFech" type="number" min="1" max="31" placeholder="Dia" style="'+inp+'"></div>'
+      +   '<div><div style="'+lbl+'">Vencimento</div><input id="cVenc" type="number" min="1" max="31" placeholder="Dia" style="'+inp+'"></div>'
+      + '</div>'
+      + '<button onclick="salvarCartao()" style="width:100%;padding:12px;background:var(--secondary);color:#fff;border:none;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;">Adicionar Cartão</button>'
+      + '</div>';
+
+    h += '</div>';
+    box.innerHTML = h;
+    box.style.maxHeight = '2200px';
+    renderCartoes();
+    setTimeout(function(){ box.scrollIntoView({behavior:'smooth', block:'nearest'}); }, 120);
+  }
+
+  window.fecharCartoesInline = function(){
+    var box=document.getElementById('vAddInline');
+    if(box){ box.style.maxHeight='0'; setTimeout(function(){ box.innerHTML=''; }, 350); }
+    window._cartoesInlineAberto=false;
+    var bc=document.getElementById('vBtnCartoes');
+    if(bc){ bc.querySelector('span') && (bc.querySelector('span').textContent='Cartões'); var ic=bc.querySelector('i'); if(ic) ic.className='fa-solid fa-credit-card'; }
+  };
 
   window.salvarCartao = function() {
     var nome=document.getElementById('cNome')?.value.trim();
     if(!nome){ alert('Informe o nome.'); return; }
     var cartoes=getCartoes();
-    cartoes.push({ id:uid(), nome:nome, bandeira:document.getElementById('cBand')?.value||'', banco:document.getElementById('cBanco')?.value||'', limite:document.getElementById('cLimite')?.value||'' });
+    cartoes.push({ id:uid(), nome:nome, bandeira:document.getElementById('cBand')?.value||'', banco:document.getElementById('cBanco')?.value||'', limite:document.getElementById('cLimite')?.value||'', diaFechamento:document.getElementById('cFech')?.value||'', diaVencimento:document.getElementById('cVenc')?.value||'' });
     saveCartoes(cartoes);
     document.getElementById('cNome').value='';
     document.getElementById('cBanco').value='';
     document.getElementById('cLimite').value='';
+    if(document.getElementById('cFech')) document.getElementById('cFech').value='';
+    if(document.getElementById('cVenc')) document.getElementById('cVenc').value='';
     renderCartoes();
   };
 
@@ -10832,6 +11078,392 @@ var _eficIv2 = setInterval(function(){
     }
   }, 1500);
 })();
+
+
+
+// ============================================================
+// BOTTOM SHEET - seleção de opções (módulo despesas)
+// Sobe de baixo, itens grandes, rolagem fluida
+// ============================================================
+(function(){
+  var SELECTS_CUSTOM = ['addCat','addSubcat','addPag','addCartao','cBand','vFP'];
+
+  // Títulos amigáveis por id
+  var TITULOS = {
+    addCat:'Categoria', addSubcat:'Subcategoria', addPag:'Forma de Pagamento',
+    addCartao:'Cartão', cBand:'Bandeira', vFC:'Categoria', vFSub:'Subcategoria', vFP:'Pagamento'
+  };
+
+  var sheetAberto = null;
+
+  function fecharSheet(){
+    if(!sheetAberto) return;
+    var ov = sheetAberto;
+    var painel = ov.querySelector('.bsPainel');
+    if(painel) painel.style.transform = 'translateY(100%)';
+    ov.style.opacity = '0';
+    setTimeout(function(){ if(ov && ov.parentNode) ov.remove(); }, 280);
+    sheetAberto = null;
+  }
+
+  function abrirSheet(sel){
+    fecharSheet();
+    var opts = Array.prototype.slice.call(sel.options);
+    if(!opts.length) return;
+    var titulo = TITULOS[sel.id] || 'Selecione';
+
+    var ov = document.createElement('div');
+    ov.className = 'bsOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .28s ease;';
+
+    var itensHtml = '';
+    opts.forEach(function(o, i){
+      var isSel = (o.value === sel.value);
+      var txt = o.textContent || o.value;
+      var vazio = (o.value === '');
+      itensHtml += '<div class="bsItem" data-i="'+i+'" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;font-size:16px;cursor:pointer;border-bottom:1px solid #f1f5f9;'
+        + (isSel?'background:#f0fdf4;':'') + '">'
+        + '<span style="color:'+(vazio?'#94a3b8':'#1e293b')+';font-weight:'+(isSel?'700':'400')+';">'+txt+'</span>'
+        + (isSel?'<i class="fa-solid fa-check" style="color:var(--secondary);font-size:15px;"></i>':'')
+        + '</div>';
+    });
+
+    ov.innerHTML = '<div class="bsPainel" style="background:#fff;width:100%;max-width:520px;max-height:70vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);overflow:hidden;">'
+      + '<div style="padding:12px 0 4px;flex-shrink:0;">'
+      +   '<div style="width:42px;height:5px;background:#cbd5e1;border-radius:3px;margin:0 auto;"></div>'
+      + '</div>'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 20px 12px;border-bottom:1px solid #f1f5f9;flex-shrink:0;">'
+      +   '<span style="font-size:16px;font-weight:800;color:#0f172a;">'+titulo+'</span>'
+      +   '<button class="bsClose" style="width:32px;height:32px;border-radius:50%;border:none;background:#f1f5f9;color:#475569;font-size:14px;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>'
+      + '</div>'
+      + '<div class="bsLista" style="overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;">'+itensHtml+'</div>'
+      + '</div>';
+
+    document.body.appendChild(ov);
+    sheetAberto = ov;
+
+    // Anima entrada
+    requestAnimationFrame(function(){
+      ov.style.opacity = '1';
+      var painel = ov.querySelector('.bsPainel');
+      if(painel) painel.style.transform = 'translateY(0)';
+    });
+
+    // Scroll até o item selecionado
+    setTimeout(function(){
+      var selItem = ov.querySelector('.bsItem[data-i="'+sel.selectedIndex+'"]');
+      if(selItem && selItem.offsetTop > 200){ ov.querySelector('.bsLista').scrollTop = selItem.offsetTop - 100; }
+    }, 320);
+
+    // Click nas opções
+    ov.querySelectorAll('.bsItem').forEach(function(item){
+      item.addEventListener('click', function(){
+        var i = parseInt(item.getAttribute('data-i'));
+        sel.selectedIndex = i;
+        var ev = new Event('change', { bubbles:true });
+        sel.dispatchEvent(ev);
+        fecharSheet();
+      });
+    });
+
+    // Fechar
+    ov.querySelector('.bsClose').addEventListener('click', fecharSheet);
+    ov.addEventListener('click', function(e){ if(e.target === ov) fecharSheet(); });
+
+    // Arrastar pra baixo pra fechar (gesto)
+    var painel = ov.querySelector('.bsPainel');
+    var startY = 0, curY = 0, dragging = false;
+    var header = painel.querySelector('div'); // área do puxador
+    function onStart(y){ startY = y; dragging = true; painel.style.transition = 'none'; }
+    function onMove(y){
+      if(!dragging) return;
+      curY = y - startY;
+      if(curY > 0) painel.style.transform = 'translateY('+curY+'px)';
+    }
+    function onEnd(){
+      if(!dragging) return;
+      dragging = false;
+      painel.style.transition = 'transform .3s cubic-bezier(.32,.72,0,1)';
+      if(curY > 80){ fecharSheet(); } else { painel.style.transform = 'translateY(0)'; }
+      curY = 0;
+    }
+    header.addEventListener('touchstart', function(e){ onStart(e.touches[0].clientY); }, {passive:true});
+    header.addEventListener('touchmove', function(e){ onMove(e.touches[0].clientY); }, {passive:true});
+    header.addEventListener('touchend', onEnd);
+  }
+
+  // Intercepta toque/clique nos selects-alvo
+  document.addEventListener('mousedown', function(e){
+    var sel = e.target;
+    if(sel && sel.tagName === 'SELECT' && SELECTS_CUSTOM.indexOf(sel.id) > -1){
+      e.preventDefault();
+      sel.blur();
+      abrirSheet(sel);
+    }
+  }, true);
+
+  // Impede o dropdown nativo de abrir no focus
+  document.addEventListener('focus', function(e){
+    var sel = e.target;
+    if(sel && sel.tagName === 'SELECT' && SELECTS_CUSTOM.indexOf(sel.id) > -1){ sel.blur(); }
+  }, true);
+})();
+
+// ============================================================
+// SELETOR MÚLTIPLO DE CATEGORIAS/SUBCATEGORIAS (bottom sheet)
+// Categorias expansíveis (+), subcategorias em 3 colunas, multi-seleção
+// ============================================================
+(function(){
+  // Seleção atual: { "Categoria": ["sub1","sub2"], ... }
+  window._selCats = {};
+  var sheetMS = null;
+
+  function totalSelecionado(){
+    var n = 0;
+    Object.keys(window._selCats).forEach(function(c){ n += window._selCats[c].length; });
+    return n;
+  }
+
+  // Texto resumido pro campo
+  window.resumoSelCats = function(){
+    var partes = [];
+    Object.keys(window._selCats).forEach(function(c){
+      window._selCats[c].forEach(function(s){ partes.push(s); });
+    });
+    if(!partes.length) return '';
+    if(partes.length <= 2) return partes.join(', ');
+    return partes.slice(0,2).join(', ') + ' +' + (partes.length-2);
+  };
+
+  // Atualiza o campo visual
+  function atualizarCampo(){
+    var campo = document.getElementById('addCatCampo');
+    if(!campo) return;
+    var txt = resumoSelCats();
+    var span = campo.querySelector('.catCampoTxt');
+    if(span){
+      span.textContent = txt || 'Toque para selecionar';
+      span.style.color = txt ? '#1e293b' : '#94a3b8';
+    }
+    var badge = campo.querySelector('.catCampoBadge');
+    var n = totalSelecionado();
+    if(badge){
+      if(n>0){ badge.style.display='flex'; badge.textContent = n; }
+      else { badge.style.display='none'; }
+    }
+  }
+
+  window.fecharMultiSel = function(){
+    if(!sheetMS) return;
+    var ov = sheetMS;
+    var p = ov.querySelector('.msPainel');
+    if(p) p.style.transform = 'translateY(100%)';
+    ov.style.opacity = '0';
+    setTimeout(function(){ if(ov.parentNode) ov.remove(); }, 280);
+    sheetMS = null;
+  };
+
+  window.abrirMultiSel = function(){
+    fecharMultiSel();
+    var cats = Object.keys(window.CATEGORIAS_VEI||{});
+
+    var ov = document.createElement('div');
+    ov.className = 'msOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .28s ease;';
+
+    var catsHtml = '';
+    cats.forEach(function(c, ci){
+      var info = window.CATEGORIAS_VEI[c];
+      var subs = window.subcatsDaCategoria(c);
+      var nSel = (window._selCats[c]||[]).length;
+      // Cabeçalho da categoria (clicável pra expandir)
+      catsHtml += '<div class="msCat" data-cat="'+ci+'">'
+        + '<div class="msCatHead" data-cat="'+c.replace(/"/g,'')+'" style="display:flex;align-items:center;gap:11px;padding:14px 18px;cursor:pointer;border-bottom:1px solid #f1f5f9;">'
+        +   '<div style="width:34px;height:34px;border-radius:50%;background:#f1f5f9;color:var(--secondary);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid '+info.ic+'"></i></div>'
+        +   '<span style="flex:1;font-size:15px;font-weight:700;color:#1e293b;">'+c+'</span>'
+        +   '<span class="msCatBadge" style="display:'+(nSel>0?'flex':'none')+';min-width:20px;height:20px;border-radius:10px;background:var(--secondary);color:#fff;font-size:11px;font-weight:700;align-items:center;justify-content:center;padding:0 6px;">'+nSel+'</span>'
+        +   '<i class="fa-solid fa-plus msCatIcon" style="color:#94a3b8;font-size:13px;transition:transform .2s;"></i>'
+        + '</div>'
+        // Painel de subcategorias (3 colunas, escondido)
+        +   '<div class="msSubs" style="display:none;padding:12px 14px;background:#f8fafc;border-bottom:1px solid #f1f5f9;">'
+        +     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;">';
+      subs.forEach(function(s){
+        var marcada = (window._selCats[c]||[]).indexOf(s) > -1;
+        catsHtml += '<div class="msSub" data-cat="'+c.replace(/"/g,'')+'" data-sub="'+s.replace(/"/g,'')+'" style="display:flex;align-items:center;gap:6px;padding:8px 4px;cursor:pointer;line-height:1.2;">'
+          + '<i class="msSubIc fa-solid '+(marcada?'fa-check':'fa-plus')+'" style="color:var(--secondary);font-size:13px;flex-shrink:0;"></i>'
+          + '<span class="msSubTxt" style="font-size:13px;font-weight:'+(marcada?'700':'500')+';color:'+(marcada?'#0f172a':'#334155')+';">'+s+'</span>'
+          + '</div>';
+      });
+      catsHtml += '</div></div>'
+        + '</div>';
+    });
+
+    ov.innerHTML = '<div class="msPainel" style="background:#fff;width:100%;max-width:560px;max-height:82vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);overflow:hidden;">'
+      + '<div style="padding:12px 0 4px;flex-shrink:0;"><div style="width:42px;height:5px;background:#cbd5e1;border-radius:3px;margin:0 auto;"></div></div>'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 18px 12px;border-bottom:1px solid #f1f5f9;flex-shrink:0;">'
+      +   '<span style="font-size:16px;font-weight:800;color:#0f172a;">O que foi feito?</span>'
+      +   '<button class="msClose" style="width:32px;height:32px;border-radius:50%;border:none;background:#f1f5f9;color:#475569;font-size:14px;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>'
+      + '</div>'
+      + '<div class="msLista" style="overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;">'+catsHtml+'</div>'
+      + '<div style="padding:12px 16px;border-top:1px solid #f1f5f9;flex-shrink:0;background:#fff;">'
+      +   '<button class="msConfirm" style="width:100%;padding:14px;background:var(--secondary);color:#fff;border:none;font-size:14px;font-weight:700;text-transform:uppercase;cursor:pointer;border-radius:10px;">Confirmar <span class="msConfirmN"></span></button>'
+      + '</div>'
+      + '</div>';
+
+    document.body.appendChild(ov);
+    sheetMS = ov;
+    requestAnimationFrame(function(){ ov.style.opacity='1'; var p=ov.querySelector('.msPainel'); if(p) p.style.transform='translateY(0)'; });
+
+    function atualizarConfirmN(){
+      var n = totalSelecionado();
+      var el = ov.querySelector('.msConfirmN');
+      if(el) el.textContent = n>0 ? '('+n+')' : '';
+    }
+    atualizarConfirmN();
+
+    // Expandir/recolher categoria
+    ov.querySelectorAll('.msCatHead').forEach(function(head){
+      head.addEventListener('click', function(){
+        var subsBox = head.nextElementSibling;
+        var icon = head.querySelector('.msCatIcon');
+        var aberto = subsBox.style.display !== 'none';
+        // Fecha todas
+        ov.querySelectorAll('.msSubs').forEach(function(s){ s.style.display='none'; });
+        ov.querySelectorAll('.msCatIcon').forEach(function(i){ i.style.transform='rotate(0deg)'; i.className='fa-solid fa-plus msCatIcon'; });
+        if(!aberto){
+          subsBox.style.display='block';
+          if(icon){ icon.className='fa-solid fa-minus msCatIcon'; }
+        }
+      });
+    });
+
+    // Selecionar/desselecionar subcategoria
+    ov.querySelectorAll('.msSub').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var cat = btn.getAttribute('data-cat');
+        var sub = btn.getAttribute('data-sub');
+        if(!window._selCats[cat]) window._selCats[cat] = [];
+        var idx = window._selCats[cat].indexOf(sub);
+        var ic = btn.querySelector('.msSubIc');
+        var tx = btn.querySelector('.msSubTxt');
+        if(idx > -1){
+          window._selCats[cat].splice(idx,1);
+          if(!window._selCats[cat].length) delete window._selCats[cat];
+          if(ic) ic.className='msSubIc fa-solid fa-plus';
+          if(tx){ tx.style.fontWeight='500'; tx.style.color='#334155'; }
+        } else {
+          window._selCats[cat].push(sub);
+          if(ic) ic.className='msSubIc fa-solid fa-check';
+          if(tx){ tx.style.fontWeight='700'; tx.style.color='#0f172a'; }
+        }
+        // Atualiza badge da categoria
+        var head = ov.querySelector('.msCatHead[data-cat="'+cat+'"]');
+        if(head){
+          var badge = head.querySelector('.msCatBadge');
+          var n = (window._selCats[cat]||[]).length;
+          if(badge){ if(n>0){ badge.style.display='flex'; badge.textContent=n; } else { badge.style.display='none'; } }
+        }
+        atualizarConfirmN();
+      });
+    });
+
+    ov.querySelector('.msClose').addEventListener('click', fecharMultiSel);
+    ov.addEventListener('click', function(e){ if(e.target===ov) fecharMultiSel(); });
+    ov.querySelector('.msConfirm').addEventListener('click', function(){
+      atualizarCampo();
+      fecharMultiSel();
+    });
+
+    // Arrastar header pra fechar
+    var painel = ov.querySelector('.msPainel');
+    var puxador = painel.querySelector('div');
+    var startY=0, curY=0, drag=false;
+    puxador.addEventListener('touchstart', function(e){ startY=e.touches[0].clientY; drag=true; painel.style.transition='none'; }, {passive:true});
+    puxador.addEventListener('touchmove', function(e){ if(!drag)return; curY=e.touches[0].clientY-startY; if(curY>0) painel.style.transform='translateY('+curY+'px)'; }, {passive:true});
+    puxador.addEventListener('touchend', function(){ if(!drag)return; drag=false; painel.style.transition='transform .3s cubic-bezier(.32,.72,0,1)'; if(curY>80) fecharMultiSel(); else painel.style.transform='translateY(0)'; curY=0; });
+  };
+
+  // Expõe atualizarCampo
+  window._atualizarCampoCats = atualizarCampo;
+})();
+
+  // ============================================================
+  // SELETOR DE CATEGORIA PARA FILTRO (escolha única, visual com ícones)
+  // ============================================================
+  window.abrirFiltroCat = function(){
+    var sheetExist = document.querySelector('.fcOverlay');
+    if(sheetExist) sheetExist.remove();
+
+    var vFC = document.getElementById('vFC');
+    var atual = vFC ? vFC.value : '';
+    var cats = Object.keys(window.CATEGORIAS_VEI||{});
+
+    var ov = document.createElement('div');
+    ov.className = 'fcOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .28s ease;';
+
+    var itensHtml = '';
+    // Opção "Todas as categorias"
+    var todasSel = (atual==='');
+    itensHtml += '<div class="fcItem" data-cat="" style="display:flex;align-items:center;gap:11px;padding:14px 18px;cursor:pointer;border-bottom:1px solid #f1f5f9;'+(todasSel?'background:#f1f5f9;':'')+'">'
+      + '<div style="width:34px;height:34px;border-radius:50%;background:#f1f5f9;color:var(--secondary);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-layer-group"></i></div>'
+      + '<span style="flex:1;font-size:15px;font-weight:'+(todasSel?'800':'600')+';color:#1e293b;">Todas as categorias</span>'
+      + (todasSel?'<i class="fa-solid fa-check" style="color:var(--secondary);font-size:15px;"></i>':'')
+      + '</div>';
+
+    cats.forEach(function(c){
+      var info = window.CATEGORIAS_VEI[c];
+      var sel = (c===atual);
+      itensHtml += '<div class="fcItem" data-cat="'+c.replace(/"/g,'')+'" style="display:flex;align-items:center;gap:11px;padding:14px 18px;cursor:pointer;border-bottom:1px solid #f1f5f9;'+(sel?'background:#f1f5f9;':'')+'">'
+        + '<div style="width:34px;height:34px;border-radius:50%;background:#f1f5f9;color:var(--secondary);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid '+info.ic+'"></i></div>'
+        + '<span style="flex:1;font-size:15px;font-weight:'+(sel?'800':'600')+';color:#1e293b;">'+c+'</span>'
+        + (sel?'<i class="fa-solid fa-check" style="color:var(--secondary);font-size:15px;"></i>':'')
+        + '</div>';
+    });
+
+    ov.innerHTML = '<div class="fcPainel" style="background:#fff;width:100%;max-width:560px;max-height:82vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);overflow:hidden;">'
+      + '<div style="padding:12px 0 4px;flex-shrink:0;"><div style="width:42px;height:5px;background:#cbd5e1;border-radius:3px;margin:0 auto;"></div></div>'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 18px 12px;border-bottom:1px solid #f1f5f9;flex-shrink:0;">'
+      +   '<span style="font-size:16px;font-weight:800;color:#0f172a;">Filtrar por categoria</span>'
+      +   '<button class="fcClose" style="width:32px;height:32px;border-radius:50%;border:none;background:#f1f5f9;color:#475569;font-size:14px;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>'
+      + '</div>'
+      + '<div class="fcLista" style="overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;">'+itensHtml+'</div>'
+      + '</div>';
+
+    document.body.appendChild(ov);
+    requestAnimationFrame(function(){ ov.style.opacity='1'; var p=ov.querySelector('.fcPainel'); if(p) p.style.transform='translateY(0)'; });
+
+    function fechar(){
+      var p=ov.querySelector('.fcPainel');
+      if(p) p.style.transform='translateY(100%)';
+      ov.style.opacity='0';
+      setTimeout(function(){ if(ov.parentNode) ov.remove(); }, 280);
+    }
+
+    // Escolher categoria -> filtra na hora
+    ov.querySelectorAll('.fcItem').forEach(function(item){
+      item.addEventListener('click', function(){
+        var cat = item.getAttribute('data-cat');
+        if(vFC){ vFC.value = cat; }
+        var txtEl = document.getElementById('vFCtxt');
+        if(txtEl) txtEl.textContent = cat || 'Categorias';
+        if(typeof renderDesp==='function') renderDesp('vei');
+        fechar();
+      });
+    });
+
+    ov.querySelector('.fcClose').addEventListener('click', fechar);
+    ov.addEventListener('click', function(e){ if(e.target===ov) fechar(); });
+
+    // Arrastar pra fechar
+    var painel = ov.querySelector('.fcPainel');
+    var puxador = painel.querySelector('div');
+    var startY=0, curY=0, drag=false;
+    puxador.addEventListener('touchstart', function(e){ startY=e.touches[0].clientY; drag=true; painel.style.transition='none'; }, {passive:true});
+    puxador.addEventListener('touchmove', function(e){ if(!drag)return; curY=e.touches[0].clientY-startY; if(curY>0) painel.style.transform='translateY('+curY+'px)'; }, {passive:true});
+    puxador.addEventListener('touchend', function(){ if(!drag)return; drag=false; painel.style.transition='transform .3s cubic-bezier(.32,.72,0,1)'; if(curY>80) fechar(); else painel.style.transform='translateY(0)'; curY=0; });
+  };
 
 </script>
 
