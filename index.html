@@ -3791,7 +3791,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v426';
+window.APP_VERSAO = 'v428';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -6210,13 +6210,17 @@ window.tnAplicar = function() {
           </div>
         </div>
 
-        <div style="padding:16px 16px 0;display:flex;gap:10px;">
+        <div id="vBtnsRow" style="padding:16px 16px 0;display:flex;gap:10px;">
           <button id="vBtnAdd" onclick="toggleAddInline()" style="flex:1;padding:12px;background:var(--secondary);color:#fff;border:none;border-radius:0;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
             <i class="fa-solid fa-plus" id="vBtnAddIcon"></i> <span id="vBtnAddTxt">Adicionar</span>
           </button>
           <button id="vBtnCartoes" onclick="toggleCartoesInline()" style="flex:1;padding:12px;background:#000;color:#fff;border:none;border-radius:0;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
             <i class="fa-solid fa-credit-card"></i> <span>Cartões</span>
           </button>
+        </div>
+        <div id="vFormHeader" style="display:none;padding:16px 16px 0;align-items:center;justify-content:space-between;">
+          <span id="vFormHeaderTxt" style="font-size:15px;font-weight:800;color:#0f172a;">Inserir Despesa</span>
+          <button onclick="fecharFormHeader()" style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:#000;color:#fff;border:none;font-size:12px;font-weight:700;text-transform:uppercase;cursor:pointer;"><i class="fa-solid fa-xmark"></i> Fechar</button>
         </div>
         <div id="vAddInline" style="max-height:0;overflow:hidden;transition:max-height .35s ease;padding:0 16px;"></div>
 
@@ -6407,8 +6411,7 @@ window.tnAplicar = function() {
     if(tipo!=='pes' && document.getElementById('vAddInline')){
       var box=document.getElementById('vAddInline');
       window._addInlineAberto = true;
-      var ic=document.getElementById('vBtnAddIcon'); var tx=document.getElementById('vBtnAddTxt');
-      if(ic) ic.className='fa-solid fa-xmark'; if(tx) tx.textContent='Fechar';
+      mostrarFormHeader('Editar Despesa');
       montarFormInline(box);
     } else {
       abrirAddDesp(tipo);
@@ -6621,12 +6624,34 @@ window.tnAplicar = function() {
   // ============================================================
   // FORMULÁRIO INLINE
   // ============================================================
+  // Alterna entre os 2 botões e o cabeçalho do formulário
+  window.mostrarFormHeader = function(titulo){
+    var row=document.getElementById('vBtnsRow');
+    var hdr=document.getElementById('vFormHeader');
+    var txt=document.getElementById('vFormHeaderTxt');
+    if(row) row.style.display='none';
+    if(hdr) hdr.style.display='flex';
+    if(txt) txt.textContent = titulo || 'Inserir Despesa';
+  };
+  window.esconderFormHeader = function(){
+    var row=document.getElementById('vBtnsRow');
+    var hdr=document.getElementById('vFormHeader');
+    if(row) row.style.display='flex';
+    if(hdr) hdr.style.display='none';
+  };
+  window.fecharFormHeader = function(){
+    // Fecha o que estiver aberto (form add ou cartoes)
+    if(window._addInlineAberto && typeof fecharAddInline==='function') fecharAddInline();
+    else if(window._cartoesInlineAberto && typeof fecharCartoesInline==='function') fecharCartoesInline();
+    else esconderFormHeader();
+  };
   window._addInlineAberto = false;
   window.toggleAddInline = function(){
     var box = document.getElementById('vAddInline');
     if(!box){ return; }
     if(window._cartoesInlineAberto){ fecharCartoesInline(); }
     if(window._addInlineAberto){ fecharAddInline(); return; }
+    mostrarFormHeader('Inserir Despesa');
 
     // Loading rápido na cor do sistema
     box.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:30px;"><div style="width:30px;height:30px;border:3px solid rgba(34,197,94,.2);border-top-color:var(--secondary);border-radius:50%;animation:splashSpin .7s linear infinite;"></div></div>';
@@ -6712,6 +6737,7 @@ window.tnAplicar = function() {
     var icon=document.getElementById('vBtnAddIcon'); var txt=document.getElementById('vBtnAddTxt');
     if(icon) icon.className='fa-solid fa-plus';
     if(txt) txt.textContent='Adicionar';
+    esconderFormHeader();
   };
 
 
@@ -6999,6 +7025,7 @@ window.tnAplicar = function() {
     // Se o form de add estiver aberto, fecha primeiro
     if(window._addInlineAberto){ fecharAddInline(); }
     if(window._cartoesInlineAberto){ fecharCartoesInline(); return; }
+    mostrarFormHeader('Cartões');
 
     // Loading
     box.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:30px;"><div style="width:30px;height:30px;border:3px solid rgba(34,197,94,.2);border-top-color:var(--secondary);border-radius:50%;animation:splashSpin .7s linear infinite;"></div></div>';
@@ -7050,6 +7077,7 @@ window.tnAplicar = function() {
     window._cartoesInlineAberto=false;
     var bc=document.getElementById('vBtnCartoes');
     if(bc){ bc.querySelector('span') && (bc.querySelector('span').textContent='Cartões'); var ic=bc.querySelector('i'); if(ic) ic.className='fa-solid fa-credit-card'; }
+    esconderFormHeader();
   };
 
   window.salvarCartao = function() {
@@ -7237,6 +7265,8 @@ window.tnAplicar = function() {
     // calcula: (kmFim - kmInicio) / litros = média
     var mediasCalculadas = [];
     todos.forEach(function(a) {
+      // Abastecimento parcial (não consumiu tudo) NÃO entra na média de consumo
+      if (a.parcial || a.fechamentoParcial) return;
       if (a.kmInicio && a.kmFim && a.quantidade && parseFloat(a.quantidade) > 0) {
         var km = parseFloat(a.kmFim) - parseFloat(a.kmInicio);
         if (km > 0) {
@@ -7285,9 +7315,10 @@ window.tnAplicar = function() {
     lista.innerHTML = todos.slice().reverse().map(function(a, i){
       var med = mediaMap[a.id];
       var unid = a.combustivel === 'GNV' ? 'm³' : 'l';
+      var ehParcial = a.parcial || a.fechamentoParcial;
       var medBadge = med
         ? '<span style="font-size:11px;background:'+(med.media>=10?'#f0fdf4':'#fef3c7')+';color:'+(med.media>=10?'#166534':'#92400e')+';padding:2px 8px;font-weight:700;border-radius:0;">'+fmtN(med.media)+' km/'+unid+'</span>'
-        : (a.kmFim ? '' : '<span style="font-size:10px;background:#f1f5f9;color:#94a3b8;padding:2px 8px;">Sem KM final</span>');
+        : (ehParcial ? '<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:2px 8px;font-weight:600;">Parcial — sem média</span>' : (a.kmFim ? '' : '<span style="font-size:10px;background:#f1f5f9;color:#94a3b8;padding:2px 8px;">Sem KM final</span>'));
       var precUn = a.quantidade&&parseFloat(a.quantidade)>0 ? 'R$'+fmtN(parseFloat(a.valor)/parseFloat(a.quantidade),3)+'/'+unid : '';
       return '<div style="display:flex;align-items:stretch;border-bottom:1px solid #ececec;background:'+(i%2===0?'#fff':'#f3f4f6')+';">'  + '<div style="width:6px;background:var(--secondary);flex-shrink:0;"></div>' + '<div style="flex:1;padding:12px 10px;">'
         +'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
