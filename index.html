@@ -2752,11 +2752,16 @@ header {
   background: #fff;
   width: 92%;
   max-width: 400px;
+  max-height: 88vh;
   border-radius: 0;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,0.4);
   animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  display: flex;
+  flex-direction: column;
 }
+.temas-novo-header { flex-shrink: 0; }
+.temas-novo-apply { flex-shrink: 0; }
 
 .temas-novo-header {
   background: #000;
@@ -2805,16 +2810,16 @@ header {
   display: flex; align-items: center; justify-content: center;
 }
 
-.temas-novo-body { padding: 16px 20px 20px; }
+.temas-novo-body { padding: 16px 20px 20px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
 
 .temas-novo-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 7px;
 }
 
 .tema-novo-option {
-  padding: 14px 12px;
+  padding: 9px 8px;
   border: 2px solid #e5e7eb;
   border-radius: 0;
   background: #f9fafb;
@@ -2823,7 +2828,7 @@ header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 .tema-novo-option:active { transform: scale(0.97); }
 .tema-novo-option.ativo {
@@ -2835,13 +2840,13 @@ header {
   gap: 5px;
 }
 .tema-novo-cor {
-  width: 20px; height: 20px;
+  width:14px; height:14px;
   border-radius: 50%;
   border: 1px solid rgba(0,0,0,0.08);
   flex-shrink: 0;
 }
 .tema-novo-nome {
-  font-size: 11px;
+  font-size:10px;
   font-weight: 700;
   color: #1e293b;
   text-align: center;
@@ -3791,7 +3796,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v428';
+window.APP_VERSAO = 'v434';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -5625,6 +5630,1238 @@ window.tnAplicar = function() {
     r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
     r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
     r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+  })();
+})();
+
+(function() {
+  var NOVO_TEMA = {
+    key: 'azul-petroleo',
+    nome: 'Azul Petróleo',
+    cores: ['#0F172A','#0891B2','#06B6D4','#CBD5E1'],
+    vars: { primary:'#0891B2', secondary:'#0891B2', dark:'#0F172A', text:'#334155', red:'#ef4444', save:'#0891B2' }
+  };
+
+  // Intercept abrirTemasNovo to inject theme after modal is created
+  var _orig = window.abrirTemasNovo;
+  window.abrirTemasNovo = function() {
+    if (_orig) _orig.apply(this, arguments);
+    setTimeout(function() {
+      var grid = document.querySelector('.temas-novo-grid');
+      if (!grid) return;
+      // Don't add if already there
+      if (document.querySelector('[data-tema="azul-petroleo"]')) return;
+      var coresHTML = NOVO_TEMA.cores.map(function(c) {
+        return '<div class="tema-novo-cor" style="background:' + c + '"></div>';
+      }).join('');
+      var el = document.createElement('div');
+      el.className = 'tema-novo-option';
+      el.dataset.tema = NOVO_TEMA.key;
+      el.setAttribute('onclick', "tnSelecionar('" + NOVO_TEMA.key + "')");
+      el.innerHTML = '<div class="tema-novo-paleta">' + coresHTML + '</div>'
+                   + '<div class="tema-novo-nome">' + NOVO_TEMA.nome + '</div>';
+      grid.appendChild(el);
+
+      // Mark active if this is current theme
+      var saved = localStorage.getItem('temaAplicativo');
+      if (saved === NOVO_TEMA.key) el.classList.add('ativo');
+    }, 50);
+  };
+
+  // Make tnSelecionar and tnAplicar aware of this theme
+  var _origSel = window.tnSelecionar;
+  window.tnSelecionar = function(key) {
+    if (_origSel) _origSel.apply(this, arguments);
+    if (key === NOVO_TEMA.key) {
+      // Apply vars preview (visual only, not saved yet)
+      var r = document.documentElement;
+      Object.keys(NOVO_TEMA.vars).forEach(function(k) {
+        r.style.setProperty('--' + k.replace(/([A-Z])/g, '-$1').toLowerCase(), NOVO_TEMA.vars[k]);
+      });
+    }
+  };
+
+  var _origApply = window.tnAplicar;
+  window.tnAplicar = function() {
+    var sel = document.querySelector('.tema-novo-option.ativo');
+    if (sel && sel.dataset.tema === NOVO_TEMA.key) {
+      // Save and apply our custom theme
+      localStorage.setItem('temaAplicativo', NOVO_TEMA.key);
+      var r = document.documentElement;
+      r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+      r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+      r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+      r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+      r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+      r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+      var btn = document.querySelector('.temas-novo-apply');
+      if (btn) btn.textContent = '⏳ Atualizando...';
+      if (typeof fecharTemasNovo === 'function') fecharTemasNovo();
+      setTimeout(function() { location.reload(true); }, 500);
+      return;
+    }
+    if (_origApply) _origApply.apply(this, arguments);
+  };
+
+  // Restore theme on page load if azul-petroleo was selected
+  (function restoreTheme() {
+    var saved = localStorage.getItem('temaAplicativo');
+    if (saved !== NOVO_TEMA.key) return;
+    var r = document.documentElement;
+    r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+    r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+    r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+    r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+    r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+    r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+    // Força o vídeo do header (usa o BW, igual aos outros temas não-padrão)
+    aplicarVideoAzul();
+  })();
+
+  // Aplica o vídeo do header para o tema azul petróleo
+  function aplicarVideoAzul(){
+    var tentar = function(n){
+      var video = document.querySelector('header video, .header-video, #headerVideo, video[src*="v14"], video[src*="bw"]');
+      if(video){
+        var url = 'https://marceloricardooficial.github.io/PillotGo/bw.mp4';
+        if(video.src !== url){ video.src = url; video.load(); video.play().catch(function(){}); }
+        return;
+      }
+      if(n < 20) setTimeout(function(){ tentar(n+1); }, 300);
+    };
+    tentar(0);
+  }
+  // Quando seleciona/aplica o azul, troca o vídeo
+  var _selAzul = window.tnSelecionar;
+  window.tnSelecionar = function(key){
+    if(_selAzul) _selAzul.apply(this, arguments);
+    if(key === 'azul-petroleo'){ aplicarVideoAzul(); }
+  };
+  // Restaura vídeo no load se azul estiver ativo
+  (function(){
+    if(localStorage.getItem('temaAplicativo') === 'azul-petroleo'){
+      setTimeout(aplicarVideoAzul, 600);
+      setTimeout(aplicarVideoAzul, 1500);
+    }
+  })();
+})();
+
+(function() {
+  var NOVO_TEMA = {
+    key: 'verde-esmeralda',
+    nome: 'Verde Esmeralda',
+    cores: ['#000000','#10B981','#059669','#22C55E'],
+    vars: { primary:'#059669', secondary:'#10B981', dark:'#000000', text:'#111827', red:'#ef4444', save:'#22C55E' }
+  };
+
+  // Intercept abrirTemasNovo to inject theme after modal is created
+  var _orig = window.abrirTemasNovo;
+  window.abrirTemasNovo = function() {
+    if (_orig) _orig.apply(this, arguments);
+    setTimeout(function() {
+      var grid = document.querySelector('.temas-novo-grid');
+      if (!grid) return;
+      // Don't add if already there
+      if (document.querySelector('[data-tema="verde-esmeralda"]')) return;
+      var coresHTML = NOVO_TEMA.cores.map(function(c) {
+        return '<div class="tema-novo-cor" style="background:' + c + '"></div>';
+      }).join('');
+      var el = document.createElement('div');
+      el.className = 'tema-novo-option';
+      el.dataset.tema = NOVO_TEMA.key;
+      el.setAttribute('onclick', "tnSelecionar('" + NOVO_TEMA.key + "')");
+      el.innerHTML = '<div class="tema-novo-paleta">' + coresHTML + '</div>'
+                   + '<div class="tema-novo-nome">' + NOVO_TEMA.nome + '</div>';
+      grid.appendChild(el);
+
+      // Mark active if this is current theme
+      var saved = localStorage.getItem('temaAplicativo');
+      if (saved === NOVO_TEMA.key) el.classList.add('ativo');
+    }, 50);
+  };
+
+  // Make tnSelecionar and tnAplicar aware of this theme
+  var _origSel = window.tnSelecionar;
+  window.tnSelecionar = function(key) {
+    if (_origSel) _origSel.apply(this, arguments);
+    if (key === NOVO_TEMA.key) {
+      // Apply vars preview (visual only, not saved yet)
+      var r = document.documentElement;
+      Object.keys(NOVO_TEMA.vars).forEach(function(k) {
+        r.style.setProperty('--' + k.replace(/([A-Z])/g, '-$1').toLowerCase(), NOVO_TEMA.vars[k]);
+      });
+    }
+  };
+
+  var _origApply = window.tnAplicar;
+  window.tnAplicar = function() {
+    var sel = document.querySelector('.tema-novo-option.ativo');
+    if (sel && sel.dataset.tema === NOVO_TEMA.key) {
+      // Save and apply our custom theme
+      localStorage.setItem('temaAplicativo', NOVO_TEMA.key);
+      var r = document.documentElement;
+      r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+      r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+      r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+      r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+      r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+      r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+      var btn = document.querySelector('.temas-novo-apply');
+      if (btn) btn.textContent = '⏳ Atualizando...';
+      if (typeof fecharTemasNovo === 'function') fecharTemasNovo();
+      setTimeout(function() { location.reload(true); }, 500);
+      return;
+    }
+    if (_origApply) _origApply.apply(this, arguments);
+  };
+
+  // Restore theme on page load if verde-esmeralda was selected
+  (function restoreTheme() {
+    var saved = localStorage.getItem('temaAplicativo');
+    if (saved !== NOVO_TEMA.key) return;
+    var r = document.documentElement;
+    r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+    r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+    r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+    r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+    r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+    r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+    // Força o vídeo do header (usa o BW, igual aos outros temas não-padrão)
+    aplicarVideoEsmeralda();
+  })();
+
+  // Aplica o vídeo do header para o tema azul petróleo
+  function aplicarVideoEsmeralda(){
+    var tentar = function(n){
+      var video = document.querySelector('header video, .header-video, #headerVideo, video[src*="v14"], video[src*="bw"]');
+      if(video){
+        var url = 'https://marceloricardooficial.github.io/PillotGo/bw.mp4';
+        if(video.src !== url){ video.src = url; video.load(); video.play().catch(function(){}); }
+        return;
+      }
+      if(n < 20) setTimeout(function(){ tentar(n+1); }, 300);
+    };
+    tentar(0);
+  }
+  // Quando seleciona/aplica o azul, troca o vídeo
+  var _selAzul = window.tnSelecionar;
+  window.tnSelecionar = function(key){
+    if(_selAzul) _selAzul.apply(this, arguments);
+    if(key === 'verde-esmeralda'){ aplicarVideoEsmeralda(); }
+  };
+  // Restaura vídeo no load se azul estiver ativo
+  (function(){
+    if(localStorage.getItem('temaAplicativo') === 'verde-esmeralda'){
+      setTimeout(aplicarVideoEsmeralda, 600);
+      setTimeout(aplicarVideoEsmeralda, 1500);
+    }
+  })();
+})();
+
+(function() {
+  var NOVO_TEMA = {
+    key: 'laranja-uber',
+    nome: 'Laranja Uber',
+    cores: ['#0F172A','#FF6B00','#FF8A33','#1E293B'],
+    vars: { primary:'#E85D00', secondary:'#FF6B00', dark:'#0F172A', text:'#334155', red:'#ef4444', save:'#FF6B00' }
+  };
+
+  // Intercept abrirTemasNovo to inject theme after modal is created
+  var _orig = window.abrirTemasNovo;
+  window.abrirTemasNovo = function() {
+    if (_orig) _orig.apply(this, arguments);
+    setTimeout(function() {
+      var grid = document.querySelector('.temas-novo-grid');
+      if (!grid) return;
+      // Don't add if already there
+      if (document.querySelector('[data-tema="laranja-uber"]')) return;
+      var coresHTML = NOVO_TEMA.cores.map(function(c) {
+        return '<div class="tema-novo-cor" style="background:' + c + '"></div>';
+      }).join('');
+      var el = document.createElement('div');
+      el.className = 'tema-novo-option';
+      el.dataset.tema = NOVO_TEMA.key;
+      el.setAttribute('onclick', "tnSelecionar('" + NOVO_TEMA.key + "')");
+      el.innerHTML = '<div class="tema-novo-paleta">' + coresHTML + '</div>'
+                   + '<div class="tema-novo-nome">' + NOVO_TEMA.nome + '</div>';
+      grid.appendChild(el);
+
+      // Mark active if this is current theme
+      var saved = localStorage.getItem('temaAplicativo');
+      if (saved === NOVO_TEMA.key) el.classList.add('ativo');
+    }, 50);
+  };
+
+  // Make tnSelecionar and tnAplicar aware of this theme
+  var _origSel = window.tnSelecionar;
+  window.tnSelecionar = function(key) {
+    if (_origSel) _origSel.apply(this, arguments);
+    if (key === NOVO_TEMA.key) {
+      // Apply vars preview (visual only, not saved yet)
+      var r = document.documentElement;
+      Object.keys(NOVO_TEMA.vars).forEach(function(k) {
+        r.style.setProperty('--' + k.replace(/([A-Z])/g, '-$1').toLowerCase(), NOVO_TEMA.vars[k]);
+      });
+    }
+  };
+
+  var _origApply = window.tnAplicar;
+  window.tnAplicar = function() {
+    var sel = document.querySelector('.tema-novo-option.ativo');
+    if (sel && sel.dataset.tema === NOVO_TEMA.key) {
+      // Save and apply our custom theme
+      localStorage.setItem('temaAplicativo', NOVO_TEMA.key);
+      var r = document.documentElement;
+      r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+      r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+      r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+      r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+      r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+      r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+      var btn = document.querySelector('.temas-novo-apply');
+      if (btn) btn.textContent = '⏳ Atualizando...';
+      if (typeof fecharTemasNovo === 'function') fecharTemasNovo();
+      setTimeout(function() { location.reload(true); }, 500);
+      return;
+    }
+    if (_origApply) _origApply.apply(this, arguments);
+  };
+
+  // Restore theme on page load if laranja-uber was selected
+  (function restoreTheme() {
+    var saved = localStorage.getItem('temaAplicativo');
+    if (saved !== NOVO_TEMA.key) return;
+    var r = document.documentElement;
+    r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+    r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+    r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+    r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+    r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+    r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+    // Força o vídeo do header (usa o BW, igual aos outros temas não-padrão)
+    aplicarVideoLaranja();
+  })();
+
+  // Aplica o vídeo do header para o tema azul petróleo
+  function aplicarVideoLaranja(){
+    var tentar = function(n){
+      var video = document.querySelector('header video, .header-video, #headerVideo, video[src*="v14"], video[src*="bw"]');
+      if(video){
+        var url = 'https://marceloricardooficial.github.io/PillotGo/bw.mp4';
+        if(video.src !== url){ video.src = url; video.load(); video.play().catch(function(){}); }
+        return;
+      }
+      if(n < 20) setTimeout(function(){ tentar(n+1); }, 300);
+    };
+    tentar(0);
+  }
+  // Quando seleciona/aplica o azul, troca o vídeo
+  var _selAzul = window.tnSelecionar;
+  window.tnSelecionar = function(key){
+    if(_selAzul) _selAzul.apply(this, arguments);
+    if(key === 'laranja-uber'){ aplicarVideoLaranja(); }
+  };
+  // Restaura vídeo no load se azul estiver ativo
+  (function(){
+    if(localStorage.getItem('temaAplicativo') === 'laranja-uber'){
+      setTimeout(aplicarVideoLaranja, 600);
+      setTimeout(aplicarVideoLaranja, 1500);
+    }
+  })();
+})();
+
+(function() {
+  var NOVO_TEMA = {
+    key: 'gun-metal',
+    nome: 'Gun Metal',
+    cores: ['#1C1F26','#FF6B00','#FF9A4D','#2A2F38'],
+    vars: { primary:'#E85D00', secondary:'#FF6B00', dark:'#1C1F26', text:'#334155', red:'#ef4444', save:'#FF6B00' }
+  };
+
+  // Intercept abrirTemasNovo to inject theme after modal is created
+  var _orig = window.abrirTemasNovo;
+  window.abrirTemasNovo = function() {
+    if (_orig) _orig.apply(this, arguments);
+    setTimeout(function() {
+      var grid = document.querySelector('.temas-novo-grid');
+      if (!grid) return;
+      // Don't add if already there
+      if (document.querySelector('[data-tema="gun-metal"]')) return;
+      var coresHTML = NOVO_TEMA.cores.map(function(c) {
+        return '<div class="tema-novo-cor" style="background:' + c + '"></div>';
+      }).join('');
+      var el = document.createElement('div');
+      el.className = 'tema-novo-option';
+      el.dataset.tema = NOVO_TEMA.key;
+      el.setAttribute('onclick', "tnSelecionar('" + NOVO_TEMA.key + "')");
+      el.innerHTML = '<div class="tema-novo-paleta">' + coresHTML + '</div>'
+                   + '<div class="tema-novo-nome">' + NOVO_TEMA.nome + '</div>';
+      grid.appendChild(el);
+
+      // Mark active if this is current theme
+      var saved = localStorage.getItem('temaAplicativo');
+      if (saved === NOVO_TEMA.key) el.classList.add('ativo');
+    }, 50);
+  };
+
+  // Make tnSelecionar and tnAplicar aware of this theme
+  var _origSel = window.tnSelecionar;
+  window.tnSelecionar = function(key) {
+    if (_origSel) _origSel.apply(this, arguments);
+    if (key === NOVO_TEMA.key) {
+      // Apply vars preview (visual only, not saved yet)
+      var r = document.documentElement;
+      Object.keys(NOVO_TEMA.vars).forEach(function(k) {
+        r.style.setProperty('--' + k.replace(/([A-Z])/g, '-$1').toLowerCase(), NOVO_TEMA.vars[k]);
+      });
+    }
+  };
+
+  var _origApply = window.tnAplicar;
+  window.tnAplicar = function() {
+    var sel = document.querySelector('.tema-novo-option.ativo');
+    if (sel && sel.dataset.tema === NOVO_TEMA.key) {
+      // Save and apply our custom theme
+      localStorage.setItem('temaAplicativo', NOVO_TEMA.key);
+      var r = document.documentElement;
+      r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+      r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+      r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+      r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+      r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+      r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+      var btn = document.querySelector('.temas-novo-apply');
+      if (btn) btn.textContent = '⏳ Atualizando...';
+      if (typeof fecharTemasNovo === 'function') fecharTemasNovo();
+      setTimeout(function() { location.reload(true); }, 500);
+      return;
+    }
+    if (_origApply) _origApply.apply(this, arguments);
+  };
+
+  // Restore theme on page load if gun-metal was selected
+  (function restoreTheme() {
+    var saved = localStorage.getItem('temaAplicativo');
+    if (saved !== NOVO_TEMA.key) return;
+    var r = document.documentElement;
+    r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+    r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+    r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+    r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+    r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+    r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+    // Força o vídeo do header (usa o BW, igual aos outros temas não-padrão)
+    aplicarVideo_gun_metal();
+  })();
+
+  // Aplica o vídeo do header para o tema azul petróleo
+  function aplicarVideo_gun_metal(){
+    var tentar = function(n){
+      var video = document.querySelector('header video, .header-video, #headerVideo, video[src*="v14"], video[src*="bw"]');
+      if(video){
+        var url = 'https://marceloricardooficial.github.io/PillotGo/bw.mp4';
+        if(video.src !== url){ video.src = url; video.load(); video.play().catch(function(){}); }
+        return;
+      }
+      if(n < 20) setTimeout(function(){ tentar(n+1); }, 300);
+    };
+    tentar(0);
+  }
+  // Quando seleciona/aplica o azul, troca o vídeo
+  var _selAzul = window.tnSelecionar;
+  window.tnSelecionar = function(key){
+    if(_selAzul) _selAzul.apply(this, arguments);
+    if(key === 'gun-metal'){ aplicarVideo_gun_metal(); }
+  };
+  // Restaura vídeo no load se azul estiver ativo
+  (function(){
+    if(localStorage.getItem('temaAplicativo') === 'gun-metal'){
+      setTimeout(aplicarVideo_gun_metal, 600);
+      setTimeout(aplicarVideo_gun_metal, 1500);
+    }
+  })();
+})();
+
+(function() {
+  var NOVO_TEMA = {
+    key: 'yellow-sport',
+    nome: 'Yellow Sport',
+    cores: ['#111827','#FACC15','#FDE047','#1F2937'],
+    vars: { primary:'#EAB308', secondary:'#FACC15', dark:'#111827', text:'#334155', red:'#ef4444', save:'#FACC15' }
+  };
+
+  // Intercept abrirTemasNovo to inject theme after modal is created
+  var _orig = window.abrirTemasNovo;
+  window.abrirTemasNovo = function() {
+    if (_orig) _orig.apply(this, arguments);
+    setTimeout(function() {
+      var grid = document.querySelector('.temas-novo-grid');
+      if (!grid) return;
+      // Don't add if already there
+      if (document.querySelector('[data-tema="yellow-sport"]')) return;
+      var coresHTML = NOVO_TEMA.cores.map(function(c) {
+        return '<div class="tema-novo-cor" style="background:' + c + '"></div>';
+      }).join('');
+      var el = document.createElement('div');
+      el.className = 'tema-novo-option';
+      el.dataset.tema = NOVO_TEMA.key;
+      el.setAttribute('onclick', "tnSelecionar('" + NOVO_TEMA.key + "')");
+      el.innerHTML = '<div class="tema-novo-paleta">' + coresHTML + '</div>'
+                   + '<div class="tema-novo-nome">' + NOVO_TEMA.nome + '</div>';
+      grid.appendChild(el);
+
+      // Mark active if this is current theme
+      var saved = localStorage.getItem('temaAplicativo');
+      if (saved === NOVO_TEMA.key) el.classList.add('ativo');
+    }, 50);
+  };
+
+  // Make tnSelecionar and tnAplicar aware of this theme
+  var _origSel = window.tnSelecionar;
+  window.tnSelecionar = function(key) {
+    if (_origSel) _origSel.apply(this, arguments);
+    if (key === NOVO_TEMA.key) {
+      // Apply vars preview (visual only, not saved yet)
+      var r = document.documentElement;
+      Object.keys(NOVO_TEMA.vars).forEach(function(k) {
+        r.style.setProperty('--' + k.replace(/([A-Z])/g, '-$1').toLowerCase(), NOVO_TEMA.vars[k]);
+      });
+    }
+  };
+
+  var _origApply = window.tnAplicar;
+  window.tnAplicar = function() {
+    var sel = document.querySelector('.tema-novo-option.ativo');
+    if (sel && sel.dataset.tema === NOVO_TEMA.key) {
+      // Save and apply our custom theme
+      localStorage.setItem('temaAplicativo', NOVO_TEMA.key);
+      var r = document.documentElement;
+      r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+      r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+      r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+      r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+      r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+      r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+      var btn = document.querySelector('.temas-novo-apply');
+      if (btn) btn.textContent = '⏳ Atualizando...';
+      if (typeof fecharTemasNovo === 'function') fecharTemasNovo();
+      setTimeout(function() { location.reload(true); }, 500);
+      return;
+    }
+    if (_origApply) _origApply.apply(this, arguments);
+  };
+
+  // Restore theme on page load if yellow-sport was selected
+  (function restoreTheme() {
+    var saved = localStorage.getItem('temaAplicativo');
+    if (saved !== NOVO_TEMA.key) return;
+    var r = document.documentElement;
+    r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+    r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+    r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+    r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+    r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+    r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+    // Força o vídeo do header (usa o BW, igual aos outros temas não-padrão)
+    aplicarVideo_yellow_sport();
+  })();
+
+  // Aplica o vídeo do header para o tema azul petróleo
+  function aplicarVideo_yellow_sport(){
+    var tentar = function(n){
+      var video = document.querySelector('header video, .header-video, #headerVideo, video[src*="v14"], video[src*="bw"]');
+      if(video){
+        var url = 'https://marceloricardooficial.github.io/PillotGo/bw.mp4';
+        if(video.src !== url){ video.src = url; video.load(); video.play().catch(function(){}); }
+        return;
+      }
+      if(n < 20) setTimeout(function(){ tentar(n+1); }, 300);
+    };
+    tentar(0);
+  }
+  // Quando seleciona/aplica o azul, troca o vídeo
+  var _selAzul = window.tnSelecionar;
+  window.tnSelecionar = function(key){
+    if(_selAzul) _selAzul.apply(this, arguments);
+    if(key === 'yellow-sport'){ aplicarVideo_yellow_sport(); }
+  };
+  // Restaura vídeo no load se azul estiver ativo
+  (function(){
+    if(localStorage.getItem('temaAplicativo') === 'yellow-sport'){
+      setTimeout(aplicarVideo_yellow_sport, 600);
+      setTimeout(aplicarVideo_yellow_sport, 1500);
+    }
+  })();
+})();
+
+(function() {
+  var NOVO_TEMA = {
+    key: 'titanium-blue',
+    nome: 'Titanium Blue',
+    cores: ['#151B26','#2563EB','#60A5FA','#202938'],
+    vars: { primary:'#1D4ED8', secondary:'#2563EB', dark:'#151B26', text:'#334155', red:'#ef4444', save:'#2563EB' }
+  };
+
+  // Intercept abrirTemasNovo to inject theme after modal is created
+  var _orig = window.abrirTemasNovo;
+  window.abrirTemasNovo = function() {
+    if (_orig) _orig.apply(this, arguments);
+    setTimeout(function() {
+      var grid = document.querySelector('.temas-novo-grid');
+      if (!grid) return;
+      // Don't add if already there
+      if (document.querySelector('[data-tema="titanium-blue"]')) return;
+      var coresHTML = NOVO_TEMA.cores.map(function(c) {
+        return '<div class="tema-novo-cor" style="background:' + c + '"></div>';
+      }).join('');
+      var el = document.createElement('div');
+      el.className = 'tema-novo-option';
+      el.dataset.tema = NOVO_TEMA.key;
+      el.setAttribute('onclick', "tnSelecionar('" + NOVO_TEMA.key + "')");
+      el.innerHTML = '<div class="tema-novo-paleta">' + coresHTML + '</div>'
+                   + '<div class="tema-novo-nome">' + NOVO_TEMA.nome + '</div>';
+      grid.appendChild(el);
+
+      // Mark active if this is current theme
+      var saved = localStorage.getItem('temaAplicativo');
+      if (saved === NOVO_TEMA.key) el.classList.add('ativo');
+    }, 50);
+  };
+
+  // Make tnSelecionar and tnAplicar aware of this theme
+  var _origSel = window.tnSelecionar;
+  window.tnSelecionar = function(key) {
+    if (_origSel) _origSel.apply(this, arguments);
+    if (key === NOVO_TEMA.key) {
+      // Apply vars preview (visual only, not saved yet)
+      var r = document.documentElement;
+      Object.keys(NOVO_TEMA.vars).forEach(function(k) {
+        r.style.setProperty('--' + k.replace(/([A-Z])/g, '-$1').toLowerCase(), NOVO_TEMA.vars[k]);
+      });
+    }
+  };
+
+  var _origApply = window.tnAplicar;
+  window.tnAplicar = function() {
+    var sel = document.querySelector('.tema-novo-option.ativo');
+    if (sel && sel.dataset.tema === NOVO_TEMA.key) {
+      // Save and apply our custom theme
+      localStorage.setItem('temaAplicativo', NOVO_TEMA.key);
+      var r = document.documentElement;
+      r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+      r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+      r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+      r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+      r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+      r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+      var btn = document.querySelector('.temas-novo-apply');
+      if (btn) btn.textContent = '⏳ Atualizando...';
+      if (typeof fecharTemasNovo === 'function') fecharTemasNovo();
+      setTimeout(function() { location.reload(true); }, 500);
+      return;
+    }
+    if (_origApply) _origApply.apply(this, arguments);
+  };
+
+  // Restore theme on page load if titanium-blue was selected
+  (function restoreTheme() {
+    var saved = localStorage.getItem('temaAplicativo');
+    if (saved !== NOVO_TEMA.key) return;
+    var r = document.documentElement;
+    r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+    r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+    r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+    r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+    r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+    r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+    // Força o vídeo do header (usa o BW, igual aos outros temas não-padrão)
+    aplicarVideo_titanium_blue();
+  })();
+
+  // Aplica o vídeo do header para o tema azul petróleo
+  function aplicarVideo_titanium_blue(){
+    var tentar = function(n){
+      var video = document.querySelector('header video, .header-video, #headerVideo, video[src*="v14"], video[src*="bw"]');
+      if(video){
+        var url = 'https://marceloricardooficial.github.io/PillotGo/bw.mp4';
+        if(video.src !== url){ video.src = url; video.load(); video.play().catch(function(){}); }
+        return;
+      }
+      if(n < 20) setTimeout(function(){ tentar(n+1); }, 300);
+    };
+    tentar(0);
+  }
+  // Quando seleciona/aplica o azul, troca o vídeo
+  var _selAzul = window.tnSelecionar;
+  window.tnSelecionar = function(key){
+    if(_selAzul) _selAzul.apply(this, arguments);
+    if(key === 'titanium-blue'){ aplicarVideo_titanium_blue(); }
+  };
+  // Restaura vídeo no load se azul estiver ativo
+  (function(){
+    if(localStorage.getItem('temaAplicativo') === 'titanium-blue'){
+      setTimeout(aplicarVideo_titanium_blue, 600);
+      setTimeout(aplicarVideo_titanium_blue, 1500);
+    }
+  })();
+})();
+
+(function() {
+  var NOVO_TEMA = {
+    key: 'copper',
+    nome: 'Copper',
+    cores: ['#161616','#C76A28','#D98A4D','#252525'],
+    vars: { primary:'#A8541E', secondary:'#C76A28', dark:'#161616', text:'#334155', red:'#ef4444', save:'#C76A28' }
+  };
+
+  // Intercept abrirTemasNovo to inject theme after modal is created
+  var _orig = window.abrirTemasNovo;
+  window.abrirTemasNovo = function() {
+    if (_orig) _orig.apply(this, arguments);
+    setTimeout(function() {
+      var grid = document.querySelector('.temas-novo-grid');
+      if (!grid) return;
+      // Don't add if already there
+      if (document.querySelector('[data-tema="copper"]')) return;
+      var coresHTML = NOVO_TEMA.cores.map(function(c) {
+        return '<div class="tema-novo-cor" style="background:' + c + '"></div>';
+      }).join('');
+      var el = document.createElement('div');
+      el.className = 'tema-novo-option';
+      el.dataset.tema = NOVO_TEMA.key;
+      el.setAttribute('onclick', "tnSelecionar('" + NOVO_TEMA.key + "')");
+      el.innerHTML = '<div class="tema-novo-paleta">' + coresHTML + '</div>'
+                   + '<div class="tema-novo-nome">' + NOVO_TEMA.nome + '</div>';
+      grid.appendChild(el);
+
+      // Mark active if this is current theme
+      var saved = localStorage.getItem('temaAplicativo');
+      if (saved === NOVO_TEMA.key) el.classList.add('ativo');
+    }, 50);
+  };
+
+  // Make tnSelecionar and tnAplicar aware of this theme
+  var _origSel = window.tnSelecionar;
+  window.tnSelecionar = function(key) {
+    if (_origSel) _origSel.apply(this, arguments);
+    if (key === NOVO_TEMA.key) {
+      // Apply vars preview (visual only, not saved yet)
+      var r = document.documentElement;
+      Object.keys(NOVO_TEMA.vars).forEach(function(k) {
+        r.style.setProperty('--' + k.replace(/([A-Z])/g, '-$1').toLowerCase(), NOVO_TEMA.vars[k]);
+      });
+    }
+  };
+
+  var _origApply = window.tnAplicar;
+  window.tnAplicar = function() {
+    var sel = document.querySelector('.tema-novo-option.ativo');
+    if (sel && sel.dataset.tema === NOVO_TEMA.key) {
+      // Save and apply our custom theme
+      localStorage.setItem('temaAplicativo', NOVO_TEMA.key);
+      var r = document.documentElement;
+      r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+      r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+      r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+      r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+      r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+      r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+      var btn = document.querySelector('.temas-novo-apply');
+      if (btn) btn.textContent = '⏳ Atualizando...';
+      if (typeof fecharTemasNovo === 'function') fecharTemasNovo();
+      setTimeout(function() { location.reload(true); }, 500);
+      return;
+    }
+    if (_origApply) _origApply.apply(this, arguments);
+  };
+
+  // Restore theme on page load if copper was selected
+  (function restoreTheme() {
+    var saved = localStorage.getItem('temaAplicativo');
+    if (saved !== NOVO_TEMA.key) return;
+    var r = document.documentElement;
+    r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+    r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+    r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+    r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+    r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+    r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+    // Força o vídeo do header (usa o BW, igual aos outros temas não-padrão)
+    aplicarVideo_copper();
+  })();
+
+  // Aplica o vídeo do header para o tema azul petróleo
+  function aplicarVideo_copper(){
+    var tentar = function(n){
+      var video = document.querySelector('header video, .header-video, #headerVideo, video[src*="v14"], video[src*="bw"]');
+      if(video){
+        var url = 'https://marceloricardooficial.github.io/PillotGo/bw.mp4';
+        if(video.src !== url){ video.src = url; video.load(); video.play().catch(function(){}); }
+        return;
+      }
+      if(n < 20) setTimeout(function(){ tentar(n+1); }, 300);
+    };
+    tentar(0);
+  }
+  // Quando seleciona/aplica o azul, troca o vídeo
+  var _selAzul = window.tnSelecionar;
+  window.tnSelecionar = function(key){
+    if(_selAzul) _selAzul.apply(this, arguments);
+    if(key === 'copper'){ aplicarVideo_copper(); }
+  };
+  // Restaura vídeo no load se azul estiver ativo
+  (function(){
+    if(localStorage.getItem('temaAplicativo') === 'copper'){
+      setTimeout(aplicarVideo_copper, 600);
+      setTimeout(aplicarVideo_copper, 1500);
+    }
+  })();
+})();
+
+(function() {
+  var NOVO_TEMA = {
+    key: 'cyber-blue',
+    nome: 'Cyber Blue',
+    cores: ['#0A0F1A','#00D4FF','#66E8FF','#131C2B'],
+    vars: { primary:'#009FCC', secondary:'#00D4FF', dark:'#0A0F1A', text:'#334155', red:'#ef4444', save:'#00D4FF' }
+  };
+
+  // Intercept abrirTemasNovo to inject theme after modal is created
+  var _orig = window.abrirTemasNovo;
+  window.abrirTemasNovo = function() {
+    if (_orig) _orig.apply(this, arguments);
+    setTimeout(function() {
+      var grid = document.querySelector('.temas-novo-grid');
+      if (!grid) return;
+      // Don't add if already there
+      if (document.querySelector('[data-tema="cyber-blue"]')) return;
+      var coresHTML = NOVO_TEMA.cores.map(function(c) {
+        return '<div class="tema-novo-cor" style="background:' + c + '"></div>';
+      }).join('');
+      var el = document.createElement('div');
+      el.className = 'tema-novo-option';
+      el.dataset.tema = NOVO_TEMA.key;
+      el.setAttribute('onclick', "tnSelecionar('" + NOVO_TEMA.key + "')");
+      el.innerHTML = '<div class="tema-novo-paleta">' + coresHTML + '</div>'
+                   + '<div class="tema-novo-nome">' + NOVO_TEMA.nome + '</div>';
+      grid.appendChild(el);
+
+      // Mark active if this is current theme
+      var saved = localStorage.getItem('temaAplicativo');
+      if (saved === NOVO_TEMA.key) el.classList.add('ativo');
+    }, 50);
+  };
+
+  // Make tnSelecionar and tnAplicar aware of this theme
+  var _origSel = window.tnSelecionar;
+  window.tnSelecionar = function(key) {
+    if (_origSel) _origSel.apply(this, arguments);
+    if (key === NOVO_TEMA.key) {
+      // Apply vars preview (visual only, not saved yet)
+      var r = document.documentElement;
+      Object.keys(NOVO_TEMA.vars).forEach(function(k) {
+        r.style.setProperty('--' + k.replace(/([A-Z])/g, '-$1').toLowerCase(), NOVO_TEMA.vars[k]);
+      });
+    }
+  };
+
+  var _origApply = window.tnAplicar;
+  window.tnAplicar = function() {
+    var sel = document.querySelector('.tema-novo-option.ativo');
+    if (sel && sel.dataset.tema === NOVO_TEMA.key) {
+      // Save and apply our custom theme
+      localStorage.setItem('temaAplicativo', NOVO_TEMA.key);
+      var r = document.documentElement;
+      r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+      r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+      r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+      r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+      r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+      r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+      var btn = document.querySelector('.temas-novo-apply');
+      if (btn) btn.textContent = '⏳ Atualizando...';
+      if (typeof fecharTemasNovo === 'function') fecharTemasNovo();
+      setTimeout(function() { location.reload(true); }, 500);
+      return;
+    }
+    if (_origApply) _origApply.apply(this, arguments);
+  };
+
+  // Restore theme on page load if cyber-blue was selected
+  (function restoreTheme() {
+    var saved = localStorage.getItem('temaAplicativo');
+    if (saved !== NOVO_TEMA.key) return;
+    var r = document.documentElement;
+    r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+    r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+    r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+    r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+    r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+    r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+    // Força o vídeo do header (usa o BW, igual aos outros temas não-padrão)
+    aplicarVideo_cyber_blue();
+  })();
+
+  // Aplica o vídeo do header para o tema azul petróleo
+  function aplicarVideo_cyber_blue(){
+    var tentar = function(n){
+      var video = document.querySelector('header video, .header-video, #headerVideo, video[src*="v14"], video[src*="bw"]');
+      if(video){
+        var url = 'https://marceloricardooficial.github.io/PillotGo/bw.mp4';
+        if(video.src !== url){ video.src = url; video.load(); video.play().catch(function(){}); }
+        return;
+      }
+      if(n < 20) setTimeout(function(){ tentar(n+1); }, 300);
+    };
+    tentar(0);
+  }
+  // Quando seleciona/aplica o azul, troca o vídeo
+  var _selAzul = window.tnSelecionar;
+  window.tnSelecionar = function(key){
+    if(_selAzul) _selAzul.apply(this, arguments);
+    if(key === 'cyber-blue'){ aplicarVideo_cyber_blue(); }
+  };
+  // Restaura vídeo no load se azul estiver ativo
+  (function(){
+    if(localStorage.getItem('temaAplicativo') === 'cyber-blue'){
+      setTimeout(aplicarVideo_cyber_blue, 600);
+      setTimeout(aplicarVideo_cyber_blue, 1500);
+    }
+  })();
+})();
+
+(function() {
+  var NOVO_TEMA = {
+    key: 'verde-lamborghini',
+    nome: 'Verde Lamborghini',
+    cores: ['#111827','#84CC16','#A3E635','#1F2937'],
+    vars: { primary:'#65A30D', secondary:'#84CC16', dark:'#111827', text:'#334155', red:'#ef4444', save:'#84CC16' }
+  };
+
+  // Intercept abrirTemasNovo to inject theme after modal is created
+  var _orig = window.abrirTemasNovo;
+  window.abrirTemasNovo = function() {
+    if (_orig) _orig.apply(this, arguments);
+    setTimeout(function() {
+      var grid = document.querySelector('.temas-novo-grid');
+      if (!grid) return;
+      // Don't add if already there
+      if (document.querySelector('[data-tema="verde-lamborghini"]')) return;
+      var coresHTML = NOVO_TEMA.cores.map(function(c) {
+        return '<div class="tema-novo-cor" style="background:' + c + '"></div>';
+      }).join('');
+      var el = document.createElement('div');
+      el.className = 'tema-novo-option';
+      el.dataset.tema = NOVO_TEMA.key;
+      el.setAttribute('onclick', "tnSelecionar('" + NOVO_TEMA.key + "')");
+      el.innerHTML = '<div class="tema-novo-paleta">' + coresHTML + '</div>'
+                   + '<div class="tema-novo-nome">' + NOVO_TEMA.nome + '</div>';
+      grid.appendChild(el);
+
+      // Mark active if this is current theme
+      var saved = localStorage.getItem('temaAplicativo');
+      if (saved === NOVO_TEMA.key) el.classList.add('ativo');
+    }, 50);
+  };
+
+  // Make tnSelecionar and tnAplicar aware of this theme
+  var _origSel = window.tnSelecionar;
+  window.tnSelecionar = function(key) {
+    if (_origSel) _origSel.apply(this, arguments);
+    if (key === NOVO_TEMA.key) {
+      // Apply vars preview (visual only, not saved yet)
+      var r = document.documentElement;
+      Object.keys(NOVO_TEMA.vars).forEach(function(k) {
+        r.style.setProperty('--' + k.replace(/([A-Z])/g, '-$1').toLowerCase(), NOVO_TEMA.vars[k]);
+      });
+    }
+  };
+
+  var _origApply = window.tnAplicar;
+  window.tnAplicar = function() {
+    var sel = document.querySelector('.tema-novo-option.ativo');
+    if (sel && sel.dataset.tema === NOVO_TEMA.key) {
+      // Save and apply our custom theme
+      localStorage.setItem('temaAplicativo', NOVO_TEMA.key);
+      var r = document.documentElement;
+      r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+      r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+      r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+      r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+      r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+      r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+      var btn = document.querySelector('.temas-novo-apply');
+      if (btn) btn.textContent = '⏳ Atualizando...';
+      if (typeof fecharTemasNovo === 'function') fecharTemasNovo();
+      setTimeout(function() { location.reload(true); }, 500);
+      return;
+    }
+    if (_origApply) _origApply.apply(this, arguments);
+  };
+
+  // Restore theme on page load if verde-lamborghini was selected
+  (function restoreTheme() {
+    var saved = localStorage.getItem('temaAplicativo');
+    if (saved !== NOVO_TEMA.key) return;
+    var r = document.documentElement;
+    r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+    r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+    r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+    r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+    r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+    r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+    // Força o vídeo do header (usa o BW, igual aos outros temas não-padrão)
+    aplicarVideo_verde_lamborghini();
+  })();
+
+  // Aplica o vídeo do header para o tema azul petróleo
+  function aplicarVideo_verde_lamborghini(){
+    var tentar = function(n){
+      var video = document.querySelector('header video, .header-video, #headerVideo, video[src*="v14"], video[src*="bw"]');
+      if(video){
+        var url = 'https://marceloricardooficial.github.io/PillotGo/bw.mp4';
+        if(video.src !== url){ video.src = url; video.load(); video.play().catch(function(){}); }
+        return;
+      }
+      if(n < 20) setTimeout(function(){ tentar(n+1); }, 300);
+    };
+    tentar(0);
+  }
+  // Quando seleciona/aplica o azul, troca o vídeo
+  var _selAzul = window.tnSelecionar;
+  window.tnSelecionar = function(key){
+    if(_selAzul) _selAzul.apply(this, arguments);
+    if(key === 'verde-lamborghini'){ aplicarVideo_verde_lamborghini(); }
+  };
+  // Restaura vídeo no load se azul estiver ativo
+  (function(){
+    if(localStorage.getItem('temaAplicativo') === 'verde-lamborghini'){
+      setTimeout(aplicarVideo_verde_lamborghini, 600);
+      setTimeout(aplicarVideo_verde_lamborghini, 1500);
+    }
+  })();
+})();
+
+(function() {
+  var NOVO_TEMA = {
+    key: 'silver-metal',
+    nome: 'Silver Metal',
+    cores: ['#1A1D21','#8B949E','#B1BAC4','#2A2F36'],
+    vars: { primary:'#6E7681', secondary:'#8B949E', dark:'#1A1D21', text:'#334155', red:'#ef4444', save:'#8B949E' }
+  };
+
+  // Intercept abrirTemasNovo to inject theme after modal is created
+  var _orig = window.abrirTemasNovo;
+  window.abrirTemasNovo = function() {
+    if (_orig) _orig.apply(this, arguments);
+    setTimeout(function() {
+      var grid = document.querySelector('.temas-novo-grid');
+      if (!grid) return;
+      // Don't add if already there
+      if (document.querySelector('[data-tema="silver-metal"]')) return;
+      var coresHTML = NOVO_TEMA.cores.map(function(c) {
+        return '<div class="tema-novo-cor" style="background:' + c + '"></div>';
+      }).join('');
+      var el = document.createElement('div');
+      el.className = 'tema-novo-option';
+      el.dataset.tema = NOVO_TEMA.key;
+      el.setAttribute('onclick', "tnSelecionar('" + NOVO_TEMA.key + "')");
+      el.innerHTML = '<div class="tema-novo-paleta">' + coresHTML + '</div>'
+                   + '<div class="tema-novo-nome">' + NOVO_TEMA.nome + '</div>';
+      grid.appendChild(el);
+
+      // Mark active if this is current theme
+      var saved = localStorage.getItem('temaAplicativo');
+      if (saved === NOVO_TEMA.key) el.classList.add('ativo');
+    }, 50);
+  };
+
+  // Make tnSelecionar and tnAplicar aware of this theme
+  var _origSel = window.tnSelecionar;
+  window.tnSelecionar = function(key) {
+    if (_origSel) _origSel.apply(this, arguments);
+    if (key === NOVO_TEMA.key) {
+      // Apply vars preview (visual only, not saved yet)
+      var r = document.documentElement;
+      Object.keys(NOVO_TEMA.vars).forEach(function(k) {
+        r.style.setProperty('--' + k.replace(/([A-Z])/g, '-$1').toLowerCase(), NOVO_TEMA.vars[k]);
+      });
+    }
+  };
+
+  var _origApply = window.tnAplicar;
+  window.tnAplicar = function() {
+    var sel = document.querySelector('.tema-novo-option.ativo');
+    if (sel && sel.dataset.tema === NOVO_TEMA.key) {
+      // Save and apply our custom theme
+      localStorage.setItem('temaAplicativo', NOVO_TEMA.key);
+      var r = document.documentElement;
+      r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+      r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+      r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+      r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+      r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+      r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+      var btn = document.querySelector('.temas-novo-apply');
+      if (btn) btn.textContent = '⏳ Atualizando...';
+      if (typeof fecharTemasNovo === 'function') fecharTemasNovo();
+      setTimeout(function() { location.reload(true); }, 500);
+      return;
+    }
+    if (_origApply) _origApply.apply(this, arguments);
+  };
+
+  // Restore theme on page load if silver-metal was selected
+  (function restoreTheme() {
+    var saved = localStorage.getItem('temaAplicativo');
+    if (saved !== NOVO_TEMA.key) return;
+    var r = document.documentElement;
+    r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+    r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+    r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+    r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+    r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+    r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+    // Força o vídeo do header (usa o BW, igual aos outros temas não-padrão)
+    aplicarVideo_silver_metal();
+  })();
+
+  // Aplica o vídeo do header para o tema azul petróleo
+  function aplicarVideo_silver_metal(){
+    var tentar = function(n){
+      var video = document.querySelector('header video, .header-video, #headerVideo, video[src*="v14"], video[src*="bw"]');
+      if(video){
+        var url = 'https://marceloricardooficial.github.io/PillotGo/bw.mp4';
+        if(video.src !== url){ video.src = url; video.load(); video.play().catch(function(){}); }
+        return;
+      }
+      if(n < 20) setTimeout(function(){ tentar(n+1); }, 300);
+    };
+    tentar(0);
+  }
+  // Quando seleciona/aplica o azul, troca o vídeo
+  var _selAzul = window.tnSelecionar;
+  window.tnSelecionar = function(key){
+    if(_selAzul) _selAzul.apply(this, arguments);
+    if(key === 'silver-metal'){ aplicarVideo_silver_metal(); }
+  };
+  // Restaura vídeo no load se azul estiver ativo
+  (function(){
+    if(localStorage.getItem('temaAplicativo') === 'silver-metal'){
+      setTimeout(aplicarVideo_silver_metal, 600);
+      setTimeout(aplicarVideo_silver_metal, 1500);
+    }
+  })();
+})();
+
+(function() {
+  var NOVO_TEMA = {
+    key: 'blue-orange',
+    nome: 'Blue Orange',
+    cores: ['#0F172A','#FF6B00','#0EA5E9','#1E293B'],
+    vars: { primary:'#E85D00', secondary:'#FF6B00', dark:'#0F172A', text:'#334155', red:'#ef4444', save:'#FF6B00' }
+  };
+
+  // Intercept abrirTemasNovo to inject theme after modal is created
+  var _orig = window.abrirTemasNovo;
+  window.abrirTemasNovo = function() {
+    if (_orig) _orig.apply(this, arguments);
+    setTimeout(function() {
+      var grid = document.querySelector('.temas-novo-grid');
+      if (!grid) return;
+      // Don't add if already there
+      if (document.querySelector('[data-tema="blue-orange"]')) return;
+      var coresHTML = NOVO_TEMA.cores.map(function(c) {
+        return '<div class="tema-novo-cor" style="background:' + c + '"></div>';
+      }).join('');
+      var el = document.createElement('div');
+      el.className = 'tema-novo-option';
+      el.dataset.tema = NOVO_TEMA.key;
+      el.setAttribute('onclick', "tnSelecionar('" + NOVO_TEMA.key + "')");
+      el.innerHTML = '<div class="tema-novo-paleta">' + coresHTML + '</div>'
+                   + '<div class="tema-novo-nome">' + NOVO_TEMA.nome + '</div>';
+      grid.appendChild(el);
+
+      // Mark active if this is current theme
+      var saved = localStorage.getItem('temaAplicativo');
+      if (saved === NOVO_TEMA.key) el.classList.add('ativo');
+    }, 50);
+  };
+
+  // Make tnSelecionar and tnAplicar aware of this theme
+  var _origSel = window.tnSelecionar;
+  window.tnSelecionar = function(key) {
+    if (_origSel) _origSel.apply(this, arguments);
+    if (key === NOVO_TEMA.key) {
+      // Apply vars preview (visual only, not saved yet)
+      var r = document.documentElement;
+      Object.keys(NOVO_TEMA.vars).forEach(function(k) {
+        r.style.setProperty('--' + k.replace(/([A-Z])/g, '-$1').toLowerCase(), NOVO_TEMA.vars[k]);
+      });
+    }
+  };
+
+  var _origApply = window.tnAplicar;
+  window.tnAplicar = function() {
+    var sel = document.querySelector('.tema-novo-option.ativo');
+    if (sel && sel.dataset.tema === NOVO_TEMA.key) {
+      // Save and apply our custom theme
+      localStorage.setItem('temaAplicativo', NOVO_TEMA.key);
+      var r = document.documentElement;
+      r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+      r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+      r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+      r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+      r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+      r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+      var btn = document.querySelector('.temas-novo-apply');
+      if (btn) btn.textContent = '⏳ Atualizando...';
+      if (typeof fecharTemasNovo === 'function') fecharTemasNovo();
+      setTimeout(function() { location.reload(true); }, 500);
+      return;
+    }
+    if (_origApply) _origApply.apply(this, arguments);
+  };
+
+  // Restore theme on page load if blue-orange was selected
+  (function restoreTheme() {
+    var saved = localStorage.getItem('temaAplicativo');
+    if (saved !== NOVO_TEMA.key) return;
+    var r = document.documentElement;
+    r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
+    r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
+    r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
+    r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
+    r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
+    r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
+    // Força o vídeo do header (usa o BW, igual aos outros temas não-padrão)
+    aplicarVideo_blue_orange();
+  })();
+
+  // Aplica o vídeo do header para o tema azul petróleo
+  function aplicarVideo_blue_orange(){
+    var tentar = function(n){
+      var video = document.querySelector('header video, .header-video, #headerVideo, video[src*="v14"], video[src*="bw"]');
+      if(video){
+        var url = 'https://marceloricardooficial.github.io/PillotGo/bw.mp4';
+        if(video.src !== url){ video.src = url; video.load(); video.play().catch(function(){}); }
+        return;
+      }
+      if(n < 20) setTimeout(function(){ tentar(n+1); }, 300);
+    };
+    tentar(0);
+  }
+  // Quando seleciona/aplica o azul, troca o vídeo
+  var _selAzul = window.tnSelecionar;
+  window.tnSelecionar = function(key){
+    if(_selAzul) _selAzul.apply(this, arguments);
+    if(key === 'blue-orange'){ aplicarVideo_blue_orange(); }
+  };
+  // Restaura vídeo no load se azul estiver ativo
+  (function(){
+    if(localStorage.getItem('temaAplicativo') === 'blue-orange'){
+      setTimeout(aplicarVideo_blue_orange, 600);
+      setTimeout(aplicarVideo_blue_orange, 1500);
+    }
   })();
 })();
 
@@ -11922,4 +13159,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-    </html>
+                        </html>
