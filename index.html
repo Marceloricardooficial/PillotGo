@@ -3796,7 +3796,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v434';
+window.APP_VERSAO = 'v441';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -4733,6 +4733,10 @@ window.verificarJornadaEmAndamento = function() {
         <button class="ana-btn" onclick="gerarAnalytics()">
           <i class="fa-solid fa-sync-alt"></i> ATUALIZAR RELATÓRIO
         </button>
+        <label style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:11px 13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;cursor:pointer;">
+          <input type="checkbox" id="anaIncluirGE" onchange="gerarAnalytics()" style="width:20px;height:20px;flex-shrink:0;accent-color:var(--secondary);">
+          <span style="font-size:12px;color:#cbd5e1;line-height:1.4;">Incluir <b style="color:#fff;">Ganhos Extras</b> no lucro<br><span style="font-size:10px;opacity:.7;">Não afeta R$/km nem R$/hora</span></span>
+        </label>
       </div>
 
       <!-- Meta da semana -->
@@ -4915,6 +4919,19 @@ window.verificarJornadaEmAndamento = function() {
 
     const mediaRh  = dias>0 ? totalRh/dias : 0;
     const mediaRk  = dias>0 ? totalRk/dias : 0;
+    // Ganhos Extras do período (módulo independente) - só no lucro se toggle ativo
+    var incluirGE = document.getElementById('anaIncluirGE')?.checked;
+    var totalGanhosExtras = 0;
+    if(incluirGE && typeof carregarGanhosExtrasList === 'function'){
+      var geIni = document.getElementById('anaDataInicio')?.value || '';
+      var geFim = document.getElementById('anaDataFim')?.value || '';
+      carregarGanhosExtrasList().forEach(function(g){
+        if(geIni && g.data < geIni) return;
+        if(geFim && g.data > geFim) return;
+        totalGanhosExtras += parseFloat(g.valor||0);
+      });
+      totalLucro += totalGanhosExtras;
+    }
     const margem   = totalBruto>0 ? Math.round((totalLucro/totalBruto)*100) : 0;
     const pctGnv   = totalBruto>0 ? Math.round((totalGnv/totalBruto)*100)   : 0;
     const pctOut   = totalBruto>0 ? Math.round((totalOutros/totalBruto)*100) : 0;
@@ -12733,6 +12750,222 @@ var _eficIv2 = setInterval(function(){
     puxador.addEventListener('touchend', function(){ if(!drag)return; drag=false; painel.style.transition='transform .3s cubic-bezier(.32,.72,0,1)'; if(curY>80) fechar(); else painel.style.transform='translateY(0)'; curY=0; });
   };
 
+// ================================================================
+// GANHOS EXTRAS - módulo independente (não entra em cálculos automaticamente)
+// ================================================================
+(function(){
+  var STORAGE_GE = 'ganhosExtras_v1';
+
+  window.carregarGanhosExtrasList = function(){
+    try { return JSON.parse(localStorage.getItem(STORAGE_GE) || '[]'); } catch(e){ return []; }
+  };
+  window.salvarGanhosExtrasList = function(arr){
+    try { localStorage.setItem(STORAGE_GE, JSON.stringify(arr)); } catch(e){}
+  };
+
+  function uidGE(){ return 'ge_' + Date.now() + '_' + Math.floor(Math.random()*1000); }
+  function fmtDataGE(d){
+    if(!d) return '';
+    var p = d.split('-');
+    return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : d;
+  }
+  function hojeGE(){
+    var d = new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+
+  // ---- Modal ----
+  function criarModalGE(){
+    if(document.getElementById('modalGanhosExtras')) return;
+    var m = document.createElement('div');
+    m.id = 'modalGanhosExtras';
+    m.style.cssText = 'display:none;position:fixed;inset:0;z-index:99996;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;';
+    var passado = new Date(); passado.setDate(passado.getDate()-30);
+    var passadoStr = passado.getFullYear()+'-'+String(passado.getMonth()+1).padStart(2,'0')+'-'+String(passado.getDate()).padStart(2,'0');
+    m.innerHTML = ''
+      + '<div style="background:#fff;width:100%;max-width:100%;height:100%;max-height:100vh;overflow-y:auto;display:flex;flex-direction:column;">'
+      +   '<div style="background:#000;position:relative;padding:22px 20px 18px;text-align:center;flex-shrink:0;">'
+      +     '<div style="position:absolute;inset:0;background:radial-gradient(circle at 80% 20%,rgba(34,197,94,.18),transparent 55%);"></div>'
+      +     '<button onclick="fecharModalGanhosExtras()" style="position:absolute;top:12px;right:12px;z-index:3;width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-xmark"></i></button>'
+      +     '<div style="position:relative;z-index:1">'
+      +       '<div style="font-size:18px;font-weight:900;color:var(--secondary);text-transform:uppercase;letter-spacing:2px">Ganhos Extras</div>'
+      +       '<div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:3px">Rendas avulsas guardadas à parte</div>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div style="padding:16px 16px 0;flex-shrink:0;">'
+      +     '<button id="geBtnAdd" onclick="toggleGEInline()" style="width:100%;padding:13px;background:var(--secondary);color:#fff;border:none;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fa-solid fa-plus" id="geBtnAddIcon"></i> <span id="geBtnAddTxt">Cadastrar Ganho Extra</span></button>'
+      +   '</div>'
+      +   '<div id="geAddInline" style="max-height:0;overflow:hidden;transition:max-height .35s ease;padding:0 16px;"></div>'
+      +   '<div style="padding:16px;flex-shrink:0;">'
+      +     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+      +       '<div><div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px;">De</div><input type="date" id="geFI" value="'+passadoStr+'" onchange="renderGE()" style="width:100%;padding:10px;border:1px solid #e5e7eb;font-size:13px;box-sizing:border-box;"></div>'
+      +       '<div><div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Até</div><input type="date" id="geFF" value="'+hojeGE()+'" onchange="renderGE()" style="width:100%;padding:10px;border:1px solid #e5e7eb;font-size:13px;box-sizing:border-box;"></div>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div style="text-align:center;padding:0 16px 10px;flex-shrink:0;">'
+      +     '<div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;">Total no período</div>'
+      +     '<div style="font-size:24px;font-weight:800;color:var(--secondary);margin-top:4px;" id="geTotal"><span style="font-size:13px;">R$</span>0,00</div>'
+      +   '</div>'
+      +   '<div id="geLista" style="padding:0 16px 24px;flex:1;"></div>'
+      + '</div>';
+    document.body.appendChild(m);
+    m.addEventListener('click', function(e){ if(e.target===m) fecharModalGanhosExtras(); });
+  }
+
+  window.abrirModalGanhosExtras = function(){
+    criarModalGE();
+    document.getElementById('modalGanhosExtras').style.display = 'flex';
+    renderGE();
+  };
+  window.fecharModalGanhosExtras = function(){
+    var m = document.getElementById('modalGanhosExtras');
+    if(m) m.style.display = 'none';
+    window._geInlineAberto = false;
+  };
+
+  // ---- Form inline ----
+  window._geInlineAberto = false;
+  window._geEditId = null;
+  window.toggleGEInline = function(){
+    var box = document.getElementById('geAddInline');
+    if(!box) return;
+    if(window._geInlineAberto){ fecharGEInline(); return; }
+    box.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:30px;"><div style="width:28px;height:28px;border:3px solid rgba(34,197,94,.2);border-top-color:var(--secondary);border-radius:50%;animation:splashSpin .7s linear infinite;"></div></div>';
+    box.style.maxHeight = '120px';
+    window._geInlineAberto = true;
+    var ic=document.getElementById('geBtnAddIcon'); var tx=document.getElementById('geBtnAddTxt');
+    if(ic) ic.className='fa-solid fa-xmark'; if(tx) tx.textContent='Fechar';
+    setTimeout(function(){ montarFormGE(box); }, 280);
+  };
+  window.fecharGEInline = function(){
+    var box=document.getElementById('geAddInline');
+    if(box){ box.style.maxHeight='0'; setTimeout(function(){ box.innerHTML=''; }, 350); }
+    window._geInlineAberto=false; window._geEditId=null;
+    var ic=document.getElementById('geBtnAddIcon'); var tx=document.getElementById('geBtnAddTxt');
+    if(ic) ic.className='fa-solid fa-plus'; if(tx) tx.textContent='Cadastrar Ganho Extra';
+  };
+
+  function montarFormGE(box){
+    var lbl = 'font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:4px;';
+    var inp = 'width:100%;padding:10px;border:1px solid #e5e7eb;font-size:13px;box-sizing:border-box;background:#fff;';
+    var ed = window._geEditId ? carregarGanhosExtrasList().find(function(g){ return g.id===window._geEditId; }) : null;
+    var h = '<div style="padding:14px 0 18px;display:flex;flex-direction:column;gap:10px;">'
+      + '<div style="display:grid;grid-template-columns:1.3fr 1fr;gap:8px;">'
+      +   '<div><div style="'+lbl+'">Serviço *</div><input id="geServico" value="'+(ed?String(ed.servico||'').replace(/"/g,'&quot;'):'')+'" placeholder="Ex: Designer" style="'+inp+'"></div>'
+      +   '<div><div style="'+lbl+'">Data</div><input type="date" id="geData" value="'+(ed?ed.data:hojeGE())+'" style="'+inp+'"></div>'
+      + '</div>'
+      + '<div><div style="'+lbl+'">Valor *</div><input id="geValor" value="'+(ed?String(ed.valor).replace('.',','):'')+'" placeholder="0,00" style="'+inp+'"></div>'
+      + '<div><div style="'+lbl+'">Descrição</div><input id="geDesc" value="'+(ed?String(ed.descricao||'').replace(/"/g,'&quot;'):'')+'" placeholder="Opcional" style="'+inp+'"></div>'
+      + '<button onclick="salvarGE()" style="width:100%;padding:13px;background:var(--secondary);color:#fff;border:none;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;margin-top:4px;">'+(ed?'Salvar Alterações':'Incluir')+'</button>'
+      + '</div>';
+    box.innerHTML = h;
+    box.style.maxHeight = '800px';
+    box.style.overflow = 'visible';
+    setTimeout(function(){
+      // Ajusta a altura exata ao conteúdo pra não cortar o botão
+      box.style.maxHeight = (box.scrollHeight + 40) + 'px';
+      box.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 120);
+  }
+
+  window.salvarGE = function(){
+    var servico = document.getElementById('geServico')?.value.trim();
+    var data = document.getElementById('geData')?.value;
+    var valor = parseFloat((document.getElementById('geValor')?.value||'').replace(',','.'));
+    var desc = document.getElementById('geDesc')?.value.trim();
+    if(!servico || !data || isNaN(valor) || valor<=0){ alert('Preencha serviço, data e valor.'); return; }
+    var lista = carregarGanhosExtrasList();
+    if(window._geEditId){
+      var g = lista.find(function(x){ return x.id===window._geEditId; });
+      if(g){ g.servico=servico; g.data=data; g.valor=valor; g.descricao=desc; }
+    } else {
+      lista.push({ id: uidGE(), servico:servico, data:data, valor:valor, descricao:desc });
+    }
+    salvarGanhosExtrasList(lista);
+    fecharGEInline();
+    renderGE();
+  };
+
+  window.editarGE = function(id){
+    window._geEditId = id;
+    if(window._geInlineAberto){ fecharGEInline(); }
+    var box = document.getElementById('geAddInline');
+    window._geInlineAberto = true;
+    var ic=document.getElementById('geBtnAddIcon'); var tx=document.getElementById('geBtnAddTxt');
+    if(ic) ic.className='fa-solid fa-xmark'; if(tx) tx.textContent='Fechar';
+    montarFormGE(box);
+  };
+
+  window.deletarGE = function(id){
+    if(!confirm('Excluir este ganho extra?')) return;
+    var lista = carregarGanhosExtrasList().filter(function(g){ return g.id!==id; });
+    salvarGanhosExtrasList(lista);
+    renderGE();
+  };
+
+  window.renderGE = function(){
+    var lista = carregarGanhosExtrasList();
+    var ini = document.getElementById('geFI')?.value || '';
+    var fim = document.getElementById('geFF')?.value || '';
+    var filtrados = lista.filter(function(g){
+      if(ini && g.data < ini) return false;
+      if(fim && g.data > fim) return false;
+      return true;
+    }).sort(function(a,b){ return (b.data||'').localeCompare(a.data||''); });
+
+    var total = filtrados.reduce(function(s,g){ return s+parseFloat(g.valor||0); },0);
+    var totEl = document.getElementById('geTotal');
+    if(totEl) totEl.innerHTML = '<span style="font-size:13px;">R$</span> ' + total.toFixed(2).replace('.',',');
+
+    var box = document.getElementById('geLista');
+    if(!box) return;
+    if(!filtrados.length){
+      box.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94a3b8;"><div style="width:56px;height:56px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;"><i class="fa-solid fa-sack-dollar" style="font-size:22px;color:#cbd5e1;"></i></div><div style="font-size:14px;font-weight:600;color:#6B7280;">Nenhum ganho extra</div><div style="font-size:12px;color:#94a3b8;margin-top:4px;">Cadastre rendas avulsas aqui</div></div>';
+      return;
+    }
+    box.innerHTML = filtrados.map(function(g){
+      return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:14px 0;border-bottom:1px solid #f1f5f9;">'
+        + '<div style="flex:1;min-width:0;">'
+        +   '<div style="font-size:15px;font-weight:700;color:#111827;">'+g.servico+'</div>'
+        +   (g.descricao?'<div style="font-size:12px;color:#475569;margin-top:2px;">'+g.descricao+'</div>':'')
+        +   '<div style="font-size:11px;color:#94a3b8;margin-top:4px;">'+fmtDataGE(g.data)+'</div>'
+        + '</div>'
+        + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;">'
+        +   '<div style="font-size:16px;font-weight:800;color:var(--secondary);white-space:nowrap;"><span style="font-size:11px;">R$</span> '+parseFloat(g.valor).toFixed(2).replace('.',',')+'</div>'
+        +   '<div style="display:flex;gap:6px;">'
+        +     '<button onclick="editarGE(\'' + g.id + '\')" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--secondary);color:#fff;font-size:12px;cursor:pointer;"><i class="fa-solid fa-pen"></i></button>'
+        +     '<button onclick="deletarGE(\'' + g.id + '\')" style="width:32px;height:32px;border-radius:50%;border:none;background:#000;color:#fff;font-size:12px;cursor:pointer;"><i class="fa-solid fa-trash"></i></button>'
+        +   '</div>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  };
+
+  // ---- Adiciona item no menu ----
+  function addMenuGE(){
+    var menu = document.getElementById('dropUpMenu');
+    if(!menu) return;
+    if(document.getElementById('menuItemGanhosExtras')) return;
+    var item = document.createElement('div');
+    item.className = 'drop-up-item';
+    item.id = 'menuItemGanhosExtras';
+    item.innerHTML = '<i class="fa-solid fa-sack-dollar"></i>Ganhos Extras';
+    item.onclick = function(){
+      if(typeof closeDropUpMenu==='function') closeDropUpMenu();
+      setTimeout(abrirModalGanhosExtras, 200);
+    };
+    // Insere após "Gastos e Despesas" se existir
+    var ref = null;
+    menu.querySelectorAll('.drop-up-item').forEach(function(it){
+      if((it.textContent||'').toLowerCase().includes('despesas')) ref = it;
+    });
+    if(ref && ref.nextSibling) menu.insertBefore(item, ref.nextSibling);
+    else menu.appendChild(item);
+  }
+  setTimeout(addMenuGE, 1000);
+  setTimeout(addMenuGE, 2000);
+})();
+
 </script>
 
 <!-- ============ SPLASH SCREEN CUSTOMIZADA ============ -->
@@ -13159,4 +13392,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-                        </html>
+</html>
