@@ -3796,7 +3796,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v445';
+window.APP_VERSAO = 'v446';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -13069,6 +13069,96 @@ var _eficIv2 = setInterval(function(){
   setTimeout(addMenuGE, 2000);
 })();
 
+// ================================================================
+// FECHAR MODAIS ABERTOS AO TROCAR DE OPÇÃO DO MENU
+// Regra: ao clicar em uma opção do menu, fecha todos os modais abertos
+// (exceto o que está prestes a abrir).
+// ================================================================
+(function(){
+
+  // IDs de todos os modais conhecidos do app
+  var MODAIS_IDS = [
+    'modalConfiguracao','modalGNVNovo',
+    'modalMetas','modalMetasNovo',
+    'modalDespesas','modalDespVeiculo','modalDespPessoais','modalAddDesp',
+    'modalCartoes','modalConfigDespesasVeiculo',
+    'modalPesquisaDespesas',
+    'modalTemas','modalTemasNovo',
+    'modalRelatorio','modalRelatorios','modalAnalytics',
+    'modalBackup','modalConscienciaZerar',
+    'modalGanhosExtras'
+  ];
+
+  // Fecha um modal específico (tenta tudo: display none + remove .show)
+  function fecharModal(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    var visivel = false;
+    var cs = getComputedStyle(el);
+    if(cs.display !== 'none' && cs.visibility !== 'hidden') visivel = true;
+    if(el.classList.contains('show') || el.classList.contains('active')) visivel = true;
+    if(!visivel) return;
+
+    // Tenta as várias formas de fechamento usadas no app
+    el.classList.remove('show');
+    el.classList.remove('active');
+    el.style.display = 'none';
+
+    // Modais com overlay flashOverlay (jornada)
+    var flash = document.getElementById('flashOverlay');
+    if(flash && el.id === 'modalRegistroJornada' && flash.classList.contains('show')){
+      flash.classList.remove('show');
+      flash.classList.remove('modal-jornada','modal-edicao');
+    }
+  }
+
+  // Fecha TODOS os modais conhecidos exceto os IDs em "exceto"
+  window.fecharTodosModais = function(exceto){
+    exceto = exceto || [];
+    if(!Array.isArray(exceto)) exceto = [exceto];
+    MODAIS_IDS.forEach(function(id){
+      if(exceto.indexOf(id) === -1) fecharModal(id);
+    });
+  };
+
+  // Hook do handleDropUpAction - antes de abrir qualquer coisa do menu, fecha tudo
+  function hookMenu(){
+    if(window._hookMenuFechado) return;
+    var orig = window.handleDropUpAction;
+    if(typeof orig !== 'function') return;
+    window.handleDropUpAction = function(action){
+      // Fecha tudo antes de abrir a próxima opção
+      try { fecharTodosModais(); } catch(e){}
+      return orig.apply(this, arguments);
+    };
+    window._hookMenuFechado = true;
+  }
+  // Tenta hookar várias vezes (o handleDropUpAction pode ser definido depois)
+  setTimeout(hookMenu, 500);
+  setTimeout(hookMenu, 1500);
+  setTimeout(hookMenu, 3000);
+
+  // Também hooka os itens customizados que foram adicionados ao menu
+  // (Ganhos Extras, etc) - eles usam item.onclick direto e não passam pelo handleDropUpAction
+  // Solução: interceptar o click em qualquer .drop-up-item
+  function hookCliqueItens(){
+    var menu = document.getElementById('dropUpMenu');
+    if(!menu) return;
+    if(menu.dataset.fechamentoInstalado === '1') return;
+    menu.dataset.fechamentoInstalado = '1';
+    // Captura na fase de captura pra rodar ANTES do onclick do item
+    menu.addEventListener('click', function(e){
+      var item = e.target.closest('.drop-up-item');
+      if(!item) return;
+      // Fecha tudo antes do onclick do item disparar (que abre o modal novo)
+      try { fecharTodosModais(); } catch(e){}
+    }, true); // capture phase
+  }
+  setTimeout(hookCliqueItens, 800);
+  setTimeout(hookCliqueItens, 2000);
+  setTimeout(hookCliqueItens, 3500);
+})();
+
 </script>
 
 <!-- ============ SPLASH SCREEN CUSTOMIZADA ============ -->
@@ -13495,4 +13585,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-    </html>
+                                                                                                                                                                                                                  </html>
