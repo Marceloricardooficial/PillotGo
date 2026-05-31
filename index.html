@@ -3796,7 +3796,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v446';
+window.APP_VERSAO = 'v447';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -13093,18 +13093,30 @@ var _eficIv2 = setInterval(function(){
   function fecharModal(id){
     var el = document.getElementById(id);
     if(!el) return;
-    var visivel = false;
+    // Detecta se está visível
     var cs = getComputedStyle(el);
-    if(cs.display !== 'none' && cs.visibility !== 'hidden') visivel = true;
-    if(el.classList.contains('show') || el.classList.contains('active')) visivel = true;
-    if(!visivel) return;
+    var visivelDisplay = (cs.display !== 'none');
+    var visivelClass = (el.classList.contains('show') || el.classList.contains('active') || el.classList.contains('aberto'));
+    if(!visivelDisplay && !visivelClass) return;
 
-    // Tenta as várias formas de fechamento usadas no app
-    el.classList.remove('show');
-    el.classList.remove('active');
-    el.style.display = 'none';
+    // ESTRATÉGIA: detecta como o modal foi aberto e fecha do MESMO jeito.
+    // Modais por classe (.aberto/.show/.active) NÃO recebem style.display:none
+    // (senão o style inline trava a reabertura).
+    var fechouPorClasse = false;
+    if(el.classList.contains('aberto')){ el.classList.remove('aberto'); fechouPorClasse = true; }
+    if(el.classList.contains('show')){ el.classList.remove('show'); fechouPorClasse = true; }
+    if(el.classList.contains('active')){ el.classList.remove('active'); fechouPorClasse = true; }
 
-    // Modais com overlay flashOverlay (jornada)
+    // Só usa style.display:none se o modal foi aberto por style inline
+    // (detecta verificando se há style.display setado inline)
+    if(!fechouPorClasse){
+      // Foi aberto via style inline - fecha do mesmo jeito
+      if(el.style.display && el.style.display !== 'none'){
+        el.style.display = 'none';
+      }
+    }
+
+    // Caso especial: modal de jornada usa o overlay flashOverlay
     var flash = document.getElementById('flashOverlay');
     if(flash && el.id === 'modalRegistroJornada' && flash.classList.contains('show')){
       flash.classList.remove('show');
@@ -13585,4 +13597,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-                                                                                                                                                                                                                  </html>
+    </html>
