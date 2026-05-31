@@ -3796,7 +3796,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v443';
+window.APP_VERSAO = 'v445';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -5110,12 +5110,24 @@ window.verificarJornadaEmAndamento = function() {
 
   window.abrirGNVNovo = function() {
     criarModal();
-    // Preenche com valores do dia atual
+    // Preenche com valores do dia atual - se não houver, busca o último dia com valores salvos
     const hoje = new Date();
     const hojeKey = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'-'+String(hoje.getDate()).padStart(2,'0');
     const daily = relatoriosDiarios[hojeKey] || {};
-    document.getElementById('gnvInputValor').value = daily.precoGNV || 4.79;
-    document.getElementById('gnvInputMedia').value = daily.mediaGNV || 18.00;
+    // Busca o último valor salvo (qualquer dia anterior) caso o dia atual ainda não tenha config
+    let ultPreco = daily.precoGNV;
+    let ultMedia = daily.mediaGNV;
+    if (ultPreco === undefined || ultMedia === undefined) {
+      const datas = Object.keys(relatoriosDiarios).filter(d => d <= hojeKey).sort().reverse();
+      for (let i=0; i<datas.length; i++) {
+        const r = relatoriosDiarios[datas[i]];
+        if (ultPreco === undefined && r && r.precoGNV !== undefined) ultPreco = r.precoGNV;
+        if (ultMedia === undefined && r && r.mediaGNV !== undefined) ultMedia = r.mediaGNV;
+        if (ultPreco !== undefined && ultMedia !== undefined) break;
+      }
+    }
+    document.getElementById('gnvInputValor').value = (ultPreco !== undefined ? ultPreco : 4.79);
+    document.getElementById('gnvInputMedia').value = (ultMedia !== undefined ? ultMedia : 18.00);
     document.getElementById('modalGNVNovo').classList.add('aberto');
   };
 
@@ -10257,7 +10269,29 @@ function cfgRestaurarBackup(input) {
     var orig = window.calcularTotaisDoDia;
     if(!orig || orig._hookedApps) return;
     window.calcularTotaisDoDia = function(daily){
-      var t = orig.apply(this, arguments);
+      // Se este dia não tem precoGNV/mediaGNV configurados, herda do último dia anterior
+      // IMPORTANTE: não persiste no daily (não muda o passado salvo); só passa pro cálculo
+      var dailyPraCalc = daily;
+      if (daily && (daily.precoGNV === undefined || daily.mediaGNV === undefined) && typeof relatoriosDiarios === 'object') {
+        var meuKey = daily.date;
+        if (meuKey) {
+          var datas = Object.keys(relatoriosDiarios).filter(function(d){ return d < meuKey; }).sort().reverse();
+          var herdadoPreco = daily.precoGNV, herdadoMedia = daily.mediaGNV;
+          for (var k=0; k<datas.length; k++) {
+            var r = relatoriosDiarios[datas[k]];
+            if (herdadoPreco === undefined && r && r.precoGNV !== undefined) herdadoPreco = r.precoGNV;
+            if (herdadoMedia === undefined && r && r.mediaGNV !== undefined) herdadoMedia = r.mediaGNV;
+            if (herdadoPreco !== undefined && herdadoMedia !== undefined) break;
+          }
+          if (herdadoPreco !== undefined || herdadoMedia !== undefined) {
+            // Cria cópia rasa pra não persistir
+            dailyPraCalc = Object.assign({}, daily);
+            if (herdadoPreco !== undefined && dailyPraCalc.precoGNV === undefined) dailyPraCalc.precoGNV = herdadoPreco;
+            if (herdadoMedia !== undefined && dailyPraCalc.mediaGNV === undefined) dailyPraCalc.mediaGNV = herdadoMedia;
+          }
+        }
+      }
+      var t = orig.call(this, dailyPraCalc);
       // Apps customizados: pega o valor do ÚLTIMO trecho que contém cada app
       if(daily && daily.trechos){
         var porApp = {};
