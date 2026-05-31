@@ -3796,7 +3796,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v441';
+window.APP_VERSAO = 'v443';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -7210,7 +7210,7 @@ window.tnAplicar = function() {
 // ================================================================
 (function() {
 
-  var PAGAMENTOS = ['Dinheiro','PIX','Débito','Crédito à vista','Crédito parcelado'];
+  var PAGAMENTOS = ['Dinheiro','PIX','Débito','Crédito à vista','Crédito parcelado','Financiamento'];
   var CAT_PES = ['Café','Crédito Celular','Almoço','Bebida','Lanche','Combustível','Farmácia','Outros'];
   var CAT_VEI = ['Troca de óleo','Pastilha de freio','Disco de freio','Amortecedor','Pneus','Lavação','Bucha','Suspensão','Alinhamento','Balanceamento','Revisão','Filtro de óleo','Filtro de ar','Outros'];
 
@@ -7585,8 +7585,8 @@ window.tnAplicar = function() {
           +'</div></div>';
       }).join('');;
     } else {
-      var parc=todos.filter(function(i){ return i.pagamento==='Crédito parcelado'; }).reduce(function(s,i){ return s+parseFloat(i.valor||0); },0);
-      var avista=todos.filter(function(i){ return i.pagamento!=='Crédito parcelado'; }).reduce(function(s,i){ return s+parseFloat(i.valor||0); },0);
+      var parc=todos.filter(function(i){ return i.pagamento==='Crédito parcelado' || i.pagamento==='Financiamento'; }).reduce(function(s,i){ return s+parseFloat(i.valor||0); },0);
+      var avista=todos.filter(function(i){ return i.pagamento!=='Crédito parcelado' && i.pagamento!=='Financiamento'; }).reduce(function(s,i){ return s+parseFloat(i.valor||0); },0);
       var s=function(id,v){ var el=document.getElementById(id); if(el) el.innerHTML=v; };
       var rs=function(v){ return '<span style="font-size:11px;">R$</span> '+fmtNum(v); };
       s('vAvista',rs(avista)); s('vParc',rs(parc)); s('vTotal',rs(total));
@@ -7594,7 +7594,7 @@ window.tnAplicar = function() {
       if (!lista) return;
       if (!todos.length) { lista.innerHTML='<div style="text-align:center;padding:44px 20px;color:#94a3b8;"><div style="width:60px;height:60px;border-radius:50%;background:#fff;border:1px solid #eef2f7;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 1px 4px rgba(16,24,40,0.05);"><i class="fa-solid fa-car-side" style="font-size:24px;color:#cbd5e1;"></i></div><div style="font-size:14px;font-weight:600;color:#6B7280;">Nenhuma despesa registrada</div><div style="font-size:12px;color:#94a3b8;margin-top:4px;">Toque em Adicionar para incluir um gasto</div></div>'; return; }
       lista.innerHTML = todos.map(function(item){
-        var ehParcelado = item.pagamento==='Crédito parcelado';
+        var ehParcelado = item.pagamento==='Crédito parcelado' || item.pagamento==='Financiamento';
         var parcInfo = ehParcelado && item.parcelas ? item.parcelas+'x de '+fmtR(parseFloat(item.valor)/parseInt(item.parcelas)) : '';
         var badges = '';
         // Badges só em verde/preto/cinza (cores do tema)
@@ -8003,7 +8003,10 @@ window.tnAplicar = function() {
   window.toggleParcAdd = function() {
     var pag=document.getElementById('addPag')?.value;
     var el=document.getElementById('addParcBox');
-    if(el) el.style.display = pag==='Crédito parcelado' ? 'flex' : 'none';
+    var ehParc = pag==='Crédito parcelado' || pag==='Financiamento';
+    if(el) el.style.display = ehParc ? 'flex' : 'none';
+    var nInp = document.getElementById('addParcN');
+    if(pag==='Financiamento' && nInp && (!nInp.value || nInp.value==='1')) nInp.value = 12;
   };
   window.calcParcAdd = function() {
     var valor=parseFloat((document.getElementById('addValor')?.value||'').replace(',','.'))||0;
@@ -8230,15 +8233,19 @@ window.tnAplicar = function() {
         <div style="padding:14px 16px;border-top:1px solid #f1f5f9;">
           <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:8px;">Novo Cartão</div>
           <div style="display:flex;flex-direction:column;gap:8px;">
-            <input id="cNome" placeholder="Nome (ex: Nubank)" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:0;font-size:13px;box-sizing:border-box;">
+            <input id="cNome" placeholder="Nome (ex: Nubank)" style="width:100%;padding:11px;border:1px solid #e5e7eb;border-radius:0;font-size:15px;box-sizing:border-box;">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              <select id="cBand" style="padding:10px;border:1px solid #e5e7eb;border-radius:0;font-size:12px;background:#fff;">
+              <select id="cBand" style="padding:11px;border:1px solid #e5e7eb;border-radius:0;font-size:14px;background:#fff;">
                 ${BANDEIRAS.map(function(b){ return '<option>'+b+'</option>'; }).join('')}
               </select>
-              <input id="cBanco" placeholder="Banco" style="padding:10px;border:1px solid #e5e7eb;border-radius:0;font-size:12px;box-sizing:border-box;">
+              <input id="cBanco" placeholder="Banco" style="padding:11px;border:1px solid #e5e7eb;border-radius:0;font-size:14px;box-sizing:border-box;">
             </div>
-            <input id="cLimite" type="number" placeholder="Limite (opcional)" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:0;font-size:13px;box-sizing:border-box;">
-            <button onclick="salvarCartao()" style="width:100%;padding:12px;background:var(--secondary);color:#fff;border:none;border-radius:0;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;">Adicionar</button>
+            <input id="cLimite" type="number" placeholder="Limite (opcional)" style="width:100%;padding:11px;border:1px solid #e5e7eb;border-radius:0;font-size:15px;box-sizing:border-box;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <input id="cFech" type="number" min="1" max="31" placeholder="Fechamento (dia)" style="padding:11px;border:1px solid #e5e7eb;border-radius:0;font-size:14px;box-sizing:border-box;">
+              <input id="cVenc" type="number" min="1" max="31" placeholder="Vencimento (dia)" style="padding:11px;border:1px solid #e5e7eb;border-radius:0;font-size:14px;box-sizing:border-box;">
+            </div>
+            <button id="cBtnSalvar2" onclick="salvarCartao()" style="width:100%;padding:13px;background:var(--secondary);color:#fff;border:none;border-radius:0;font-size:15px;font-weight:700;text-transform:uppercase;cursor:pointer;">Adicionar</button>
           </div>
         </div>
       </div>`;
@@ -8251,20 +8258,20 @@ window.tnAplicar = function() {
   function renderCartoes() {
     var lista=document.getElementById('cartoesLista'); if(!lista) return;
     var cartoes=getCartoes();
-    if(!cartoes.length){ lista.innerHTML='<div style="text-align:center;padding:20px;color:#94a3b8;font-size:12px;">Nenhum cartão cadastrado</div>'; return; }
+    if(!cartoes.length){ lista.innerHTML='<div style="text-align:center;padding:24px;color:#94a3b8;font-size:14px;">Nenhum cartão cadastrado</div>'; return; }
     lista.innerHTML=cartoes.map(function(c){
       var dias='';
       if(c.diaFechamento||c.diaVencimento){
         dias='<div style="display:flex;gap:5px;margin-top:5px;">';
-        if(c.diaFechamento) dias+='<span style="font-size:9px;background:#f1f5f9;color:#475569;padding:2px 7px;font-weight:600;"><i class="fa-solid fa-lock" style="font-size:8px;margin-right:3px;"></i>Fecha '+c.diaFechamento+'</span>';
-        if(c.diaVencimento) dias+='<span style="font-size:9px;background:#f0fdf4;color:#166534;padding:2px 7px;font-weight:600;"><i class="fa-solid fa-calendar-check" style="font-size:8px;margin-right:3px;"></i>Vence '+c.diaVencimento+'</span>';
+        if(c.diaFechamento) dias+='<span style="font-size:11px;background:#f1f5f9;color:#475569;padding:3px 8px;font-weight:600;"><i class="fa-solid fa-lock" style="font-size:10px;margin-right:3px;"></i>Fecha '+c.diaFechamento+'</span>';
+        if(c.diaVencimento) dias+='<span style="font-size:11px;background:#f0fdf4;color:#166534;padding:3px 8px;font-weight:600;"><i class="fa-solid fa-calendar-check" style="font-size:10px;margin-right:3px;"></i>Vence '+c.diaVencimento+'</span>';
         dias+='</div>';
       }
-      return '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 12px;border-bottom:1px solid #f1f5f9;">'
-        +'<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#1e293b;">'+c.nome+'</div>'
-        +'<div style="font-size:10px;color:#94a3b8;">'+c.bandeira+(c.banco?' · '+c.banco:'')+(c.limite?' · '+fmtR(c.limite):'')+'</div>'
+      return '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 14px;border-bottom:1px solid #f1f5f9;">'
+        +'<div style="flex:1;"><div style="font-size:15px;font-weight:700;color:#1e293b;">'+c.nome+'</div>'
+        +'<div style="font-size:12px;color:#94a3b8;">'+c.bandeira+(c.banco?' · '+c.banco:'')+(c.limite?' · '+fmtR(c.limite):'')+'</div>'
         +dias+'</div>'
-        +'<button onclick="deleteCartao(\''+c.id+'\')" style="width:30px;height:30px;border-radius:50%;border:none;background:#000;color:#fff;font-size:11px;cursor:pointer;flex-shrink:0;margin-left:8px;"><i class="fa-solid fa-trash"></i></button>'
+        +'<div style="display:flex;gap:5px;margin-left:8px;flex-shrink:0;"><button onclick="editarCartao(\''+c.id+'\')" style="width:30px;height:30px;border-radius:50%;border:none;background:var(--secondary);color:#fff;font-size:11px;cursor:pointer;"><i class="fa-solid fa-pen"></i></button><button onclick="deleteCartao(\''+c.id+'\')" style="width:30px;height:30px;border-radius:50%;border:none;background:#000;color:#fff;font-size:11px;cursor:pointer;"><i class="fa-solid fa-trash"></i></button></div>'
         +'</div>';
     }).join('');
   }
@@ -8315,7 +8322,7 @@ window.tnAplicar = function() {
       +   '<div><div style="'+lbl+'">Fechamento</div><input id="cFech" type="number" min="1" max="31" placeholder="Dia" style="'+inp+'"></div>'
       +   '<div><div style="'+lbl+'">Vencimento</div><input id="cVenc" type="number" min="1" max="31" placeholder="Dia" style="'+inp+'"></div>'
       + '</div>'
-      + '<button onclick="salvarCartao()" style="width:100%;padding:12px;background:var(--secondary);color:#fff;border:none;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;">Adicionar Cartão</button>'
+      + '<button id="cBtnSalvar" onclick="salvarCartao()" style="width:100%;padding:12px;background:var(--secondary);color:#fff;border:none;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;">Adicionar Cartão</button>'
       + '</div>';
 
     h += '</div>';
@@ -8338,14 +8345,76 @@ window.tnAplicar = function() {
     var nome=document.getElementById('cNome')?.value.trim();
     if(!nome){ alert('Informe o nome.'); return; }
     var cartoes=getCartoes();
-    cartoes.push({ id:uid(), nome:nome, bandeira:document.getElementById('cBand')?.value||'', banco:document.getElementById('cBanco')?.value||'', limite:document.getElementById('cLimite')?.value||'', diaFechamento:document.getElementById('cFech')?.value||'', diaVencimento:document.getElementById('cVenc')?.value||'' });
+    var dados = {
+      nome:nome,
+      bandeira:document.getElementById('cBand')?.value||'',
+      banco:document.getElementById('cBanco')?.value||'',
+      limite:document.getElementById('cLimite')?.value||'',
+      diaFechamento:document.getElementById('cFech')?.value||'',
+      diaVencimento:document.getElementById('cVenc')?.value||''
+    };
+    if(window._editCartaoId){
+      // Modo edição: atualiza o cartão existente
+      var c = cartoes.find(function(x){ return x.id===window._editCartaoId; });
+      if(c){ Object.assign(c, dados); }
+      window._editCartaoId = null;
+    } else {
+      // Novo cartão
+      cartoes.push(Object.assign({ id:uid() }, dados));
+    }
     saveCartoes(cartoes);
+    // Limpa form
     document.getElementById('cNome').value='';
     document.getElementById('cBanco').value='';
     document.getElementById('cLimite').value='';
     if(document.getElementById('cFech')) document.getElementById('cFech').value='';
     if(document.getElementById('cVenc')) document.getElementById('cVenc').value='';
+    // Restaura texto do botão e some o cancelar
+    var btnSave = document.getElementById('cBtnSalvar');
+    if(btnSave) btnSave.textContent = 'Adicionar Cartão';
+    var btnCancel = document.getElementById('cBtnCancelar');
+    if(btnCancel) btnCancel.remove();
     renderCartoes();
+  };
+
+  window.editarCartao = function(id){
+    var c = getCartoes().find(function(x){ return x.id===id; });
+    if(!c) return;
+    window._editCartaoId = id;
+    // Preenche os campos
+    if(document.getElementById('cNome')) document.getElementById('cNome').value = c.nome||'';
+    if(document.getElementById('cBand')) document.getElementById('cBand').value = c.bandeira||'';
+    if(document.getElementById('cBanco')) document.getElementById('cBanco').value = c.banco||'';
+    if(document.getElementById('cLimite')) document.getElementById('cLimite').value = c.limite||'';
+    if(document.getElementById('cFech')) document.getElementById('cFech').value = c.diaFechamento||'';
+    if(document.getElementById('cVenc')) document.getElementById('cVenc').value = c.diaVencimento||'';
+    // Muda texto do botão e adiciona Cancelar
+    var btnSave = document.getElementById('cBtnSalvar');
+    if(btnSave) btnSave.textContent = 'Atualizar Cartão';
+    if(btnSave && !document.getElementById('cBtnCancelar')){
+      var btnCancel = document.createElement('button');
+      btnCancel.id = 'cBtnCancelar';
+      btnCancel.textContent = 'Cancelar';
+      btnCancel.style.cssText = 'width:100%;padding:10px;background:#f1f5f9;color:#475569;border:none;font-size:12px;font-weight:700;text-transform:uppercase;cursor:pointer;margin-top:6px;';
+      btnCancel.onclick = function(){ cancelarEdicaoCartao(); };
+      btnSave.parentNode.insertBefore(btnCancel, btnSave.nextSibling);
+    }
+    // Scroll até o form
+    var campoNome = document.getElementById('cNome');
+    if(campoNome){ campoNome.focus(); campoNome.scrollIntoView({behavior:'smooth', block:'center'}); }
+  };
+
+  window.cancelarEdicaoCartao = function(){
+    window._editCartaoId = null;
+    document.getElementById('cNome').value='';
+    document.getElementById('cBanco').value='';
+    document.getElementById('cLimite').value='';
+    if(document.getElementById('cFech')) document.getElementById('cFech').value='';
+    if(document.getElementById('cVenc')) document.getElementById('cVenc').value='';
+    var btnSave = document.getElementById('cBtnSalvar');
+    if(btnSave) btnSave.textContent = 'Adicionar Cartão';
+    var btnCancel = document.getElementById('cBtnCancelar');
+    if(btnCancel) btnCancel.remove();
   };
 
   window.deleteCartao = function(id) {
@@ -13392,4 +13461,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-</html>
+    </html>
