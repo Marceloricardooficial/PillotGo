@@ -3796,7 +3796,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v447';
+window.APP_VERSAO = 'v449';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -5159,7 +5159,22 @@ window.verificarJornadaEmAndamento = function() {
     if (!relatoriosDiarios[hojeKey]) relatoriosDiarios[hojeKey] = { date: hojeKey, trechos: [] };
     relatoriosDiarios[hojeKey].precoGNV = valor;
     relatoriosDiarios[hojeKey].mediaGNV = media;
-    salvarDados();
+    // BUGFIX: salvarDados() sobrescreve relatoriosDiarios[hoje] com dadosDoDiaExibido.
+    // Se hojeKey é o dia exibido, atualiza tbm o dadosDoDiaExibido pra não perder o valor.
+    try {
+      if (typeof dadosDoDiaExibido !== 'undefined' && dadosDoDiaExibido && dadosDoDiaExibido.date === hojeKey) {
+        dadosDoDiaExibido.precoGNV = valor;
+        dadosDoDiaExibido.mediaGNV = media;
+      }
+    } catch(e){}
+    // Salva DIRETO no localStorage (não chama salvarDados pq ele sobrescreve com dadosDoDiaExibido)
+    try {
+      if (typeof DATA_STORAGE_KEY !== 'undefined') {
+        localStorage.setItem(DATA_STORAGE_KEY, JSON.stringify(relatoriosDiarios));
+      } else {
+        salvarDados();
+      }
+    } catch(e){ salvarDados(); }
 
     // Feedback
     const btn = document.getElementById('gnvSaveBtn');
@@ -5171,6 +5186,32 @@ window.verificarJornadaEmAndamento = function() {
   };
 
   // Substitui o item de menu "Parâmetros GNV" para abrir o novo modal
+  // Sobrescreve a função antiga salvarConfiguracaoGNV (que aplicava em TODOS os dias)
+  // Garantia: se algum caminho ainda chama a antiga, ela usa a mesma lógica do gnvSalvar
+  if(typeof window.salvarConfiguracaoGNV === 'function' && !window.salvarConfiguracaoGNV._patched){
+    window.salvarConfiguracaoGNV = function(){
+      // Pega valores dos campos do modal antigo (se existirem) ou do novo
+      var preco = parseFloat(document.getElementById('configPrecoGNV')?.value || document.getElementById('gnvInputValor')?.value || 0);
+      var media = parseFloat(document.getElementById('configMediaGNV')?.value || document.getElementById('gnvInputMedia')?.value || 0);
+      if (isNaN(preco) || preco <= 0 || isNaN(media) || media <= 0) { alert('Preço e Consumo devem ser positivos.'); return; }
+      var hoje = new Date();
+      var hojeKey = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'-'+String(hoje.getDate()).padStart(2,'0');
+      if (!relatoriosDiarios[hojeKey]) relatoriosDiarios[hojeKey] = { date: hojeKey, trechos: [] };
+      relatoriosDiarios[hojeKey].precoGNV = preco;
+      relatoriosDiarios[hojeKey].mediaGNV = media;
+      // Atualiza dadosDoDiaExibido se for hoje (pra salvarDados não sobrescrever)
+      if (typeof dadosDoDiaExibido !== 'undefined' && dadosDoDiaExibido && dadosDoDiaExibido.date === hojeKey){
+        dadosDoDiaExibido.precoGNV = preco;
+        dadosDoDiaExibido.mediaGNV = media;
+      }
+      try { localStorage.setItem(DATA_STORAGE_KEY, JSON.stringify(relatoriosDiarios)); } catch(e){}
+      if(typeof atualizarUI === 'function') atualizarUI();
+      if(typeof fecharModalConfiguracao === 'function') fecharModalConfiguracao();
+      if(typeof mostrarFlashModerno === 'function') mostrarFlashModerno('Configurações Salvas','Parâmetros GNV atualizados!');
+    };
+    window.salvarConfiguracaoGNV._patched = true;
+  }
+
   function fixMenuGNV() {
     const menu = document.getElementById('dropUpMenu');
     if (!menu) return;
@@ -13597,4 +13638,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-    </html>
+</html>
