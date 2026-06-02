@@ -3796,7 +3796,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v449';
+window.APP_VERSAO = 'v450';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -5110,19 +5110,23 @@ window.verificarJornadaEmAndamento = function() {
 
   window.abrirGNVNovo = function() {
     criarModal();
-    // Preenche com valores do dia atual - se não houver, busca o último dia com valores salvos
-    const hoje = new Date();
-    const hojeKey = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'-'+String(hoje.getDate()).padStart(2,'0');
-    const daily = relatoriosDiarios[hojeKey] || {};
-    // Busca o último valor salvo (qualquer dia anterior) caso o dia atual ainda não tenha config
-    let ultPreco = daily.precoGNV;
-    let ultMedia = daily.mediaGNV;
+    // FONTE DA VERDADE: lê do storage próprio gnvConfigAtual_v1
+    let ultPreco, ultMedia;
+    try {
+      const c = JSON.parse(localStorage.getItem('gnvConfigAtual_v1') || 'null');
+      if (c && typeof c.preco === 'number' && c.preco > 0) ultPreco = c.preco;
+      if (c && typeof c.media === 'number' && c.media > 0) ultMedia = c.media;
+    } catch(e){}
+
+    // Fallback: se nunca foi salvo no storage próprio, busca o último valor salvo nos dias
     if (ultPreco === undefined || ultMedia === undefined) {
+      const hoje = new Date();
+      const hojeKey = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'-'+String(hoje.getDate()).padStart(2,'0');
       const datas = Object.keys(relatoriosDiarios).filter(d => d <= hojeKey).sort().reverse();
       for (let i=0; i<datas.length; i++) {
         const r = relatoriosDiarios[datas[i]];
-        if (ultPreco === undefined && r && r.precoGNV !== undefined) ultPreco = r.precoGNV;
-        if (ultMedia === undefined && r && r.mediaGNV !== undefined) ultMedia = r.mediaGNV;
+        if (ultPreco === undefined && r && r.precoGNV !== undefined && r.precoGNV > 0) ultPreco = r.precoGNV;
+        if (ultMedia === undefined && r && r.mediaGNV !== undefined && r.mediaGNV > 0) ultMedia = r.mediaGNV;
         if (ultPreco !== undefined && ultMedia !== undefined) break;
       }
     }
@@ -5153,21 +5157,24 @@ window.verificarJornadaEmAndamento = function() {
     const valor = parseFloat(document.getElementById('gnvInputValor').value) || 0;
     const media = parseFloat(document.getElementById('gnvInputMedia').value) || 0;
 
-    // Salva APENAS no dia atual
+    // FONTE DA VERDADE: storage próprio que ninguém mais mexe.
+    // Resolve o bug onde lastDate pegava dia futuro com defaults (4.79/18).
+    try {
+      localStorage.setItem('gnvConfigAtual_v1', JSON.stringify({ preco: valor, media: media, atualizadoEm: new Date().toISOString() }));
+    } catch(e){}
+
+    // Mantém também em relatoriosDiarios[hoje] (compatibilidade com código existente)
     const hoje = new Date();
     const hojeKey = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'-'+String(hoje.getDate()).padStart(2,'0');
     if (!relatoriosDiarios[hojeKey]) relatoriosDiarios[hojeKey] = { date: hojeKey, trechos: [] };
     relatoriosDiarios[hojeKey].precoGNV = valor;
     relatoriosDiarios[hojeKey].mediaGNV = media;
-    // BUGFIX: salvarDados() sobrescreve relatoriosDiarios[hoje] com dadosDoDiaExibido.
-    // Se hojeKey é o dia exibido, atualiza tbm o dadosDoDiaExibido pra não perder o valor.
     try {
       if (typeof dadosDoDiaExibido !== 'undefined' && dadosDoDiaExibido && dadosDoDiaExibido.date === hojeKey) {
         dadosDoDiaExibido.precoGNV = valor;
         dadosDoDiaExibido.mediaGNV = media;
       }
     } catch(e){}
-    // Salva DIRETO no localStorage (não chama salvarDados pq ele sobrescreve com dadosDoDiaExibido)
     try {
       if (typeof DATA_STORAGE_KEY !== 'undefined') {
         localStorage.setItem(DATA_STORAGE_KEY, JSON.stringify(relatoriosDiarios));
@@ -5186,20 +5193,19 @@ window.verificarJornadaEmAndamento = function() {
   };
 
   // Substitui o item de menu "Parâmetros GNV" para abrir o novo modal
-  // Sobrescreve a função antiga salvarConfiguracaoGNV (que aplicava em TODOS os dias)
-  // Garantia: se algum caminho ainda chama a antiga, ela usa a mesma lógica do gnvSalvar
+  // Sobrescreve a função antiga salvarConfiguracaoGNV
   if(typeof window.salvarConfiguracaoGNV === 'function' && !window.salvarConfiguracaoGNV._patched){
     window.salvarConfiguracaoGNV = function(){
-      // Pega valores dos campos do modal antigo (se existirem) ou do novo
       var preco = parseFloat(document.getElementById('configPrecoGNV')?.value || document.getElementById('gnvInputValor')?.value || 0);
       var media = parseFloat(document.getElementById('configMediaGNV')?.value || document.getElementById('gnvInputMedia')?.value || 0);
       if (isNaN(preco) || preco <= 0 || isNaN(media) || media <= 0) { alert('Preço e Consumo devem ser positivos.'); return; }
+      // FONTE DA VERDADE: storage próprio
+      try { localStorage.setItem('gnvConfigAtual_v1', JSON.stringify({ preco: preco, media: media, atualizadoEm: new Date().toISOString() })); } catch(e){}
       var hoje = new Date();
       var hojeKey = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'-'+String(hoje.getDate()).padStart(2,'0');
       if (!relatoriosDiarios[hojeKey]) relatoriosDiarios[hojeKey] = { date: hojeKey, trechos: [] };
       relatoriosDiarios[hojeKey].precoGNV = preco;
       relatoriosDiarios[hojeKey].mediaGNV = media;
-      // Atualiza dadosDoDiaExibido se for hoje (pra salvarDados não sobrescrever)
       if (typeof dadosDoDiaExibido !== 'undefined' && dadosDoDiaExibido && dadosDoDiaExibido.date === hojeKey){
         dadosDoDiaExibido.precoGNV = preco;
         dadosDoDiaExibido.mediaGNV = media;
@@ -10313,22 +10319,40 @@ function cfgRestaurarBackup(input) {
       // Se este dia não tem precoGNV/mediaGNV configurados, herda do último dia anterior
       // IMPORTANTE: não persiste no daily (não muda o passado salvo); só passa pro cálculo
       var dailyPraCalc = daily;
-      if (daily && (daily.precoGNV === undefined || daily.mediaGNV === undefined) && typeof relatoriosDiarios === 'object') {
-        var meuKey = daily.date;
-        if (meuKey) {
-          var datas = Object.keys(relatoriosDiarios).filter(function(d){ return d < meuKey; }).sort().reverse();
-          var herdadoPreco = daily.precoGNV, herdadoMedia = daily.mediaGNV;
-          for (var k=0; k<datas.length; k++) {
-            var r = relatoriosDiarios[datas[k]];
-            if (herdadoPreco === undefined && r && r.precoGNV !== undefined) herdadoPreco = r.precoGNV;
-            if (herdadoMedia === undefined && r && r.mediaGNV !== undefined) herdadoMedia = r.mediaGNV;
-            if (herdadoPreco !== undefined && herdadoMedia !== undefined) break;
+      if (daily) {
+        // Estratégia: se o dia for HOJE ou FUTURO sem valores próprios, usa o storage próprio gnvConfigAtual_v1
+        // Se for um dia PASSADO, tenta usar valores salvos (próprio dia ou anterior)
+        var precisaPreco = daily.precoGNV === undefined || daily.precoGNV === 0 || daily.precoGNV === 4.79;
+        var precisaMedia = daily.mediaGNV === undefined || daily.mediaGNV === 0 || daily.mediaGNV === 18.00 || daily.mediaGNV === 15;
+        if (precisaPreco || precisaMedia) {
+          var hojeDt = new Date();
+          var hojeK = hojeDt.getFullYear()+'-'+String(hojeDt.getMonth()+1).padStart(2,'0')+'-'+String(hojeDt.getDate()).padStart(2,'0');
+          var meuKey = daily.date || hojeK;
+          var herdadoPreco, herdadoMedia;
+          // Para hoje/futuro: usa storage próprio
+          if (meuKey >= hojeK) {
+            try {
+              var cfg = JSON.parse(localStorage.getItem('gnvConfigAtual_v1') || 'null');
+              if (cfg && typeof cfg.preco === 'number' && cfg.preco > 0) herdadoPreco = cfg.preco;
+              if (cfg && typeof cfg.media === 'number' && cfg.media > 0) herdadoMedia = cfg.media;
+            } catch(e){}
+          }
+          // Fallback: busca em dias anteriores
+          if ((herdadoPreco === undefined && precisaPreco) || (herdadoMedia === undefined && precisaMedia)) {
+            if (typeof relatoriosDiarios === 'object') {
+              var datas = Object.keys(relatoriosDiarios).filter(function(d){ return d <= meuKey; }).sort().reverse();
+              for (var k=0; k<datas.length; k++) {
+                var r = relatoriosDiarios[datas[k]];
+                if (herdadoPreco === undefined && r && typeof r.precoGNV === 'number' && r.precoGNV > 0 && r.precoGNV !== 4.79) herdadoPreco = r.precoGNV;
+                if (herdadoMedia === undefined && r && typeof r.mediaGNV === 'number' && r.mediaGNV > 0 && r.mediaGNV !== 18 && r.mediaGNV !== 15) herdadoMedia = r.mediaGNV;
+                if (herdadoPreco !== undefined && herdadoMedia !== undefined) break;
+              }
+            }
           }
           if (herdadoPreco !== undefined || herdadoMedia !== undefined) {
-            // Cria cópia rasa pra não persistir
             dailyPraCalc = Object.assign({}, daily);
-            if (herdadoPreco !== undefined && dailyPraCalc.precoGNV === undefined) dailyPraCalc.precoGNV = herdadoPreco;
-            if (herdadoMedia !== undefined && dailyPraCalc.mediaGNV === undefined) dailyPraCalc.mediaGNV = herdadoMedia;
+            if (herdadoPreco !== undefined && precisaPreco) dailyPraCalc.precoGNV = herdadoPreco;
+            if (herdadoMedia !== undefined && precisaMedia) dailyPraCalc.mediaGNV = herdadoMedia;
           }
         }
       }
@@ -13638,4 +13662,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-</html>
+    </html>
