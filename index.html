@@ -3796,7 +3796,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v450';
+window.APP_VERSAO = 'v451';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -13236,6 +13236,167 @@ var _eficIv2 = setInterval(function(){
   setTimeout(hookCliqueItens, 3500);
 })();
 
+// ================================================================
+// GNV DEBUG - feedback + diagnóstico visível
+// ================================================================
+(function(){
+  // Sobrescreve gnvSalvar pra mostrar EXATAMENTE o que foi salvo
+  setTimeout(function instalar(){
+    if(typeof window.gnvSalvar !== 'function'){
+      setTimeout(instalar, 500);
+      return;
+    }
+    if(window.gnvSalvar._comDebug) return;
+
+    var origSalvar = window.gnvSalvar;
+    window.gnvSalvar = function(){
+      var valor = parseFloat(document.getElementById('gnvInputValor').value) || 0;
+      var media = parseFloat(document.getElementById('gnvInputMedia').value) || 0;
+
+      // SALVA NO STORAGE PRÓPRIO (fonte da verdade)
+      try {
+        localStorage.setItem('gnvConfigAtual_v1', JSON.stringify({
+          preco: valor,
+          media: media,
+          atualizadoEm: new Date().toISOString()
+        }));
+      } catch(e){}
+
+      // Chama o salvar original também (compatibilidade)
+      try { origSalvar.apply(this, arguments); } catch(e){}
+
+      // VERIFICA o que foi efetivamente salvo (lê do localStorage)
+      var confSalvo = null;
+      try { confSalvo = JSON.parse(localStorage.getItem('gnvConfigAtual_v1') || 'null'); } catch(e){}
+      var precoLido = confSalvo ? confSalvo.preco : null;
+      var mediaLida = confSalvo ? confSalvo.media : null;
+
+      // Mostra FEEDBACK GIGANTE com o que foi gravado
+      var existente = document.getElementById('gnvDebugToast');
+      if(existente) existente.remove();
+      var toast = document.createElement('div');
+      toast.id = 'gnvDebugToast';
+      toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#0f172a;color:#fff;padding:16px 22px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:0 12px 40px rgba(0,0,0,.5);max-width:90vw;min-width:260px;border:2px solid var(--secondary);';
+      var sucesso = (precoLido === valor && mediaLida === media);
+      toast.innerHTML = ''
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
+        +   '<div style="width:32px;height:32px;border-radius:50%;background:'+(sucesso?'var(--secondary)':'#ef4444')+';color:#000;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;">'+(sucesso?'✓':'!')+'</div>'
+        +   '<span style="font-size:15px;font-weight:800;color:var(--secondary);">'+(sucesso?'CONFIGURAÇÃO SALVA':'ERRO AO SALVAR')+'</span>'
+        + '</div>'
+        + '<div style="font-size:13px;color:#cbd5e1;line-height:1.6;">'
+        +   '<div>Preço digitado: <b style="color:#fff;">R$ '+valor.toFixed(2)+'</b></div>'
+        +   '<div>Média digitada: <b style="color:#fff;">'+media+' km/m³</b></div>'
+        +   '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #334155;">'
+        +     '<div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Lido do localStorage agora:</div>'
+        +     '<div>Preço: <b style="color:'+(precoLido===valor?'var(--secondary)':'#ef4444')+';">R$ '+(precoLido!==null?precoLido.toFixed(2):'NULL')+'</b></div>'
+        +     '<div>Média: <b style="color:'+(mediaLida===media?'var(--secondary)':'#ef4444')+';">'+(mediaLida!==null?mediaLida:'NULL')+' km/m³</b></div>'
+        +   '</div>'
+        + '</div>'
+        + '<button onclick="this.parentElement.remove()" style="margin-top:12px;width:100%;padding:8px;background:var(--secondary);color:#000;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;">OK</button>';
+      document.body.appendChild(toast);
+
+      // Auto-fecha em 8s (tempo de você ler)
+      setTimeout(function(){ if(toast.parentNode) toast.remove(); }, 8000);
+    };
+    window.gnvSalvar._comDebug = true;
+  }, 800);
+
+  // FUNÇÃO DE DIAGNÓSTICO MANUAL - chama no console: window.diagnosticarGNV()
+  window.diagnosticarGNV = function(){
+    var painel = document.createElement('div');
+    painel.style.cssText = 'position:fixed;inset:20px;z-index:2147483647;background:#0f172a;color:#fff;padding:20px;border-radius:14px;overflow-y:auto;font-size:12px;font-family:monospace;box-shadow:0 20px 60px rgba(0,0,0,.6);';
+
+    var info = '<div style="font-size:16px;font-weight:800;color:var(--secondary);margin-bottom:14px;">DIAGNÓSTICO GNV</div>';
+
+    // 1. Storage próprio
+    var c = null;
+    try { c = JSON.parse(localStorage.getItem('gnvConfigAtual_v1') || 'null'); } catch(e){}
+    info += '<div style="margin-bottom:14px;padding:10px;background:#1e293b;border-radius:8px;">'
+      + '<div style="color:var(--secondary);font-weight:800;margin-bottom:6px;">1. Storage próprio (fonte da verdade):</div>'
+      + '<div>gnvConfigAtual_v1 = ' + (c ? JSON.stringify(c, null, 2).replace(/\n/g,'<br>') : '<b style="color:#ef4444">VAZIO/NULL</b>') + '</div>'
+      + '</div>';
+
+    // 2. relatoriosDiarios - últimos 10 dias com precoGNV/mediaGNV
+    info += '<div style="margin-bottom:14px;padding:10px;background:#1e293b;border-radius:8px;">';
+    info += '<div style="color:var(--secondary);font-weight:800;margin-bottom:6px;">2. relatoriosDiarios (últimos 10 dias):</div>';
+    try {
+      var rd = JSON.parse(localStorage.getItem('dailyReportsData_v4') || '{}');
+      var datas = Object.keys(rd).sort().slice(-10);
+      datas.forEach(function(d){
+        var r = rd[d] || {};
+        info += '<div style="color:#cbd5e1;">' + d + ': preço=' + (r.precoGNV||'?') + ', média=' + (r.mediaGNV||'?') + '</div>';
+      });
+      if(!datas.length) info += '<div style="color:#94a3b8;">vazio</div>';
+    } catch(e){ info += '<div style="color:#ef4444;">erro: '+e.message+'</div>'; }
+    info += '</div>';
+
+    // 3. Memória (relatoriosDiarios em memória)
+    info += '<div style="margin-bottom:14px;padding:10px;background:#1e293b;border-radius:8px;">';
+    info += '<div style="color:var(--secondary);font-weight:800;margin-bottom:6px;">3. Variável em memória (relatoriosDiarios):</div>';
+    try {
+      if(typeof relatoriosDiarios !== 'undefined'){
+        var hoje = new Date();
+        var hojeKey = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'-'+String(hoje.getDate()).padStart(2,'0');
+        var datasMem = Object.keys(relatoriosDiarios).sort();
+        var ultMem = datasMem[datasMem.length-1];
+        info += '<div>Total de dias em memória: ' + datasMem.length + '</div>';
+        info += '<div>Último dia em memória: ' + ultMem + '</div>';
+        info += '<div>Hoje: ' + hojeKey + '</div>';
+        if(relatoriosDiarios[hojeKey]){
+          info += '<div>Dia HOJE: preço=' + relatoriosDiarios[hojeKey].precoGNV + ', média=' + relatoriosDiarios[hojeKey].mediaGNV + '</div>';
+        } else {
+          info += '<div style="color:#94a3b8;">Hoje não existe em memória</div>';
+        }
+      }
+    } catch(e){ info += '<div style="color:#ef4444;">erro: '+e.message+'</div>'; }
+    info += '</div>';
+
+    // 4. Service Worker
+    info += '<div style="margin-bottom:14px;padding:10px;background:#1e293b;border-radius:8px;">';
+    info += '<div style="color:var(--secondary);font-weight:800;margin-bottom:6px;">4. Service Worker:</div>';
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.getRegistrations().then(function(regs){
+        var sw = document.getElementById('gnvDebugSW');
+        if(sw) sw.innerHTML = 'Registrados: ' + regs.length + (regs.length ? ' (pode estar cacheando dados)' : '');
+      });
+      info += '<div id="gnvDebugSW">Verificando...</div>';
+    } else {
+      info += '<div>Sem service worker</div>';
+    }
+    info += '</div>';
+
+    info += '<button onclick="this.parentElement.remove()" style="width:100%;padding:12px;background:var(--secondary);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;">FECHAR</button>';
+
+    painel.innerHTML = info;
+    document.body.appendChild(painel);
+  };
+
+  // Adiciona botão de diagnóstico no modal GNV (depois que ele abrir)
+  var origAbrirGNV = null;
+  setTimeout(function instalarBotao(){
+    if(typeof window.abrirGNVNovo !== 'function'){ setTimeout(instalarBotao, 500); return; }
+    if(window.abrirGNVNovo._comDiag) return;
+    origAbrirGNV = window.abrirGNVNovo;
+    window.abrirGNVNovo = function(){
+      origAbrirGNV.apply(this, arguments);
+      // Adiciona botão de diagnóstico depois do modal montar
+      setTimeout(function(){
+        var modal = document.getElementById('modalGNVNovo');
+        if(!modal || modal.querySelector('.gnvDiagBtn')) return;
+        var btnSalvar = document.getElementById('gnvSaveBtn');
+        if(!btnSalvar) return;
+        var btnDiag = document.createElement('button');
+        btnDiag.className = 'gnvDiagBtn';
+        btnDiag.innerHTML = '<i class="fa-solid fa-bug" style="margin-right:5px;"></i>Diagnóstico (ver onde está salvo)';
+        btnDiag.style.cssText = 'width:100%;padding:10px;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;margin-top:8px;';
+        btnDiag.onclick = function(e){ e.preventDefault(); window.diagnosticarGNV(); };
+        btnSalvar.parentNode.appendChild(btnDiag);
+      }, 200);
+    };
+    window.abrirGNVNovo._comDiag = true;
+  }, 800);
+})();
+
 </script>
 
 <!-- ============ SPLASH SCREEN CUSTOMIZADA ============ -->
@@ -13662,4 +13823,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-    </html>
+</html>
