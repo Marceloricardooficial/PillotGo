@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v456';
+window.APP_VERSAO = 'v463';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -6046,117 +6046,7 @@ window.tnAplicar = function() {
   })();
 })();
 
-(function() {
-  var NOVO_TEMA = {
-    key: 'gun-metal',
-    nome: 'Gun Metal',
-    cores: ['#1C1F26','#FF6B00','#FF9A4D','#2A2F38'],
-    vars: { primary:'#E85D00', secondary:'#FF6B00', dark:'#1C1F26', text:'#334155', red:'#ef4444', save:'#FF6B00' }
-  };
 
-  // Intercept abrirTemasNovo to inject theme after modal is created
-  var _orig = window.abrirTemasNovo;
-  window.abrirTemasNovo = function() {
-    if (_orig) _orig.apply(this, arguments);
-    setTimeout(function() {
-      var grid = document.querySelector('.temas-novo-grid');
-      if (!grid) return;
-      // Don't add if already there
-      if (document.querySelector('[data-tema="gun-metal"]')) return;
-      var coresHTML = NOVO_TEMA.cores.map(function(c) {
-        return '<div class="tema-novo-cor" style="background:' + c + '"></div>';
-      }).join('');
-      var el = document.createElement('div');
-      el.className = 'tema-novo-option';
-      el.dataset.tema = NOVO_TEMA.key;
-      el.setAttribute('onclick', "tnSelecionar('" + NOVO_TEMA.key + "')");
-      el.innerHTML = '<div class="tema-novo-paleta">' + coresHTML + '</div>'
-                   + '<div class="tema-novo-nome">' + NOVO_TEMA.nome + '</div>';
-      grid.appendChild(el);
-
-      // Mark active if this is current theme
-      var saved = localStorage.getItem('temaAplicativo');
-      if (saved === NOVO_TEMA.key) el.classList.add('ativo');
-    }, 50);
-  };
-
-  // Make tnSelecionar and tnAplicar aware of this theme
-  var _origSel = window.tnSelecionar;
-  window.tnSelecionar = function(key) {
-    if (_origSel) _origSel.apply(this, arguments);
-    if (key === NOVO_TEMA.key) {
-      // Apply vars preview (visual only, not saved yet)
-      var r = document.documentElement;
-      Object.keys(NOVO_TEMA.vars).forEach(function(k) {
-        r.style.setProperty('--' + k.replace(/([A-Z])/g, '-$1').toLowerCase(), NOVO_TEMA.vars[k]);
-      });
-    }
-  };
-
-  var _origApply = window.tnAplicar;
-  window.tnAplicar = function() {
-    var sel = document.querySelector('.tema-novo-option.ativo');
-    if (sel && sel.dataset.tema === NOVO_TEMA.key) {
-      // Save and apply our custom theme
-      localStorage.setItem('temaAplicativo', NOVO_TEMA.key);
-      var r = document.documentElement;
-      r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
-      r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
-      r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
-      r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
-      r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
-      r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
-      var btn = document.querySelector('.temas-novo-apply');
-      if (btn) btn.textContent = '⏳ Atualizando...';
-      if (typeof fecharTemasNovo === 'function') fecharTemasNovo();
-      setTimeout(function() { location.reload(true); }, 500);
-      return;
-    }
-    if (_origApply) _origApply.apply(this, arguments);
-  };
-
-  // Restore theme on page load if gun-metal was selected
-  (function restoreTheme() {
-    var saved = localStorage.getItem('temaAplicativo');
-    if (saved !== NOVO_TEMA.key) return;
-    var r = document.documentElement;
-    r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
-    r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
-    r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
-    r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
-    r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
-    r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
-    // Força o vídeo do header (usa o BW, igual aos outros temas não-padrão)
-    aplicarVideo_gun_metal();
-  })();
-
-  // Aplica o vídeo do header para o tema azul petróleo
-  function aplicarVideo_gun_metal(){
-    var tentar = function(n){
-      var video = document.querySelector('header video, .header-video, #headerVideo, video[src*="v14"], video[src*="bw"]');
-      if(video){
-        var url = 'https://marceloricardooficial.github.io/PillotGo/bw.mp4';
-        if(video.src !== url){ video.src = url; video.load(); video.play().catch(function(){}); }
-        return;
-      }
-      if(n < 20) setTimeout(function(){ tentar(n+1); }, 300);
-    };
-    tentar(0);
-  }
-  // Quando seleciona/aplica o azul, troca o vídeo
-  var _selAzul = window.tnSelecionar;
-  window.tnSelecionar = function(key){
-    if(_selAzul) _selAzul.apply(this, arguments);
-    if(key === 'gun-metal'){ aplicarVideo_gun_metal(); }
-  };
-  // Restaura vídeo no load se azul estiver ativo
-  (function(){
-    if(localStorage.getItem('temaAplicativo') === 'gun-metal'){
-      setTimeout(aplicarVideo_gun_metal, 600);
-      setTimeout(aplicarVideo_gun_metal, 1500);
-    }
-  })();
-})();
 
 (function() {
   var NOVO_TEMA = {
@@ -6830,212 +6720,11 @@ window.tnAplicar = function() {
   })();
 })();
 
-(function() {
-  var NOVO_TEMA = {
-    key: 'blue-orange',
-    nome: 'Blue Orange',
-    cores: ['#0F172A','#FF6B00','#0EA5E9','#1E293B'],
-    vars: { primary:'#E85D00', secondary:'#FF6B00', dark:'#0F172A', text:'#334155', red:'#ef4444', save:'#FF6B00' }
-  };
 
-  // Intercept abrirTemasNovo to inject theme after modal is created
-  var _orig = window.abrirTemasNovo;
-  window.abrirTemasNovo = function() {
-    if (_orig) _orig.apply(this, arguments);
-    setTimeout(function() {
-      var grid = document.querySelector('.temas-novo-grid');
-      if (!grid) return;
-      // Don't add if already there
-      if (document.querySelector('[data-tema="blue-orange"]')) return;
-      var coresHTML = NOVO_TEMA.cores.map(function(c) {
-        return '<div class="tema-novo-cor" style="background:' + c + '"></div>';
-      }).join('');
-      var el = document.createElement('div');
-      el.className = 'tema-novo-option';
-      el.dataset.tema = NOVO_TEMA.key;
-      el.setAttribute('onclick', "tnSelecionar('" + NOVO_TEMA.key + "')");
-      el.innerHTML = '<div class="tema-novo-paleta">' + coresHTML + '</div>'
-                   + '<div class="tema-novo-nome">' + NOVO_TEMA.nome + '</div>';
-      grid.appendChild(el);
-
-      // Mark active if this is current theme
-      var saved = localStorage.getItem('temaAplicativo');
-      if (saved === NOVO_TEMA.key) el.classList.add('ativo');
-    }, 50);
-  };
-
-  // Make tnSelecionar and tnAplicar aware of this theme
-  var _origSel = window.tnSelecionar;
-  window.tnSelecionar = function(key) {
-    if (_origSel) _origSel.apply(this, arguments);
-    if (key === NOVO_TEMA.key) {
-      // Apply vars preview (visual only, not saved yet)
-      var r = document.documentElement;
-      Object.keys(NOVO_TEMA.vars).forEach(function(k) {
-        r.style.setProperty('--' + k.replace(/([A-Z])/g, '-$1').toLowerCase(), NOVO_TEMA.vars[k]);
-      });
-    }
-  };
-
-  var _origApply = window.tnAplicar;
-  window.tnAplicar = function() {
-    var sel = document.querySelector('.tema-novo-option.ativo');
-    if (sel && sel.dataset.tema === NOVO_TEMA.key) {
-      // Save and apply our custom theme
-      localStorage.setItem('temaAplicativo', NOVO_TEMA.key);
-      var r = document.documentElement;
-      r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
-      r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
-      r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
-      r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
-      r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
-      r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
-      var btn = document.querySelector('.temas-novo-apply');
-      if (btn) btn.textContent = '⏳ Atualizando...';
-      if (typeof fecharTemasNovo === 'function') fecharTemasNovo();
-      setTimeout(function() { location.reload(true); }, 500);
-      return;
-    }
-    if (_origApply) _origApply.apply(this, arguments);
-  };
-
-  // Restore theme on page load if blue-orange was selected
-  (function restoreTheme() {
-    var saved = localStorage.getItem('temaAplicativo');
-    if (saved !== NOVO_TEMA.key) return;
-    var r = document.documentElement;
-    r.style.setProperty('--primary',     NOVO_TEMA.vars.primary);
-    r.style.setProperty('--secondary',   NOVO_TEMA.vars.secondary);
-    r.style.setProperty('--action-dark', NOVO_TEMA.vars.dark);
-    r.style.setProperty('--action-text', NOVO_TEMA.vars.text);
-    r.style.setProperty('--action-red',  NOVO_TEMA.vars.red);
-    r.style.setProperty('--action-save', NOVO_TEMA.vars.save);
-    // Força o vídeo do header (usa o BW, igual aos outros temas não-padrão)
-    aplicarVideo_blue_orange();
-  })();
-
-  // Aplica o vídeo do header para o tema azul petróleo
-  function aplicarVideo_blue_orange(){
-    var tentar = function(n){
-      var video = document.querySelector('header video, .header-video, #headerVideo, video[src*="v14"], video[src*="bw"]');
-      if(video){
-        var url = 'https://marceloricardooficial.github.io/PillotGo/bw.mp4';
-        if(video.src !== url){ video.src = url; video.load(); video.play().catch(function(){}); }
-        return;
-      }
-      if(n < 20) setTimeout(function(){ tentar(n+1); }, 300);
-    };
-    tentar(0);
-  }
-  // Quando seleciona/aplica o azul, troca o vídeo
-  var _selAzul = window.tnSelecionar;
-  window.tnSelecionar = function(key){
-    if(_selAzul) _selAzul.apply(this, arguments);
-    if(key === 'blue-orange'){ aplicarVideo_blue_orange(); }
-  };
-  // Restaura vídeo no load se azul estiver ativo
-  (function(){
-    if(localStorage.getItem('temaAplicativo') === 'blue-orange'){
-      setTimeout(aplicarVideo_blue_orange, 600);
-      setTimeout(aplicarVideo_blue_orange, 1500);
-    }
-  })();
-})();
 
 
 // INJECT tema noturno
-(function() {
-  var NOTURNO = {
-    key: 'noturno',
-    nome: 'Noturno',
-    cores: ['#0a0a0a','#C0ED23','#111','#1a1a1a'],
-    vars: {
-      primary:     '#C0ED23',
-      secondary:   '#C0ED23',
-      dark:        '#0a0a0a',
-      text:        '#C0ED23',
-      red:         '#dc2626',
-      save:        '#C0ED23',
-      bg:          '#0a0a0a',
-      glow:        '192,237,35'
-    }
-  };
 
-  // Injeta card no modal
-  var _origAbrir = window.abrirTemasNovo;
-  window.abrirTemasNovo = function() {
-    if (_origAbrir) _origAbrir.apply(this, arguments);
-    setTimeout(function() {
-      var grid = document.querySelector('.temas-novo-grid');
-      if (!grid || document.querySelector('[data-tema="noturno"]')) return;
-      var coresHTML = NOTURNO.cores.map(function(c) {
-        return '<div class="tema-novo-cor" style="background:' + c + ';border:1px solid #333"></div>';
-      }).join('');
-      var el = document.createElement('div');
-      el.className = 'tema-novo-option';
-      el.dataset.tema = NOTURNO.key;
-      el.setAttribute('onclick', "tnSelecionar('" + NOTURNO.key + "')");
-      el.innerHTML = '<div class="tema-novo-paleta">' + coresHTML + '</div>'
-                   + '<div class="tema-novo-nome">' + NOTURNO.nome + '</div>';
-      grid.appendChild(el);
-      if (localStorage.getItem('temaAplicativo') === NOTURNO.key) el.classList.add('ativo');
-    }, 60);
-  };
-
-  // Aplica vars
-  function aplicarNoturno() {
-    var r = document.documentElement;
-    r.style.setProperty('--primary',     NOTURNO.vars.primary);
-    r.style.setProperty('--secondary',   NOTURNO.vars.secondary);
-    r.style.setProperty('--action-dark', NOTURNO.vars.dark);
-    r.style.setProperty('--action-text', NOTURNO.vars.text);
-    r.style.setProperty('--action-red',  NOTURNO.vars.red);
-    r.style.setProperty('--action-save', NOTURNO.vars.save);
-  }
-
-  // Intercepta tnAplicar
-  var _origApply = window.tnAplicar;
-  window.tnAplicar = function() {
-    var sel = document.querySelector('.tema-novo-option.ativo');
-    if (sel && sel.dataset.tema === NOTURNO.key) {
-      localStorage.setItem('temaAplicativo', NOTURNO.key);
-      aplicarNoturno();
-      if (typeof selecionarTema === 'function') selecionarTema(NOTURNO.key);
-      var btn = document.querySelector('.temas-novo-apply');
-      if (btn) btn.textContent = '⏳ Atualizando...';
-      if (typeof fecharTemasNovo === 'function') fecharTemasNovo();
-      setTimeout(function() { location.reload(true); }, 500);
-      return;
-    }
-    if (_origApply) _origApply.apply(this, arguments);
-  };
-
-  // CSS overrides para modo noturno
-  var styleEl = document.createElement('style');
-  styleEl.id = 'noturno-css';
-  styleEl.textContent = '';
-  document.head.appendChild(styleEl);
-
-  function ativarCSS() {
-    styleEl.textContent = `
-      body { background: #0a0a0a !important; color: #C0ED23 !important; }
-      #cardResumoSolto { background: #111 !important; }
-      #faixaPretaStats { background: #0a0a0a !important; }
-      .report-section, .card, .weekly-card, .jorney-card, .jornada-item { background: #111 !important; color: #C0ED23 !important; }
-      .section-title, h2, h3, p, span, label, .stat-label { color: #C0ED23 !important; }
-      .text-slate-800, .text-slate-700, .text-slate-600 { color: #C0ED23 !important; }
-      .bg-white, [class*="bg-white"] { background: #111 !important; }
-      .border-slate-100, .border-slate-200 { border-color: #333 !important; }
-    `;
-  }
-
-  // Restaura ao carregar
-  if (localStorage.getItem('temaAplicativo') === NOTURNO.key) {
-    aplicarNoturno();
-    document.addEventListener('DOMContentLoaded', ativarCSS);
-    setTimeout(ativarCSS, 300);
-  }
-})();
 
 
 // ================================================================
@@ -7270,7 +6959,7 @@ window.tnAplicar = function() {
 // ================================================================
 (function() {
 
-  var PAGAMENTOS = ['Dinheiro','PIX','Débito','Crédito à vista','Crédito parcelado','Financiamento'];
+  var PAGAMENTOS = ['Dinheiro','PIX','Débito','Crédito à vista','Crédito parcelado','Financiamento','Mensal'];
   var CAT_PES = ['Café','Crédito Celular','Almoço','Bebida','Lanche','Combustível','Farmácia','Outros'];
   var CAT_VEI = ['Troca de óleo','Pastilha de freio','Disco de freio','Amortecedor','Pneus','Lavação','Bucha','Suspensão','Alinhamento','Balanceamento','Revisão','Filtro de óleo','Filtro de ar','Outros'];
 
@@ -7645,8 +7334,8 @@ window.tnAplicar = function() {
           +'</div></div>';
       }).join('');;
     } else {
-      var parc=todos.filter(function(i){ return i.pagamento==='Crédito parcelado' || i.pagamento==='Financiamento'; }).reduce(function(s,i){ return s+parseFloat(i.valor||0); },0);
-      var avista=todos.filter(function(i){ return i.pagamento!=='Crédito parcelado' && i.pagamento!=='Financiamento'; }).reduce(function(s,i){ return s+parseFloat(i.valor||0); },0);
+      var parc=todos.filter(function(i){ return i.pagamento==='Crédito parcelado' || i.pagamento==='Financiamento' || i.pagamento==='Mensal'; }).reduce(function(s,i){ return s+parseFloat(i.valor||0); },0);
+      var avista=todos.filter(function(i){ return i.pagamento!=='Crédito parcelado' && i.pagamento!=='Financiamento' && i.pagamento!=='Mensal'; }).reduce(function(s,i){ return s+parseFloat(i.valor||0); },0);
       var s=function(id,v){ var el=document.getElementById(id); if(el) el.innerHTML=v; };
       var rs=function(v){ return '<span style="font-size:11px;">R$</span> '+fmtNum(v); };
       s('vAvista',rs(avista)); s('vParc',rs(parc)); s('vTotal',rs(total));
@@ -7654,7 +7343,7 @@ window.tnAplicar = function() {
       if (!lista) return;
       if (!todos.length) { lista.innerHTML='<div style="text-align:center;padding:44px 20px;color:#94a3b8;"><div style="width:60px;height:60px;border-radius:50%;background:#fff;border:1px solid #eef2f7;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 1px 4px rgba(16,24,40,0.05);"><i class="fa-solid fa-car-side" style="font-size:24px;color:#cbd5e1;"></i></div><div style="font-size:14px;font-weight:600;color:#6B7280;">Nenhuma despesa registrada</div><div style="font-size:12px;color:#94a3b8;margin-top:4px;">Toque em Adicionar para incluir um gasto</div></div>'; return; }
       lista.innerHTML = todos.map(function(item){
-        var ehParcelado = item.pagamento==='Crédito parcelado' || item.pagamento==='Financiamento';
+        var ehParcelado = item.pagamento==='Crédito parcelado' || item.pagamento==='Financiamento' || item.pagamento==='Mensal';
         var parcInfo = ehParcelado && item.parcelas ? item.parcelas+'x de '+fmtR(parseFloat(item.valor)/parseInt(item.parcelas)) : '';
         var badges = '';
         // Badges só em verde/preto/cinza (cores do tema)
@@ -7837,13 +7526,17 @@ window.tnAplicar = function() {
         </select>
       </div>
       <div id="addParcBox" style="display:none;background:#f8fafc;padding:12px;flex-direction:column;gap:8px;">
+        <div id="addIndetWrap" style="display:none;align-items:center;gap:8px;padding:4px 0;">
+          <input type="checkbox" id="addIndet" onchange="toggleIndeterminado()" style="width:16px;height:16px;accent-color:var(--secondary);cursor:pointer;">
+          <label for="addIndet" style="font-size:12px;font-weight:600;color:#475569;cursor:pointer;">Indeterminado (sem fim definido)</label>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
           <div>
-            <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:4px;">Parcelas</div>
-            <input id="addParcN" type="number" min="2" max="48" placeholder="Ex: 6" oninput="calcParcAdd()" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:0;font-size:13px;box-sizing:border-box;">
+            <div id="addParcNLabel" style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:4px;">Parcelas</div>
+            <input id="addParcN" type="number" min="1" max="240" placeholder="Ex: 6" oninput="calcParcAdd()" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:0;font-size:13px;box-sizing:border-box;">
           </div>
           <div>
-            <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:4px;">Valor/Parcela</div>
+            <div id="addParcValLabel" style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:4px;">Valor/Parcela</div>
             <div id="addParcVal" style="padding:10px;border:1px solid #e5e7eb;font-size:13px;font-weight:700;color:var(--secondary);">R$ 0,00</div>
           </div>
         </div>
@@ -8064,15 +7757,59 @@ window.tnAplicar = function() {
     var pag=document.getElementById('addPag')?.value;
     var el=document.getElementById('addParcBox');
     var ehParc = pag==='Crédito parcelado' || pag==='Financiamento';
-    if(el) el.style.display = ehParc ? 'flex' : 'none';
+    var ehMensal = pag==='Mensal';
+    var mostrar = ehParc || ehMensal;
+    if(el) el.style.display = mostrar ? 'flex' : 'none';
+
+    // Label dinâmica: Parcelas vs Mensalidades
+    var lbl = document.getElementById('addParcNLabel');
+    if(lbl) lbl.textContent = ehMensal ? 'Mensalidades' : 'Parcelas';
+
+    // Label do valor: Valor/Parcela vs Valor/Mês
+    var lblVal = document.getElementById('addParcValLabel');
+    if(lblVal) lblVal.textContent = ehMensal ? 'Valor/Mês' : 'Valor/Parcela';
+
+    // Mostra checkbox Indeterminado APENAS quando é Mensal
+    var indWrap = document.getElementById('addIndetWrap');
+    if(indWrap) indWrap.style.display = ehMensal ? 'flex' : 'none';
+
     var nInp = document.getElementById('addParcN');
     if(pag==='Financiamento' && nInp && (!nInp.value || nInp.value==='1')) nInp.value = 12;
+    if(pag==='Mensal' && nInp && !nInp.value) nInp.value = 12;
+
+    // Recalcula
+    calcParcAdd();
   };
+
+  window.toggleIndeterminado = function() {
+    var chk = document.getElementById('addIndet');
+    var nInp = document.getElementById('addParcN');
+    if(!chk || !nInp) return;
+    if(chk.checked){
+      nInp.value = '';
+      nInp.disabled = true;
+      nInp.placeholder = 'Indeterminado';
+    } else {
+      nInp.disabled = false;
+      nInp.placeholder = 'Ex: 12';
+      if(!nInp.value) nInp.value = 12;
+    }
+    calcParcAdd();
+  };
+
   window.calcParcAdd = function() {
-    var valor=parseFloat((document.getElementById('addValor')?.value||'').replace(',','.'))||0;
-    var n=parseInt(document.getElementById('addParcN')?.value)||1;
-    var el=document.getElementById('addParcVal');
-    if(el) el.textContent=fmtR(valor/n);
+    var pag = document.getElementById('addPag')?.value;
+    var valor = parseFloat((document.getElementById('addValor')?.value||'').replace(',','.'))||0;
+    var el = document.getElementById('addParcVal');
+    if(!el) return;
+    // MENSAL: valor por mês = o próprio valor digitado (não divide)
+    if(pag === 'Mensal'){
+      el.textContent = fmtR(valor);
+      return;
+    }
+    // Parcelado / Financiamento: divide
+    var n = parseInt(document.getElementById('addParcN')?.value) || 1;
+    el.textContent = fmtR(valor/n);
   };
 
 
@@ -13417,7 +13154,11 @@ var _eficIv2 = setInterval(function(){
   function ehParcelado(item){
     var p = item.pagamento || '';
     var n = parseInt(item.parcelas) || 0;
+    if(p === 'Mensal') return true; // Mensal sempre é considerado recorrente
     return (p === 'Crédito parcelado' || p === 'Financiamento') && n > 1;
+  }
+  function ehMensal(item){
+    return (item.pagamento || '') === 'Mensal';
   }
 
   // Pega TODAS as despesas de veículo do storage nativo
@@ -13457,12 +13198,20 @@ var _eficIv2 = setInterval(function(){
       if(isNaN(anoOrig) || isNaN(mesOrig)) return;
 
       if(ehParcelado(item)){
-        var n = parseInt(item.parcelas);
-        var valorParcela = valor / n;
-        // Verifica se o mês atual cai dentro do range das parcelas
-        // Parcela 1 = mês original, parcela 2 = +1 mês, etc
+        var n = parseInt(item.parcelas) || 0;
         var mesesDiff = (ano - anoOrig) * 12 + (mes - mesOrig);
-        if(mesesDiff >= 0 && mesesDiff < n){
+        if(mesesDiff < 0) {
+          // mês antes do início, não conta
+        } else if(ehMensal(item)){
+          // MENSAL: valor cheio em cada mês. Se indeterminado (n<=0), roda pra sempre.
+          var dentroRange = (n > 0) ? (mesesDiff < n) : true;
+          if(dentroRange){
+            totalParcelado += valor;
+            totalGeral += valor;
+          }
+        } else if(mesesDiff < n) {
+          // Parcelado / Financiamento: divide
+          var valorParcela = valor / n;
           totalParcelado += valorParcela;
           totalGeral += valorParcela;
         }
@@ -13488,18 +13237,24 @@ var _eficIv2 = setInterval(function(){
       var anoOrig = parseInt(partes[0]);
       var mesOrig = parseInt(partes[1]) - 1;
       if(isNaN(anoOrig) || isNaN(mesOrig)) return;
-      var n = parseInt(item.parcelas);
+      var n = parseInt(item.parcelas) || 0;
       var mesesDiff = (ano - anoOrig) * 12 + (mes - mesOrig);
-      if(mesesDiff >= 0 && mesesDiff < n){
+      if(mesesDiff < 0) return;
+      var ehM = ehMensal(item);
+      // Para Mensal indeterminado (n<=0): sempre dentro do range
+      // Para Mensal com fim: dentro se mesesDiff < n
+      // Para Parcelado/Financiamento: dentro se mesesDiff < n
+      var dentroRange = ehM ? (n <= 0 || mesesDiff < n) : (mesesDiff < n);
+      if(dentroRange){
         lista.push({
           descricao: item.descricao || item.categoria || 'Despesa',
           categoria: item.categoria || '',
           subcategoria: item.subcategoria || '',
           cartao: item.cartao || '',
           numeroParcela: mesesDiff + 1,
-          totalParcelas: n,
-          valorParcela: valor / n,
-          valorTotal: valor,
+          totalParcelas: (ehM && n <= 0) ? 0 : n,  // 0 = indeterminado
+          valorParcela: ehM ? valor : (valor / n),
+          valorTotal: ehM ? null : valor, // Mensal não tem total
           dataOriginal: item.data,
           tipoPag: item.pagamento || ''
         });
@@ -13511,6 +13266,38 @@ var _eficIv2 = setInterval(function(){
   // Estado: ano/mes atualmente selecionado no carrossel
   window._fvSel = null;
 
+  // Mapa de imagens do banner por tema
+  var BANNERS_POR_TEMA = {
+    'padrao':              'temapadrao.png',
+    'preto-amarelo':       'pretoeamarelo.png',
+    'preto-vermelho':      'pretoevermelho.png',
+    'preto-roxo-amarelo':  'finan.png',
+    'terra-verde':         'finan.png',
+    'verde-limao':         'verdelimão.png',
+    'azul-petroleo':       'azulpetroleo.png',
+    'verde-esmeralda':     'verdeesmeralda.png',
+    'laranja-uber':        'laranjauber.png',
+    'yellow-sport':        'yellowsport.png',
+    'titanium-blue':       'titaniumblue.png',
+    'copper':              'cooper.png',
+    'cyber-blue':          'cyberblue.png',
+    'verde-lamborghini':   'verdelamborghini.png',
+    'silver-metal':        'silvermetal.png'
+  };
+  function obterImagemBannerFV(){
+    var BASE = 'https://marceloricardooficial.github.io/PillotGo/';
+    var tema = '';
+    try { tema = localStorage.getItem('temaAplicativo') || 'padrao'; } catch(e){}
+    var arquivo = BANNERS_POR_TEMA[tema] || 'finan.png';
+    // encodeURI para acentos (verdelimão)
+    return BASE + encodeURI(arquivo);
+  }
+  // Atualiza imagem do banner (chamado ao abrir ou ao trocar tema com modal aberto)
+  window.atualizarBannerFV = function(){
+    var img = document.getElementById('fvBanner');
+    if(img) { img.style.display = 'block'; img.src = obterImagemBannerFV(); }
+  };
+
   function criarModal(){
     if(document.getElementById('modalFinanVei')) return;
     var modal = document.createElement('div');
@@ -13519,17 +13306,17 @@ var _eficIv2 = setInterval(function(){
     modal.innerHTML = ''
       // Header apenas com a imagem (sem overlay, sem título)
       + '<div id="fvHeader" style="position:relative;width:100%;overflow:hidden;">'
-      +   '<img id="fvBanner" src="https://marceloricardooficial.github.io/PillotGo/finan.png" alt="" style="display:block;width:100%;height:auto;" onerror="this.style.display=\'none\'">'
+      +   '<img id="fvBanner" src="' + obterImagemBannerFV() + '" alt="" style="display:block;width:100%;height:auto;" onerror="this.style.display=\'none\'">'
       +   '<button onclick="fecharFinanVei()" style="position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;border:none;background:rgba(0,0,0,.45);color:#fff;font-size:16px;cursor:pointer;backdrop-filter:blur(6px);z-index:2;"><i class="fa-solid fa-xmark"></i></button>'
       + '</div>'
       // Carrossel
-      + '<div style="background:#fff;padding:18px 0 14px;box-shadow:0 4px 12px rgba(0,0,0,.04);">'
+      + '<div style="background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.04);">'
       +   '<div id="fvCarrosselWrap" style="overflow-x:auto;overflow-y:hidden;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none;">'
-      +     '<div id="fvCarrossel" style="display:flex;gap:10px;padding:4px 50% 4px 50%;width:max-content;"></div>'
+      +     '<div id="fvCarrossel" style="display:flex;gap:0;padding:0 50%;width:max-content;min-height:88px;align-items:stretch;"></div>'
       +   '</div>'
       + '</div>'
       // Conteudo do mes selecionado
-      + '<div id="fvConteudo" style="padding:18px 16px 32px;"></div>';
+      + '<div id="fvConteudo" style="padding:0 16px 32px;"></div>';
     document.body.appendChild(modal);
 
     // Esconde scrollbar do carrossel
@@ -13540,6 +13327,8 @@ var _eficIv2 = setInterval(function(){
 
   window.abrirFinanVei = function(){
     criarModal();
+    // Atualiza banner conforme tema ativo (recria src toda vez)
+    atualizarBannerFV();
     var hoje = new Date();
     window._fvSel = { ano: hoje.getFullYear(), mes: hoje.getMonth() };
     document.getElementById('modalFinanVei').style.display = 'block';
@@ -13560,7 +13349,6 @@ var _eficIv2 = setInterval(function(){
     var mesHoje = hoje.getMonth();
     var itens = todasDespesasVeiculo();
 
-    // Gera 18 meses ao redor do mês atual (9 antes, 9 depois)
     var html = '';
     for(var i = -12; i <= 12; i++){
       var d = new Date(anoHoje, mesHoje + i, 1);
@@ -13568,24 +13356,30 @@ var _eficIv2 = setInterval(function(){
       var mes = d.getMonth();
       var total = calcularTotalDoMes(itens, ano, mes);
       var ehSelecionado = window._fvSel && window._fvSel.ano === ano && window._fvSel.mes === mes;
-      var ehAtual = ano === anoHoje && mes === mesHoje;
 
-      var bg = ehSelecionado ? 'var(--secondary)' : (ehAtual ? '#f1f5f9' : '#fff');
-      var color = ehSelecionado ? '#000' : '#0f172a';
-      var border = ehSelecionado ? 'var(--secondary)' : (ehAtual ? 'var(--secondary)' : '#e5e7eb');
-      var subColor = ehSelecionado ? 'rgba(0,0,0,.7)' : '#64748b';
-      var shadow = ehSelecionado ? '0 8px 22px rgba(34,197,94,.35)' : '0 2px 6px rgba(0,0,0,.04)';
-      var scale = ehSelecionado ? '1.05' : '1';
-
-      html += '<button class="fvMesBtn" data-ano="'+ano+'" data-mes="'+mes+'" '
-        + 'onclick="selecionarMesFV('+ano+','+mes+')" '
-        + 'style="flex-shrink:0;min-width:108px;padding:14px 12px;border-radius:14px;border:2px solid '+border+';'
-        + 'background:'+bg+';color:'+color+';cursor:pointer;transition:all .3s cubic-bezier(.4,.6,.3,1);'
-        + 'box-shadow:'+shadow+';transform:scale('+scale+');text-align:center;font-family:inherit;">'
-        + '<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:.7;">'+ano+'</div>'
-        + '<div style="font-size:15px;font-weight:800;margin:3px 0;text-transform:uppercase;letter-spacing:.5px;">'+MESES_NOMES[mes]+'</div>'
-        + '<div style="font-size:11px;font-weight:700;color:'+subColor+';">'+(total.total > 0 ? fmtR(total.total) : '—')+'</div>'
-        + '</button>';
+      if(ehSelecionado){
+        // SELECIONADO: faixa vertical full-height com cor do tema + texto branco e maior
+        html += '<button class="fvMesBtn" data-ano="'+ano+'" data-mes="'+mes+'" '
+          + 'onclick="selecionarMesFV('+ano+','+mes+')" '
+          + 'style="flex-shrink:0;min-width:120px;padding:12px 14px;border:none;border-radius:0;'
+          + 'background:var(--secondary);color:#fff;cursor:pointer;transition:all .3s cubic-bezier(.4,.6,.3,1);'
+          + 'text-align:center;font-family:inherit;align-self:stretch;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;">'
+          + '<div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:.85;color:#fff;">'+ano+'</div>'
+          + '<div style="font-size:20px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:#fff;line-height:1;">'+MESES_NOMES[mes]+'</div>'
+          + '<div style="font-size:13px;font-weight:800;color:#fff;opacity:.95;">'+(total.total > 0 ? fmtR(total.total) : '—')+'</div>'
+          + '</button>';
+      } else {
+        // OUTROS MESES: soltos, sem fundo, texto preto
+        html += '<button class="fvMesBtn" data-ano="'+ano+'" data-mes="'+mes+'" '
+          + 'onclick="selecionarMesFV('+ano+','+mes+')" '
+          + 'style="flex-shrink:0;min-width:90px;padding:12px 10px;border:none;background:transparent;'
+          + 'color:#000;cursor:pointer;transition:all .3s cubic-bezier(.4,.6,.3,1);'
+          + 'text-align:center;font-family:inherit;align-self:stretch;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">'
+          + '<div style="font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:#000;opacity:.55;">'+ano+'</div>'
+          + '<div style="font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#000;line-height:1;">'+MESES_NOMES[mes]+'</div>'
+          + '<div style="font-size:11px;font-weight:600;color:#000;opacity:.7;">'+(total.total > 0 ? fmtR(total.total) : '—')+'</div>'
+          + '</button>';
+      }
     }
     carr.innerHTML = html;
   }
@@ -13630,32 +13424,39 @@ var _eficIv2 = setInterval(function(){
     var ehMesAtual = (ano === hoje.getFullYear() && mes === hoje.getMonth());
     var ehFuturo = (ano > hoje.getFullYear() || (ano === hoje.getFullYear() && mes > hoje.getMonth()));
     var statusTxt = ehMesAtual ? 'Mês atual' : (ehFuturo ? 'Mês futuro' : 'Mês anterior');
-    var statusCor = ehMesAtual ? 'var(--secondary)' : (ehFuturo ? '#f59e0b' : '#94a3b8');
+    var statusCor = ehMesAtual ? 'var(--secondary)' : (ehFuturo ? 'var(--secondary)' : '#94a3b8');
 
     var html = '';
 
-    // Header do mês
-    html += '<div style="text-align:center;margin-bottom:18px;">'
-      + '<div style="font-size:22px;font-weight:900;color:#0f172a;letter-spacing:-.5px;">'+MESES_FULL[mes]+' '+ano+'</div>'
-      + '<div style="font-size:11px;font-weight:700;color:'+statusCor+';text-transform:uppercase;letter-spacing:1.5px;margin-top:4px;">'+statusTxt+'</div>'
-      + '</div>';
-
-    // Card destaque total
-    html += '<div style="background:linear-gradient(135deg,#000 0%,#1e293b 100%);border-radius:18px;padding:22px 18px;margin-bottom:16px;text-align:center;position:relative;overflow:hidden;">'
-      + '<div style="position:absolute;inset:0;background:radial-gradient(circle at 80% 20%,rgba(34,197,94,.2),transparent 60%);"></div>'
-      + '<div style="position:relative;z-index:1;">'
-      +   '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:1.8px;">Total do mês</div>'
-      +   '<div style="font-size:34px;font-weight:900;color:var(--secondary);margin-top:5px;line-height:1;"><span style="font-size:17px;font-weight:700;">R$</span> '+fmtNum(total.total)+'</div>'
-      +   '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:8px;">'+(parcs.length + avistas.length)+' lançamento'+((parcs.length + avistas.length) !== 1 ? 's' : '')+'</div>'
+    // Card unificado full-bleed: mês + total + fundo volante.png + overlay preto
+    var totalLanc = parcs.length + avistas.length;
+    html += '<div style="position:relative;left:50%;transform:translateX(-50%);width:100vw;margin:0 0 16px 0;padding:26px 20px;background-image:url(\'https://marceloricardooficial.github.io/PillotGo/volante.png\');background-size:cover;background-position:center;background-repeat:no-repeat;overflow:hidden;box-sizing:border-box;">'
+      // Overlay preto
+      + '<div style="position:absolute;inset:0;background:rgba(0,0,0,.72);"></div>'
+      // Conteúdo (2 colunas) CENTRALIZADO
+      + '<div style="position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:18px;">'
+        // Coluna ESQUERDA - mês + ano
+      +   '<div style="flex-shrink:0;text-align:center;">'
+      +     '<div style="font-size:36px;font-weight:900;color:var(--secondary);text-transform:uppercase;letter-spacing:1px;line-height:1;">'+MESES_NOMES[mes]+'</div>'
+      +     '<div style="font-size:13px;font-weight:600;color:#fff;margin-top:5px;letter-spacing:.5px;">'+ano+'</div>'
+      +   '</div>'
+        // Separador vertical
+      +   '<div style="flex-shrink:0;width:1px;height:60px;background:rgba(255,255,255,.45);"></div>'
+        // Coluna DIREITA - total
+      +   '<div style="flex-shrink:0;text-align:center;">'
+      +     '<div style="font-size:11px;font-weight:700;color:#cbd5e1;text-transform:uppercase;letter-spacing:1.5px;">Total do mês</div>'
+      +     '<div style="font-size:30px;font-weight:900;color:#fff;line-height:1;margin-top:5px;"><span style="font-size:15px;font-weight:700;">R$</span> '+fmtNum(total.total)+'</div>'
+      +     '<div style="font-size:12px;font-weight:700;color:var(--secondary);margin-top:6px;">'+totalLanc+' lançamento'+(totalLanc !== 1 ? 's' : '')+'</div>'
+      +   '</div>'
       + '</div>'
       + '</div>';
 
     // Grid 2 cards: parcelado / à vista
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">'
       + '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px;position:relative;overflow:hidden;">'
-      +   '<div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:#f59e0b;"></div>'
-      +   '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><i class="fa-solid fa-credit-card" style="color:#f59e0b;font-size:11px;"></i><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;">Parcelado</div></div>'
-      +   '<div style="font-size:18px;font-weight:800;color:#f59e0b;"><span style="font-size:11px;">R$</span> '+fmtNum(total.parcelado)+'</div>'
+      +   '<div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--secondary);"></div>'
+      +   '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><i class="fa-solid fa-credit-card" style="color:var(--secondary);font-size:11px;"></i><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;">Parcelado</div></div>'
+      +   '<div style="font-size:18px;font-weight:800;color:var(--secondary);"><span style="font-size:11px;">R$</span> '+fmtNum(total.parcelado)+'</div>'
       +   '<div style="font-size:10px;color:#94a3b8;margin-top:2px;">'+parcs.length+' parcela'+(parcs.length !== 1 ? 's' : '')+'</div>'
       + '</div>'
       + '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px;position:relative;overflow:hidden;">'
@@ -13668,28 +13469,32 @@ var _eficIv2 = setInterval(function(){
 
     // Lista parcelamentos do mês
     if(parcs.length){
-      html += '<div style="font-size:13px;font-weight:800;color:#0f172a;margin:18px 0 10px;display:flex;align-items:center;gap:6px;"><i class="fa-solid fa-clock-rotate-left" style="color:#f59e0b;"></i>Parcelamentos neste mês</div>';
+      html += '<div style="font-size:13px;font-weight:800;color:#0f172a;margin:18px 0 10px;display:flex;align-items:center;gap:6px;"><i class="fa-solid fa-clock-rotate-left" style="color:var(--secondary);"></i>Parcelamentos neste mês</div>';
       html += '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;margin-bottom:18px;">';
       parcs.forEach(function(p, i){
-        var pct = (p.numeroParcela / p.totalParcelas) * 100;
-        var tipoTxt = p.tipoPag === 'Financiamento' ? 'Financiamento' : 'Parcelado';
-        var tipoCor = p.tipoPag === 'Financiamento' ? '#7c3aed' : '#f59e0b';
+        var ehMensalP = p.tipoPag === 'Mensal';
+        var ehIndet = ehMensalP && p.totalParcelas === 0;
+        var pct = (ehIndet || p.totalParcelas === 0) ? 100 : (p.numeroParcela / p.totalParcelas) * 100;
+        var tipoTxt = p.tipoPag === 'Financiamento' ? 'Financiamento' : (ehMensalP ? 'Mensal' : 'Parcelado');
+        var tipoCor = p.tipoPag === 'Financiamento' ? '#7c3aed' : 'var(--secondary)';
+        var fracTxt = ehIndet ? p.numeroParcela+'ª' : p.numeroParcela+'/'+p.totalParcelas;
         html += '<div style="padding:13px 14px;'+(i < parcs.length-1 ? 'border-bottom:1px solid #f1f5f9;' : '')+'">'
           + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px;">'
           +   '<div style="flex:1;min-width:0;">'
           +     '<div style="font-size:13px;font-weight:700;color:#0f172a;">'+p.descricao+'</div>'
           +     '<div style="font-size:10px;color:#94a3b8;margin-top:2px;">'
           +       '<span style="color:'+tipoCor+';font-weight:700;">'+tipoTxt+'</span>'
+          +       (ehIndet ? ' • <span style="font-style:italic;">indeterminado</span>' : '')
           +       (p.cartao ? ' • '+p.cartao : '')
           +       (p.categoria ? ' • '+p.categoria : '')
           +     '</div>'
           +   '</div>'
           +   '<div style="text-align:right;flex-shrink:0;">'
           +     '<div style="font-size:14px;font-weight:800;color:#0f172a;white-space:nowrap;">'+fmtR(p.valorParcela)+'</div>'
-          +     '<div style="font-size:10px;color:#94a3b8;">'+p.numeroParcela+'/'+p.totalParcelas+'</div>'
+          +     '<div style="font-size:10px;color:#94a3b8;">'+fracTxt+'</div>'
           +   '</div>'
           + '</div>'
-          + '<div style="height:5px;background:#f1f5f9;border-radius:3px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:'+tipoCor+';transition:width .4s;"></div></div>'
+          + (ehIndet ? '' : '<div style="height:5px;background:#f1f5f9;border-radius:3px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:'+tipoCor+';transition:width .4s;"></div></div>')
           + '</div>';
       });
       html += '</div>';
@@ -14195,4 +14000,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-                                                                                                                                                                                                                                                                                                           </html>
+    </html>
