@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v470';
+window.APP_VERSAO = 'v471';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -7479,6 +7479,9 @@ window.tnAplicar = function() {
         set('addParcN',item.parcelas);
         set('addCartao',item.cartao);
         calcParcAdd();
+        // Preenche checkbox FIXA
+        var chkFixa = document.getElementById('addFixa');
+        if(chkFixa) chkFixa.checked = !!item.fixa;
       }
       // Change save button text
       var btn=document.querySelector('#modalAddDesp button[onclick*="salvarDesp"]');
@@ -7724,13 +7727,12 @@ window.tnAplicar = function() {
     // Checkbox incluir no cálculo (escondido pro veiculo, mantém compat)
     h += '<input type="hidden" id="addIncCalc" value="true">';
 
-    // Checkbox DESPESA FIXA
-    var fixaChecked = ed && ed.fixa ? 'checked' : '';
+    // Checkbox DESPESA FIXA (preenchido depois via editDesp se for edição)
     h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#f8fafc;margin-top:8px;">'
       + '<div><div style="font-size:12px;font-weight:700;color:#1e293b;">Despesa Fixa</div>'
       + '<div style="font-size:10px;color:#94a3b8;margin-top:1px;">Seguro, financiamento, mensalidades, etc</div></div>'
       + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">'
-      + '<input type="checkbox" id="addFixa" '+fixaChecked+' style="width:18px;height:18px;accent-color:var(--secondary);cursor:pointer;">'
+      + '<input type="checkbox" id="addFixa" style="width:18px;height:18px;accent-color:var(--secondary);cursor:pointer;">'
       + '<span style="font-size:11px;font-weight:700;color:var(--secondary);">Fixa</span>'
       + '</label></div>';
 
@@ -14089,4 +14091,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-</html>
+    </html>
