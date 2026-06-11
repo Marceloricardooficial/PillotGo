@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v463';
+window.APP_VERSAO = 'v468';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -13430,9 +13430,9 @@ var _eficIv2 = setInterval(function(){
 
     // Card unificado full-bleed: mês + total + fundo volante.png + overlay preto
     var totalLanc = parcs.length + avistas.length;
-    html += '<div style="position:relative;left:50%;transform:translateX(-50%);width:100vw;margin:0 0 16px 0;padding:26px 20px;background-image:url(\'https://marceloricardooficial.github.io/PillotGo/volante.png\');background-size:cover;background-position:center;background-repeat:no-repeat;overflow:hidden;box-sizing:border-box;">'
+    html += '<div style="position:relative;left:50%;transform:translateX(-50%);width:100vw;margin:0;padding:26px 20px;background-image:url(\'https://marceloricardooficial.github.io/PillotGo/volante.png\');background-size:cover;background-position:center;background-repeat:no-repeat;overflow:hidden;box-sizing:border-box;">'
       // Overlay preto
-      + '<div style="position:absolute;inset:0;background:rgba(0,0,0,.72);"></div>'
+      + '<div style="position:absolute;inset:0;background:rgba(0,0,0,.45);"></div>'
       // Conteúdo (2 colunas) CENTRALIZADO
       + '<div style="position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:18px;">'
         // Coluna ESQUERDA - mês + ano
@@ -13446,31 +13446,46 @@ var _eficIv2 = setInterval(function(){
       +   '<div style="flex-shrink:0;text-align:center;">'
       +     '<div style="font-size:11px;font-weight:700;color:#cbd5e1;text-transform:uppercase;letter-spacing:1.5px;">Total do mês</div>'
       +     '<div style="font-size:30px;font-weight:900;color:#fff;line-height:1;margin-top:5px;"><span style="font-size:15px;font-weight:700;">R$</span> '+fmtNum(total.total)+'</div>'
-      +     '<div style="font-size:12px;font-weight:700;color:var(--secondary);margin-top:6px;">'+totalLanc+' lançamento'+(totalLanc !== 1 ? 's' : '')+'</div>'
+      +     '<div style="font-size:12px;font-weight:700;color:#fff;margin-top:6px;">'+totalLanc+' lançamento'+(totalLanc !== 1 ? 's' : '')+'</div>'
       +   '</div>'
       + '</div>'
       + '</div>';
 
-    // Grid 2 cards: parcelado / à vista
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">'
-      + '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px;position:relative;overflow:hidden;">'
-      +   '<div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--secondary);"></div>'
-      +   '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><i class="fa-solid fa-credit-card" style="color:var(--secondary);font-size:11px;"></i><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;">Parcelado</div></div>'
-      +   '<div style="font-size:18px;font-weight:800;color:var(--secondary);"><span style="font-size:11px;">R$</span> '+fmtNum(total.parcelado)+'</div>'
-      +   '<div style="font-size:10px;color:#94a3b8;margin-top:2px;">'+parcs.length+' parcela'+(parcs.length !== 1 ? 's' : '')+'</div>'
+    // 2 ACORDEÕES full-width: Parcelado + À vista
+    html += '<div id="fvAcordeoes" style="position:relative;left:50%;transform:translateX(-50%);width:100vw;background:#fff;margin-bottom:0;box-sizing:border-box;">'
+      + '<div class="fvAcc" data-acc="parc">'
+      +   '<button onclick="toggleAccFV(\'parc\')" style="width:100%;display:flex;align-items:stretch;background:transparent;border:none;border-bottom:1px solid #e5e7eb;padding:0;cursor:pointer;font-family:inherit;text-align:left;">'
+      +     '<div style="flex:1;display:flex;align-items:center;gap:12px;padding:16px 32px;">'
+      +       '<i class="fa-solid fa-credit-card" style="color:var(--secondary);font-size:20px;width:24px;text-align:center;flex-shrink:0;"></i>'
+      +       '<div style="flex:1;min-width:0;">'
+      +         '<div style="font-size:15px;font-weight:700;color:#0f172a;">Parcelados</div>'
+      +         '<div style="font-size:12px;color:#94a3b8;margin-top:2px;">'+parcs.length+' parcelado'+(parcs.length !== 1 ? 's' : '')+'</div>'
+      +       '</div>'
+      +       '<div style="font-size:18px;font-weight:800;color:var(--secondary);white-space:nowrap;"><span style="font-size:12px;">R$</span> '+fmtNum(total.parcelado)+'</div>'
+      +     '</div>'
+      +     '<div class="fvAccPlus" style="flex-shrink:0;width:54px;background:var(--secondary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:300;"><i class="fa-solid fa-plus" style="transition:transform .25s;"></i></div>'
+      +   '</button>'
+      +   '<div class="fvAccBody" style="display:none;background:#fafafa;border-bottom:1px solid #e5e7eb;"></div>'
       + '</div>'
-      + '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px;position:relative;overflow:hidden;">'
-      +   '<div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--secondary);"></div>'
-      +   '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><i class="fa-solid fa-money-bill" style="color:var(--secondary);font-size:11px;"></i><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;">À vista</div></div>'
-      +   '<div style="font-size:18px;font-weight:800;color:var(--secondary);"><span style="font-size:11px;">R$</span> '+fmtNum(total.avista)+'</div>'
-      +   '<div style="font-size:10px;color:#94a3b8;margin-top:2px;">'+avistas.length+' compra'+(avistas.length !== 1 ? 's' : '')+'</div>'
+      + '<div class="fvAcc" data-acc="av">'
+      +   '<button onclick="toggleAccFV(\'av\')" style="width:100%;display:flex;align-items:stretch;background:transparent;border:none;border-bottom:1px solid #e5e7eb;padding:0;cursor:pointer;font-family:inherit;text-align:left;">'
+      +     '<div style="flex:1;display:flex;align-items:center;gap:12px;padding:16px 32px;">'
+      +       '<i class="fa-solid fa-money-bill" style="color:var(--secondary);font-size:20px;width:24px;text-align:center;flex-shrink:0;"></i>'
+      +       '<div style="flex:1;min-width:0;">'
+      +         '<div style="font-size:15px;font-weight:700;color:#0f172a;">À vista</div>'
+      +         '<div style="font-size:12px;color:#94a3b8;margin-top:2px;">'+avistas.length+' compra'+(avistas.length !== 1 ? 's' : '')+'</div>'
+      +       '</div>'
+      +       '<div style="font-size:18px;font-weight:800;color:var(--secondary);white-space:nowrap;"><span style="font-size:12px;">R$</span> '+fmtNum(total.avista)+'</div>'
+      +     '</div>'
+      +     '<div class="fvAccPlus" style="flex-shrink:0;width:54px;background:var(--secondary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:300;"><i class="fa-solid fa-plus" style="transition:transform .25s;"></i></div>'
+      +   '</button>'
+      +   '<div class="fvAccBody" style="display:none;background:#fafafa;border-bottom:1px solid #e5e7eb;"></div>'
       + '</div>'
       + '</div>';
 
-    // Lista parcelamentos do mês
+    // Monta string do conteúdo do acordeão Parcelados
+    var htmlParc = '';
     if(parcs.length){
-      html += '<div style="font-size:13px;font-weight:800;color:#0f172a;margin:18px 0 10px;display:flex;align-items:center;gap:6px;"><i class="fa-solid fa-clock-rotate-left" style="color:var(--secondary);"></i>Parcelamentos neste mês</div>';
-      html += '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;margin-bottom:18px;">';
       parcs.forEach(function(p, i){
         var ehMensalP = p.tipoPag === 'Mensal';
         var ehIndet = ehMensalP && p.totalParcelas === 0;
@@ -13478,45 +13493,57 @@ var _eficIv2 = setInterval(function(){
         var tipoTxt = p.tipoPag === 'Financiamento' ? 'Financiamento' : (ehMensalP ? 'Mensal' : 'Parcelado');
         var tipoCor = p.tipoPag === 'Financiamento' ? '#7c3aed' : 'var(--secondary)';
         var fracTxt = ehIndet ? p.numeroParcela+'ª' : p.numeroParcela+'/'+p.totalParcelas;
-        html += '<div style="padding:13px 14px;'+(i < parcs.length-1 ? 'border-bottom:1px solid #f1f5f9;' : '')+'">'
-          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px;">'
+        // Categoria (preto) + Subcategoria (cinza)
+        var catHtml = '';
+        if(p.categoria){
+          catHtml = '<span style="color:#000;">'+p.categoria+'</span>';
+          if(p.subcategoria) catHtml += ' <span style="color:#94a3b8;">» '+p.subcategoria+'</span>';
+        }
+        // Item com margem lateral maior (padding horizontal)
+        htmlParc += '<div style="padding:14px 32px;'+(i < parcs.length-1 ? 'border-bottom:1px solid #e5e7eb;' : '')+'">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;">'
           +   '<div style="flex:1;min-width:0;">'
-          +     '<div style="font-size:13px;font-weight:700;color:#0f172a;">'+p.descricao+'</div>'
-          +     '<div style="font-size:10px;color:#94a3b8;margin-top:2px;">'
+          // Título: sem negrito, +1pt (16px), com cores específicas
+          +     (catHtml ? '<div style="font-size:16px;font-weight:500;line-height:1.2;">'+catHtml+'</div>' : '')
+          +     '<div style="font-size:13px;color:#475569;margin-top:3px;font-weight:500;">'+p.descricao+'</div>'
+          +     '<div style="font-size:12px;color:#94a3b8;margin-top:4px;">'
           +       '<span style="color:'+tipoCor+';font-weight:700;">'+tipoTxt+'</span>'
           +       (ehIndet ? ' • <span style="font-style:italic;">indeterminado</span>' : '')
           +       (p.cartao ? ' • '+p.cartao : '')
-          +       (p.categoria ? ' • '+p.categoria : '')
           +     '</div>'
           +   '</div>'
           +   '<div style="text-align:right;flex-shrink:0;">'
-          +     '<div style="font-size:14px;font-weight:800;color:#0f172a;white-space:nowrap;">'+fmtR(p.valorParcela)+'</div>'
-          +     '<div style="font-size:10px;color:#94a3b8;">'+fracTxt+'</div>'
+          +     '<div style="font-size:16px;font-weight:800;color:#0f172a;white-space:nowrap;">'+fmtR(p.valorParcela)+'</div>'
+          // Quantidade de parcela: +2pt (12→14) na cor do tema
+          +     '<div style="font-size:14px;font-weight:700;color:var(--secondary);margin-top:2px;">'+fracTxt+'</div>'
           +   '</div>'
           + '</div>'
           + (ehIndet ? '' : '<div style="height:5px;background:#f1f5f9;border-radius:3px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:'+tipoCor+';transition:width .4s;"></div></div>')
           + '</div>';
       });
-      html += '</div>';
     }
 
-    // Lista à vista do mês
+    var htmlAv = '';
     if(avistas.length){
-      html += '<div style="font-size:13px;font-weight:800;color:#0f172a;margin:18px 0 10px;display:flex;align-items:center;gap:6px;"><i class="fa-solid fa-receipt" style="color:var(--secondary);"></i>Compras à vista neste mês</div>';
-      html += '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;margin-bottom:18px;">';
       avistas.forEach(function(item, i){
         var dataFmt = (item.data||'').split('-').reverse().join('/');
-        html += '<div style="padding:13px 14px;'+(i < avistas.length-1 ? 'border-bottom:1px solid #f1f5f9;' : '')+'">'
+        var catHtml = '';
+        if(item.categoria){
+          catHtml = '<span style="color:#000;">'+item.categoria+'</span>';
+          if(item.subcategoria) catHtml += ' <span style="color:#94a3b8;">» '+item.subcategoria+'</span>';
+        }
+        var desc = item.descricao || '';
+        htmlAv += '<div style="padding:14px 32px;'+(i < avistas.length-1 ? 'border-bottom:1px solid #e5e7eb;' : '')+'">'
           + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">'
           +   '<div style="flex:1;min-width:0;">'
-          +     '<div style="font-size:13px;font-weight:700;color:#0f172a;">'+(item.descricao || item.categoria || 'Despesa')+'</div>'
-          +     '<div style="font-size:10px;color:#94a3b8;margin-top:2px;">'+dataFmt+(item.pagamento ? ' • '+item.pagamento : '')+(item.cartao ? ' • '+item.cartao : '')+'</div>'
+          +     (catHtml ? '<div style="font-size:16px;font-weight:500;line-height:1.2;">'+catHtml+'</div>' : '')
+          +     (desc ? '<div style="font-size:13px;color:#475569;margin-top:3px;font-weight:500;">'+desc+'</div>' : '')
+          +     '<div style="font-size:12px;color:#94a3b8;margin-top:4px;">'+dataFmt+(item.pagamento ? ' • '+item.pagamento : '')+(item.cartao ? ' • '+item.cartao : '')+'</div>'
           +   '</div>'
-          +   '<div style="font-size:14px;font-weight:800;color:#0f172a;white-space:nowrap;">'+fmtR(item.valor)+'</div>'
+          +   '<div style="font-size:16px;font-weight:800;color:#0f172a;white-space:nowrap;">'+fmtR(item.valor)+'</div>'
           + '</div>'
           + '</div>';
       });
-      html += '</div>';
     }
 
     // Vazio
@@ -13529,7 +13556,36 @@ var _eficIv2 = setInterval(function(){
     }
 
     cont.innerHTML = html;
+
+    // Injeta o conteúdo nos bodies dos acordeões
+    var accParcBody = cont.querySelector('.fvAcc[data-acc="parc"] .fvAccBody');
+    var accAvBody = cont.querySelector('.fvAcc[data-acc="av"] .fvAccBody');
+    if(accParcBody) accParcBody.innerHTML = htmlParc || '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">Sem parcelados neste mês</div>';
+    if(accAvBody) accAvBody.innerHTML = htmlAv || '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">Sem compras à vista neste mês</div>';
   }
+
+  // Toggle acordeão (Parcelado / À vista)
+  window.toggleAccFV = function(qual){
+    var acc = document.querySelector('.fvAcc[data-acc="'+qual+'"]');
+    if(!acc) return;
+    var body = acc.querySelector('.fvAccBody');
+    var icone = acc.querySelector('.fvAccPlus i');
+    var aberto = body.style.display !== 'none';
+    if(aberto){
+      body.style.display = 'none';
+      if(icone){ icone.className = 'fa-solid fa-plus'; icone.style.transform = 'rotate(0deg)'; }
+    } else {
+      body.style.display = 'block';
+      // Animação: rotaciona 180° e troca pra minus
+      if(icone){
+        icone.style.transform = 'rotate(180deg)';
+        setTimeout(function(){
+          icone.className = 'fa-solid fa-minus';
+          icone.style.transform = 'rotate(0deg)';
+        }, 125);
+      }
+    }
+  };
 
   // ----- Item no menu -----
   function addItemMenu(){
@@ -14000,4 +14056,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-    </html>
+                                                                                                                    </html>
