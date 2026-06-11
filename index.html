@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v469';
+window.APP_VERSAO = 'v470';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -7347,6 +7347,8 @@ window.tnAplicar = function() {
         var ehParcelado = item.pagamento==='Crédito parcelado' || item.pagamento==='Financiamento' || item.pagamento==='Mensal';
         var parcInfo = ehParcelado && item.parcelas ? item.parcelas+'x de '+fmtR(parseFloat(item.valor)/parseInt(item.parcelas)) : '';
         var badges = '';
+        // Tag FIXA em destaque (cor do tema)
+        if(item.fixa) badges += '<span class="vBadge" style="background:var(--secondary);color:#fff;font-weight:800;"><i class="fa-solid fa-thumbtack" style="font-size:9px;"></i>FIXA</span>';
         // Badges só em verde/preto/cinza (cores do tema)
         if(item.kmTroca) badges += '<span class="vBadge" style="background:#f1f5f9;color:#475569;"><i class="fa-solid fa-gauge-high" style="font-size:9px;"></i>KM '+item.kmTroca+(item.kmProxima?' → '+item.kmProxima:'')+'</span>';
         if(ehParcelado){
@@ -7722,6 +7724,16 @@ window.tnAplicar = function() {
     // Checkbox incluir no cálculo (escondido pro veiculo, mantém compat)
     h += '<input type="hidden" id="addIncCalc" value="true">';
 
+    // Checkbox DESPESA FIXA
+    var fixaChecked = ed && ed.fixa ? 'checked' : '';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#f8fafc;margin-top:8px;">'
+      + '<div><div style="font-size:12px;font-weight:700;color:#1e293b;">Despesa Fixa</div>'
+      + '<div style="font-size:10px;color:#94a3b8;margin-top:1px;">Seguro, financiamento, mensalidades, etc</div></div>'
+      + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">'
+      + '<input type="checkbox" id="addFixa" '+fixaChecked+' style="width:18px;height:18px;accent-color:var(--secondary);cursor:pointer;">'
+      + '<span style="font-size:11px;font-weight:700;color:var(--secondary);">Fixa</span>'
+      + '</label></div>';
+
     // Botão salvar
     h += '<button onclick="salvarDesp(\'vei\')" style="width:100%;padding:13px;background:var(--secondary);color:#fff;border:none;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;margin-top:4px;">Salvar</button>';
 
@@ -7977,6 +7989,7 @@ window.tnAplicar = function() {
       item.kmProxima = document.getElementById('addKmP')?.value||'';
       item.parcelas  = document.getElementById('addParcN')?.value||'';
       item.cartao    = document.getElementById('addCartao')?.value||'';
+      item.fixa      = !!document.getElementById('addFixa')?.checked;
     }
 
     var d = getDespesas();
@@ -13162,6 +13175,15 @@ var _eficIv2 = setInterval(function(){
     return (item.pagamento || '') === 'Mensal';
   }
 
+  // Estado do filtro Só Fixas
+  window._fvFilFixas = false;
+  window.toggleFilFixasFV = function(){
+    var c = document.getElementById('fvFilFixas');
+    window._fvFilFixas = !!(c && c.checked);
+    renderCarrossel();
+    renderConteudo();
+  };
+
   // Pega TODAS as despesas de veículo do storage nativo
   function todasDespesasVeiculo(){
     try {
@@ -13172,12 +13194,15 @@ var _eficIv2 = setInterval(function(){
       var out = [];
       Object.keys(vei).forEach(function(dataKey){
         (vei[dataKey] || []).forEach(function(it){
-          // Garante que tem data (usa a chave se nao tiver)
           var item = Object.assign({}, it);
           if(!item.data) item.data = dataKey;
           out.push(item);
         });
       });
+      // Aplica filtro Só Fixas
+      if(window._fvFilFixas){
+        out = out.filter(function(it){ return !!it.fixa; });
+      }
       return out;
     } catch(e){ return []; }
   }
@@ -13315,6 +13340,13 @@ var _eficIv2 = setInterval(function(){
       +   '<div id="fvCarrosselWrap" style="overflow-x:auto;overflow-y:hidden;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none;">'
       +     '<div id="fvCarrossel" style="display:flex;gap:0;padding:0 50%;width:max-content;min-height:88px;align-items:stretch;"></div>'
       +   '</div>'
+      + '</div>'
+      // Filtro Só Fixas
+      + '<div style="background:#fff;padding:10px 18px;display:flex;align-items:center;justify-content:flex-end;gap:8px;border-bottom:1px solid #e5e7eb;">'
+      +   '<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-family:inherit;">'
+      +     '<input type="checkbox" id="fvFilFixas" onchange="toggleFilFixasFV()" style="width:16px;height:16px;accent-color:var(--secondary);cursor:pointer;">'
+      +     '<span style="font-size:12px;font-weight:700;color:#0f172a;"><i class="fa-solid fa-thumbtack" style="color:var(--secondary);margin-right:4px;"></i>Mostrar só FIXAS</span>'
+      +   '</label>'
       + '</div>'
       // Conteudo do mes selecionado
       + '<div id="fvConteudo" style="padding:0 16px 32px;"></div>';
@@ -14057,4 +14089,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-    </html>
+</html>
