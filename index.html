@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v471';
+window.APP_VERSAO = 'v475';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -8452,32 +8452,73 @@ window.tnAplicar = function() {
       var med = mediaMap[a.id];
       var unid = a.combustivel === 'GNV' ? 'm³' : 'l';
       var ehParcial = a.parcial || a.fechamentoParcial;
-      var medBadge = med
-        ? '<span style="font-size:11px;background:'+(med.media>=10?'#f0fdf4':'#fef3c7')+';color:'+(med.media>=10?'#166534':'#92400e')+';padding:2px 8px;font-weight:700;border-radius:0;">'+fmtN(med.media)+' km/'+unid+'</span>'
-        : (ehParcial ? '<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:2px 8px;font-weight:600;">Parcial — sem média</span>' : (a.kmFim ? '' : '<span style="font-size:10px;background:#f1f5f9;color:#94a3b8;padding:2px 8px;">Sem KM final</span>'));
-      var precUn = a.quantidade&&parseFloat(a.quantidade)>0 ? 'R$'+fmtN(parseFloat(a.valor)/parseFloat(a.quantidade),3)+'/'+unid : '';
-      return '<div style="display:flex;align-items:stretch;border-bottom:1px solid #ececec;background:'+(i%2===0?'#fff':'#f3f4f6')+';">'  + '<div style="width:6px;background:var(--secondary);flex-shrink:0;"></div>' + '<div style="flex:1;padding:12px 10px;">'
-        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
-        +'<div style="flex:1;">'
-        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
-        +'<span style="font-size:15px;font-weight:800;color:#1e293b;">'+a.combustivel+'</span>'
-        +medBadge
-        +'</div>'
-        +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;">'
-        +(a.kmInicio?'<span style="font-size:11px;background:#f8fafc;padding:3px 8px;color:#475569;font-weight:600;">KM ini: '+a.kmInicio+'</span>':'')
-        +(a.kmFim?'<span style="font-size:11px;background:#f8fafc;padding:3px 8px;color:#475569;font-weight:600;">KM fim: '+a.kmFim+'</span>':'')
-        +(a.quantidade?'<span style="font-size:11px;background:#f8fafc;padding:3px 8px;color:#475569;font-weight:600;">'+fmtN(parseFloat(a.quantidade),2)+' '+unid+'</span>':'')
-        +(precUn?'<span style="font-size:11px;background:#f8fafc;padding:3px 8px;color:#475569;font-weight:600;">'+precUn+'</span>':'')
-        +'</div>'
-        +'<div style="font-size:12px;color:var(--secondary);font-weight:600;">'+fmtData(a.data)+(a.descricao?' · '+a.descricao:'')+'</div>'
-        +'</div>'
-        +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;margin-left:10px;">'
-        +'<div style="font-size:17px;font-weight:900;color:var(--secondary);">'+fmtR(a.valor)+'</div>'
-        +'<div style="display:flex;gap:6px;">'
-        +(a.kmFim?'':'<button onclick="abrirAddKmFim(\''+a.id+'\')" style="padding:4px 8px;border:1px solid var(--secondary);border-radius:0;background:#fff;color:var(--secondary);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">+ KM fim</button>')
-        +'<button onclick="editAbastecimento(\''+a.id+'\')" style="width:30px;height:30px;border-radius:50%;border:none;background:#f0fdf4;color:var(--secondary);font-size:12px;cursor:pointer;"><i class="fa-solid fa-pen"></i></button>'
-        +'<button onclick="deleteAbastecimento(\''+a.id+'\')" style="width:30px;height:30px;border-radius:50%;border:none;background:#1e293b;color:#fff;font-size:12px;cursor:pointer;"><i class="fa-solid fa-trash"></i></button>'
-        +'</div></div></div></div></div>';
+      var precUn = a.quantidade&&parseFloat(a.quantidade)>0 ? 'R$ '+fmtN(parseFloat(a.valor)/parseFloat(a.quantidade),3) : '--';
+      var mediaTxt = med ? fmtN(med.media)+' km/'+unid : (ehParcial ? 'parcial' : '--');
+      var kmRodTxt = med ? fmtN(med.km, 0)+' km' : '--';
+      var qtdTxt = a.quantidade ? fmtN(parseFloat(a.quantidade),2)+' '+unid : '--';
+      var kmIniTxt = a.kmInicio || '--';
+      var kmFimTxt = a.kmFim || '--';
+
+      // Helper: célula da grade
+      function celula(label, valor){
+        return '<div style="flex:1;text-align:center;padding:0 6px;min-width:0;">'
+          + '<div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+label+'</div>'
+          + '<div style="font-size:13px;color:#0f172a;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+valor+'</div>'
+          + '</div>';
+      }
+      var divisor = '<div style="width:1px;background:#e5e7eb;flex-shrink:0;align-self:stretch;margin:2px 0;"></div>';
+
+      return '<div style="display:flex;align-items:stretch;border-bottom:1px solid #ececec;background:'+(i%2===0?'#fff':'#f3f4f6')+';">'
+        + '<div style="width:6px;background:var(--secondary);flex-shrink:0;"></div>'
+        + '<div style="flex:1;padding:14px 14px;min-width:0;">'
+
+        // ===== LINHA 1: NOME COMBUSTÍVEL ········· 📅 DATA =====
+        // (linha pontilhada começa logo depois do nome - sem largura fixa)
+        + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+        +   '<span style="font-size:15px;font-weight:800;color:#1e293b;white-space:nowrap;flex-shrink:0;">'+a.combustivel+'</span>'
+        +   '<div style="flex:1;border-bottom:2px dotted #cbd5e1;align-self:center;margin-bottom:3px;"></div>'
+        +   '<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#94a3b8;font-weight:600;white-space:nowrap;flex-shrink:0;">'
+        +     '<i class="fa-solid fa-calendar-days" style="color:var(--secondary);opacity:.55;font-size:13px;"></i>'
+        +     fmtData(a.data)
+        +   '</span>'
+        + '</div>'
+
+        // ===== LINHA 2: MÉDIA + KMS RODADO (mesma margem do nome, distribuídos) =====
+        + '<div style="display:flex;align-items:center;justify-content:space-around;margin-bottom:10px;gap:8px;">'
+        +   '<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#000;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">'
+        +     '<i class="fa-solid fa-gauge" style="color:var(--secondary);font-size:13px;"></i>'
+        +     'MÉDIA: <span style="color:var(--secondary);font-weight:800;">'+mediaTxt+'</span>'
+        +   '</span>'
+        +   '<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#000;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">'
+        +     '<i class="fa-solid fa-road" style="color:var(--secondary);font-size:13px;"></i>'
+        +     'KMS RODADO: <span style="color:var(--secondary);font-weight:800;">'+kmRodTxt+'</span>'
+        +   '</span>'
+        + '</div>'
+
+        // ===== LINHA 3: GRADE 4 COLUNAS (mesma margem do nome) =====
+        + '<div style="display:flex;align-items:stretch;padding:8px 0;border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9;margin-bottom:12px;">'
+        +   celula('Km Inicial', kmIniTxt)
+        +   divisor
+        +   celula('Km Final', kmFimTxt)
+        +   divisor
+        +   celula('Quant', qtdTxt)
+        +   divisor
+        +   celula('Valor Un', precUn)
+        + '</div>'
+
+        // ===== LINHA 4: ÍCONES (esquerda) + VALOR R$ EM QUADRADO (direita) =====
+        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+        +   '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+        +     (a.kmFim?'':'<button onclick="abrirAddKmFim(\''+a.id+'\')" style="padding:6px 10px;border:1px solid var(--secondary);background:#fff;color:var(--secondary);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;border-radius:0;">+ KM fim</button>')
+        +     '<button onclick="editAbastecimento(\''+a.id+'\')" style="width:34px;height:34px;border-radius:50%;border:none;background:var(--secondary);color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-pen"></i></button>'
+        +     '<button onclick="deleteAbastecimento(\''+a.id+'\')" style="width:34px;height:34px;border-radius:50%;border:none;background:#000;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-trash"></i></button>'
+        +     (a.descricao?'<span style="font-size:11px;color:#94a3b8;font-weight:500;">'+a.descricao+'</span>':'')
+        +   '</div>'
+        +   '<div style="background:var(--secondary);color:#fff;padding:8px 14px;font-size:17px;font-weight:900;white-space:nowrap;">'+fmtR(a.valor)+'</div>'
+        + '</div>'
+
+        + '</div>'
+        + '</div>';
     }).join('');
   };
 
