@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v484';
+window.APP_VERSAO = 'v486';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -13308,11 +13308,12 @@ var _eficIv2 = setInterval(function(){
           subcategoria: item.subcategoria || '',
           cartao: item.cartao || '',
           numeroParcela: mesesDiff + 1,
-          totalParcelas: (ehM && n <= 0) ? 0 : n,  // 0 = indeterminado
+          totalParcelas: (ehM && n <= 0) ? 0 : n,
           valorParcela: ehM ? valor : (valor / n),
-          valorTotal: ehM ? null : valor, // Mensal não tem total
+          valorTotal: ehM ? null : valor,
           dataOriginal: item.data,
-          tipoPag: item.pagamento || ''
+          tipoPag: item.pagamento || '',
+          fixa: !!item.fixa
         });
       }
     });
@@ -13476,6 +13477,43 @@ var _eficIv2 = setInterval(function(){
       }
     });
 
+    // ===== SEPARA FIXAS de Parceladas e À vista =====
+    var parcsNF = []; // parcelados NÃO-fixos
+    var fixasList = []; // todas as fixas (parceladas e à vista)
+    var totalParcNF = 0;
+    var totalFixas = 0;
+    parcs.forEach(function(p){
+      if(p.fixa){ fixasList.push(p); totalFixas += p.valorParcela; }
+      else { parcsNF.push(p); totalParcNF += p.valorParcela; }
+    });
+    var avistasNF = [];
+    var totalAvNF = 0;
+    avistas.forEach(function(item){
+      var v = parseFloat(item.valor) || 0;
+      if(item.fixa){
+        // adiciona à lista de fixas no mesmo formato dos parcelados pra unificar render
+        fixasList.push({
+          descricao: item.descricao || item.categoria || 'Despesa',
+          categoria: item.categoria || '',
+          subcategoria: item.subcategoria || '',
+          cartao: item.cartao || '',
+          numeroParcela: 0,
+          totalParcelas: 0,
+          valorParcela: v,
+          valorTotal: v,
+          dataOriginal: item.data,
+          tipoPag: item.pagamento || 'À vista',
+          fixa: true,
+          _ehAvista: true
+        });
+        totalFixas += v;
+      } else {
+        avistasNF.push(item);
+        totalAvNF += v;
+      }
+    });
+
+
     var hoje = new Date();
     var ehMesAtual = (ano === hoje.getFullYear() && mes === hoje.getMonth());
     var ehFuturo = (ano > hoje.getFullYear() || (ano === hoje.getFullYear() && mes > hoje.getMonth()));
@@ -13515,9 +13553,9 @@ var _eficIv2 = setInterval(function(){
       +       '<i class="fa-solid fa-credit-card" style="color:var(--secondary);font-size:20px;width:24px;text-align:center;flex-shrink:0;"></i>'
       +       '<div style="flex:1;min-width:0;">'
       +         '<div style="font-size:15px;font-weight:700;color:#0f172a;">Parcelados</div>'
-      +         '<div style="font-size:12px;color:#94a3b8;margin-top:2px;">'+parcs.length+' parcelado'+(parcs.length !== 1 ? 's' : '')+'</div>'
+      +         '<div style="font-size:12px;color:#94a3b8;margin-top:2px;">'+parcsNF.length+' parcelado'+(parcsNF.length !== 1 ? 's' : '')+'</div>'
       +       '</div>'
-      +       '<div style="font-size:18px;font-weight:800;color:var(--secondary);white-space:nowrap;"><span style="font-size:12px;">R$</span> '+fmtNum(total.parcelado)+'</div>'
+      +       '<div style="font-size:18px;font-weight:800;color:var(--secondary);white-space:nowrap;"><span style="font-size:12px;">R$</span> '+fmtNum(totalParcNF)+'</div>'
       +     '</div>'
       +     '<div class="fvAccPlus" style="flex-shrink:0;width:54px;background:var(--secondary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:300;"><i class="fa-solid fa-plus" style="transition:transform .25s;"></i></div>'
       +   '</button>'
@@ -13529,9 +13567,24 @@ var _eficIv2 = setInterval(function(){
       +       '<i class="fa-solid fa-money-bill" style="color:var(--secondary);font-size:20px;width:24px;text-align:center;flex-shrink:0;"></i>'
       +       '<div style="flex:1;min-width:0;">'
       +         '<div style="font-size:15px;font-weight:700;color:#0f172a;">À vista</div>'
-      +         '<div style="font-size:12px;color:#94a3b8;margin-top:2px;">'+avistas.length+' compra'+(avistas.length !== 1 ? 's' : '')+'</div>'
+      +         '<div style="font-size:12px;color:#94a3b8;margin-top:2px;">'+avistasNF.length+' compra'+(avistasNF.length !== 1 ? 's' : '')+'</div>'
       +       '</div>'
-      +       '<div style="font-size:18px;font-weight:800;color:var(--secondary);white-space:nowrap;"><span style="font-size:12px;">R$</span> '+fmtNum(total.avista)+'</div>'
+      +       '<div style="font-size:18px;font-weight:800;color:var(--secondary);white-space:nowrap;"><span style="font-size:12px;">R$</span> '+fmtNum(totalAvNF)+'</div>'
+      +     '</div>'
+      +     '<div class="fvAccPlus" style="flex-shrink:0;width:54px;background:var(--secondary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:300;"><i class="fa-solid fa-plus" style="transition:transform .25s;"></i></div>'
+      +   '</button>'
+      +   '<div class="fvAccBody" style="display:none;background:#fafafa;border-bottom:1px solid #e5e7eb;"></div>'
+      + '</div>'
+      // === 3º acordeão: FIXAS ===
+      + '<div class="fvAcc" data-acc="fixas">'
+      +   '<button onclick="toggleAccFV(\'fixas\')" style="width:100%;display:flex;align-items:stretch;background:transparent;border:none;border-bottom:1px solid #e5e7eb;padding:0;cursor:pointer;font-family:inherit;text-align:left;">'
+      +     '<div style="flex:1;display:flex;align-items:center;gap:12px;padding:16px 32px;">'
+      +       '<i class="fa-solid fa-thumbtack" style="color:var(--secondary);font-size:20px;width:24px;text-align:center;flex-shrink:0;"></i>'
+      +       '<div style="flex:1;min-width:0;">'
+      +         '<div style="font-size:15px;font-weight:700;color:#0f172a;">Fixas</div>'
+      +         '<div style="font-size:12px;color:#94a3b8;margin-top:2px;">'+fixasList.length+' compromisso'+(fixasList.length !== 1 ? 's' : '')+'</div>'
+      +       '</div>'
+      +       '<div style="font-size:18px;font-weight:800;color:var(--secondary);white-space:nowrap;"><span style="font-size:12px;">R$</span> '+fmtNum(totalFixas)+'</div>'
       +     '</div>'
       +     '<div class="fvAccPlus" style="flex-shrink:0;width:54px;background:var(--secondary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:300;"><i class="fa-solid fa-plus" style="transition:transform .25s;"></i></div>'
       +   '</button>'
@@ -13539,10 +13592,10 @@ var _eficIv2 = setInterval(function(){
       + '</div>'
       + '</div>';
 
-    // Monta string do conteúdo do acordeão Parcelados
+    // Monta string do conteúdo do acordeão Parcelados (não-fixos)
     var htmlParc = '';
-    if(parcs.length){
-      parcs.forEach(function(p, i){
+    if(parcsNF.length){
+      parcsNF.forEach(function(p, i){
         var ehMensalP = p.tipoPag === 'Mensal';
         var ehIndet = ehMensalP && p.totalParcelas === 0;
         var pct = (ehIndet || p.totalParcelas === 0) ? 100 : (p.numeroParcela / p.totalParcelas) * 100;
@@ -13556,7 +13609,7 @@ var _eficIv2 = setInterval(function(){
           if(p.subcategoria) catHtml += ' <span style="color:#94a3b8;">» '+p.subcategoria+'</span>';
         }
         // Item com margem lateral maior (padding horizontal)
-        htmlParc += '<div style="padding:14px 32px;'+(i < parcs.length-1 ? 'border-bottom:1px solid #e5e7eb;' : '')+'">'
+        htmlParc += '<div style="padding:14px 32px;'+(i < parcsNF.length-1 ? 'border-bottom:1px solid #e5e7eb;' : '')+'">'
           + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;">'
           +   '<div style="flex:1;min-width:0;">'
           // Título: sem negrito, +1pt (16px), com cores específicas
@@ -13580,8 +13633,8 @@ var _eficIv2 = setInterval(function(){
     }
 
     var htmlAv = '';
-    if(avistas.length){
-      avistas.forEach(function(item, i){
+    if(avistasNF.length){
+      avistasNF.forEach(function(item, i){
         var dataFmt = (item.data||'').split('-').reverse().join('/');
         var catHtml = '';
         if(item.categoria){
@@ -13589,7 +13642,7 @@ var _eficIv2 = setInterval(function(){
           if(item.subcategoria) catHtml += ' <span style="color:#94a3b8;">» '+item.subcategoria+'</span>';
         }
         var desc = item.descricao || '';
-        htmlAv += '<div style="padding:14px 32px;'+(i < avistas.length-1 ? 'border-bottom:1px solid #e5e7eb;' : '')+'">'
+        htmlAv += '<div style="padding:14px 32px;'+(i < avistasNF.length-1 ? 'border-bottom:1px solid #e5e7eb;' : '')+'">'
           + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">'
           +   '<div style="flex:1;min-width:0;">'
           +     (catHtml ? '<div style="font-size:16px;font-weight:500;line-height:1.2;">'+catHtml+'</div>' : '')
@@ -13611,6 +13664,42 @@ var _eficIv2 = setInterval(function(){
         + '</div>';
     }
 
+    // ===== Monta string do conteúdo do acordeão Fixas =====
+    var htmlFixas = '';
+    if(fixasList.length){
+      fixasList.forEach(function(p, i){
+        var ehMensalP = p.tipoPag === 'Mensal';
+        var ehIndet = ehMensalP && p.totalParcelas === 0;
+        var ehAv = !!p._ehAvista;
+        var tipoTxt = ehAv ? (p.tipoPag || 'À vista') : (p.tipoPag === 'Financiamento' ? 'Financiamento' : (ehMensalP ? 'Mensal' : 'Parcelado'));
+        var tipoCor = p.tipoPag === 'Financiamento' ? '#7c3aed' : 'var(--secondary)';
+        var fracTxt = ehAv ? '' : (ehIndet ? p.numeroParcela+'ª' : p.numeroParcela+'/'+p.totalParcelas);
+        var catHtml = '';
+        if(p.categoria){
+          catHtml = '<span style="color:#000;">'+p.categoria+'</span>';
+          if(p.subcategoria) catHtml += ' <span style="color:#94a3b8;">» '+p.subcategoria+'</span>';
+        }
+        htmlFixas += '<div style="padding:14px 32px;'+(i < fixasList.length-1 ? 'border-bottom:1px solid #e5e7eb;' : '')+'">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;">'
+          +   '<div style="flex:1;min-width:0;">'
+          +     (catHtml ? '<div style="font-size:16px;font-weight:500;line-height:1.2;">'+catHtml+'</div>' : '')
+          +     '<div style="font-size:13px;color:#475569;margin-top:3px;font-weight:500;">'+p.descricao+'</div>'
+          +     '<div style="font-size:12px;color:#94a3b8;margin-top:4px;">'
+          +       '<i class="fa-solid fa-thumbtack" style="color:var(--secondary);font-size:10px;margin-right:3px;"></i>'
+          +       '<span style="color:'+tipoCor+';font-weight:700;">'+tipoTxt+'</span>'
+          +       (ehIndet ? ' • <span style="font-style:italic;">indeterminado</span>' : '')
+          +       (p.cartao ? ' • '+p.cartao : '')
+          +     '</div>'
+          +   '</div>'
+          +   '<div style="text-align:right;flex-shrink:0;">'
+          +     '<div style="font-size:16px;font-weight:800;color:#0f172a;white-space:nowrap;">'+fmtR(p.valorParcela)+'</div>'
+          +     (fracTxt ? '<div style="font-size:14px;font-weight:700;color:var(--secondary);margin-top:2px;">'+fracTxt+'</div>' : '')
+          +   '</div>'
+          + '</div>'
+          + '</div>';
+      });
+    }
+
     cont.innerHTML = html;
 
     // Injeta o conteúdo nos bodies dos acordeões
@@ -13618,6 +13707,8 @@ var _eficIv2 = setInterval(function(){
     var accAvBody = cont.querySelector('.fvAcc[data-acc="av"] .fvAccBody');
     if(accParcBody) accParcBody.innerHTML = htmlParc || '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">Sem parcelados neste mês</div>';
     if(accAvBody) accAvBody.innerHTML = htmlAv || '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">Sem compras à vista neste mês</div>';
+    var accFixasBody = cont.querySelector('.fvAcc[data-acc="fixas"] .fvAccBody');
+    if(accFixasBody) accFixasBody.innerHTML = htmlFixas || '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">Sem despesas fixas neste mês</div>';
   }
 
   // Toggle acordeão (Parcelado / À vista)
@@ -13802,11 +13893,9 @@ var _eficIv2 = setInterval(function(){
 
       var bloco = document.createElement('div');
       bloco.setAttribute('data-grafico-fv', '1');
-      bloco.style.cssText = 'margin-top:24px;padding:18px 16px;background:#fff;';
+      bloco.style.cssText = 'margin-top:0;padding:18px 16px;background:#fff;';
 
-      var html = '<div style="text-align:center;margin-bottom:18px;">'
-        + '<div style="font-size:14px;font-weight:400;color:#64748b;text-transform:uppercase;letter-spacing:1.5px;">Despesas '+(MESES[mes]||'').toUpperCase()+'</div>'
-        + '</div>';
+      var html = '';
 
       if(soma <= 0){
         html += '<div style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:20px;">'
@@ -14281,4 +14370,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-</html>
+    </html>
