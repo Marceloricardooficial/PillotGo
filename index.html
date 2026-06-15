@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v475';
+window.APP_VERSAO = 'v484';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -13218,15 +13218,6 @@ var _eficIv2 = setInterval(function(){
     return (item.pagamento || '') === 'Mensal';
   }
 
-  // Estado do filtro Só Fixas
-  window._fvFilFixas = false;
-  window.toggleFilFixasFV = function(){
-    var c = document.getElementById('fvFilFixas');
-    window._fvFilFixas = !!(c && c.checked);
-    renderCarrossel();
-    renderConteudo();
-  };
-
   // Pega TODAS as despesas de veículo do storage nativo
   function todasDespesasVeiculo(){
     try {
@@ -13242,10 +13233,6 @@ var _eficIv2 = setInterval(function(){
           out.push(item);
         });
       });
-      // Aplica filtro Só Fixas
-      if(window._fvFilFixas){
-        out = out.filter(function(it){ return !!it.fixa; });
-      }
       return out;
     } catch(e){ return []; }
   }
@@ -13383,13 +13370,6 @@ var _eficIv2 = setInterval(function(){
       +   '<div id="fvCarrosselWrap" style="overflow-x:auto;overflow-y:hidden;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none;">'
       +     '<div id="fvCarrossel" style="display:flex;gap:0;padding:0 50%;width:max-content;min-height:88px;align-items:stretch;"></div>'
       +   '</div>'
-      + '</div>'
-      // Filtro Só Fixas
-      + '<div style="background:#fff;padding:10px 18px;display:flex;align-items:center;justify-content:flex-end;gap:8px;border-bottom:1px solid #e5e7eb;">'
-      +   '<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-family:inherit;">'
-      +     '<input type="checkbox" id="fvFilFixas" onchange="toggleFilFixasFV()" style="width:16px;height:16px;accent-color:var(--secondary);cursor:pointer;">'
-      +     '<span style="font-size:12px;font-weight:700;color:#0f172a;"><i class="fa-solid fa-thumbtack" style="color:var(--secondary);margin-right:4px;"></i>Mostrar só FIXAS</span>'
-      +   '</label>'
       + '</div>'
       // Conteudo do mes selecionado
       + '<div id="fvConteudo" style="padding:0 16px 32px;"></div>';
@@ -13704,6 +13684,175 @@ var _eficIv2 = setInterval(function(){
       }
     }
   });
+
+  // ===== NOVA ABORDAGEM v483: MutationObserver no #fvConteudo =====
+  // Toda vez que o renderConteudo modifica o conteúdo do modal,
+  // adicionamos o gráfico de despesas no final, fora do controle do renderConteudo
+  function _instalarObserverGraficoFV(){
+    var alvo = document.getElementById('fvConteudo');
+    if(!alvo){
+      setTimeout(_instalarObserverGraficoFV, 500);
+      return;
+    }
+    if(alvo.__graficoObserver) return; // já instalado
+    var obs = new MutationObserver(function(mutations){
+      // Só processa se houve troca de conteúdo (childList) e o gráfico AINDA não está lá
+      var precisaRedesenhar = mutations.some(function(m){ return m.type === 'childList'; });
+      if(!precisaRedesenhar) return;
+      // Evita loop: se nosso próprio bloco já existe E ainda corresponde ao mês atual, não refaz
+      var existente = alvo.querySelector('[data-grafico-fv]');
+      if(existente) return; // será removido na próxima troca de mês via renderConteudo
+      _desenharGraficoFV(alvo);
+    });
+    obs.observe(alvo, { childList: true, subtree: false });
+    alvo.__graficoObserver = obs;
+    console.log('[FV grafico v483] observer instalado');
+    // Desenha agora também (se já tem conteúdo)
+    _desenharGraficoFV(alvo);
+  }
+
+  function _desenharGraficoFV(cont){
+    try {
+      if(!cont || !window._fvSel) return;
+      // Calcula totais do mês selecionado
+      var ano = window._fvSel.ano;
+      var mes = window._fvSel.mes;
+      var itens = (typeof todasDespesasVeiculo === 'function') ? todasDespesasVeiculo() : [];
+      // Total geral (mesma lógica do módulo)
+      var total = (typeof calcularTotalDoMes === 'function') ? calcularTotalDoMes(itens, ano, mes) : {parcelado:0,avista:0,total:0};
+      var vParcTotal = parseFloat(total.parcelado) || 0;
+      var vAvTotal = parseFloat(total.avista) || 0;
+
+      // Calcula SÓ as fixas do mês (usando mesma lógica de contagem do módulo)
+      var vFixas = 0;
+      try {
+        itens.forEach(function(item){
+          if(!item || !item.fixa) return; // só fixas
+          var valor = parseFloat(item.valor) || 0;
+          if(valor <= 0) return;
+          var partes = (item.data||'').split('-');
+          if(partes.length !== 3) return;
+          var anoOrig = parseInt(partes[0]);
+          var mesOrig = parseInt(partes[1]) - 1;
+          if(isNaN(anoOrig) || isNaN(mesOrig)) return;
+
+          var ehParc = (typeof ehParcelado === 'function') && ehParcelado(item);
+          var ehMen = (typeof ehMensal === 'function') && ehMensal(item);
+
+          if(ehParc){
+            var n = parseInt(item.parcelas) || 0;
+            var diff = (ano - anoOrig) * 12 + (mes - mesOrig);
+            if(diff < 0) return;
+            if(ehMen){
+              var dentro = (n > 0) ? (diff < n) : true;
+              if(dentro) vFixas += valor;
+            } else if(diff < n){
+              vFixas += valor / n;
+            }
+          } else {
+            if(ano === anoOrig && mes === mesOrig) vFixas += valor;
+          }
+        });
+      } catch(e){ console.warn('[FV fixas calc]', e); }
+
+      // Para o gráfico: separa Parcelado (não-fixas), À vista (não-fixas), e Fixas
+      // Como vFixas pode ter pedaços de ambos, subtraímos do total: vParc = total.parcelado - parteFixaParc, vAv = total.avista - parteFixaAv
+      // Mais simples: calcular parteFixa separada de parcelado e avista
+      var vFixaParc = 0, vFixaAv = 0;
+      try {
+        itens.forEach(function(item){
+          if(!item || !item.fixa) return;
+          var valor = parseFloat(item.valor) || 0;
+          if(valor <= 0) return;
+          var partes = (item.data||'').split('-');
+          if(partes.length !== 3) return;
+          var anoOrig = parseInt(partes[0]);
+          var mesOrig = parseInt(partes[1]) - 1;
+          if(isNaN(anoOrig) || isNaN(mesOrig)) return;
+          var ehParc = (typeof ehParcelado === 'function') && ehParcelado(item);
+          var ehMen = (typeof ehMensal === 'function') && ehMensal(item);
+          if(ehParc){
+            var n = parseInt(item.parcelas) || 0;
+            var diff = (ano - anoOrig) * 12 + (mes - mesOrig);
+            if(diff < 0) return;
+            if(ehMen){
+              var dentro = (n > 0) ? (diff < n) : true;
+              if(dentro) vFixaParc += valor;
+            } else if(diff < n){
+              vFixaParc += valor / n;
+            }
+          } else {
+            if(ano === anoOrig && mes === mesOrig) vFixaAv += valor;
+          }
+        });
+      } catch(e){}
+
+      var vParc = Math.max(0, vParcTotal - vFixaParc); // parcelado NÃO fixo
+      var vAv = Math.max(0, vAvTotal - vFixaAv);       // à vista NÃO fixo
+      vFixas = vFixaParc + vFixaAv;                     // total fixas
+      var soma = vParc + vAv + vFixas;
+      console.log('[FV grafico v484] parc:', vParc, 'av:', vAv, 'fixas:', vFixas, 'soma:', soma);
+
+      var corStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary');
+      var cor = (corStyle && corStyle.trim()) || '#22c55e';
+
+      var fmtRR = (typeof fmtR === 'function') ? fmtR : function(v){ return 'R$ '+(v||0).toFixed(2); };
+      var fmtNN = (typeof fmtN === 'function') ? fmtN : function(v,d){ return (v||0).toFixed(d||1); };
+      var MESES = (typeof MESES_FULL !== 'undefined') ? MESES_FULL : ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+      var bloco = document.createElement('div');
+      bloco.setAttribute('data-grafico-fv', '1');
+      bloco.style.cssText = 'margin-top:24px;padding:18px 16px;background:#fff;';
+
+      var html = '<div style="text-align:center;margin-bottom:18px;">'
+        + '<div style="font-size:14px;font-weight:400;color:#64748b;text-transform:uppercase;letter-spacing:1.5px;">Despesas '+(MESES[mes]||'').toUpperCase()+'</div>'
+        + '</div>';
+
+      if(soma <= 0){
+        html += '<div style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:20px;">'
+          + '<svg viewBox="0 0 180 180" style="width:140px;height:140px;">'
+          + '<circle cx="90" cy="90" r="70" fill="none" stroke="#e5e7eb" stroke-width="28"></circle>'
+          + '</svg>'
+          + '<div style="font-size:12px;color:#94a3b8;text-align:center;">Sem despesas registradas neste mês</div>'
+          + '</div>';
+      } else {
+        var pctP = (vParc/soma)*100;
+        var pctA = (vAv/soma)*100;
+        var pctF = (vFixas/soma)*100;
+        var raio = 70;
+        var circ = 2 * Math.PI * raio;
+        // offsets cumulativos
+        var off1 = 0;
+        var off2 = -(circ * pctP/100);
+        var off3 = -(circ * (pctP+pctA)/100);
+        // Cor das fixas = cor do tema com opacidade reduzida (tema mais claro)
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center;">'
+          + '<div style="display:flex;align-items:center;justify-content:center;">'
+          + '<svg viewBox="0 0 180 180" style="width:100%;max-width:180px;height:auto;transform:rotate(-90deg);">'
+          + '<circle cx="90" cy="90" r="'+raio+'" fill="none" stroke="#f1f5f9" stroke-width="28"></circle>'
+          + (pctP>0 ? '<circle cx="90" cy="90" r="'+raio+'" fill="none" stroke="'+cor+'" stroke-width="28" stroke-dasharray="'+(circ*pctP/100)+' '+circ+'" stroke-dashoffset="'+off1+'"></circle>' : '')
+          + (pctA>0 ? '<circle cx="90" cy="90" r="'+raio+'" fill="none" stroke="#000" stroke-width="28" stroke-dasharray="'+(circ*pctA/100)+' '+circ+'" stroke-dashoffset="'+off2+'"></circle>' : '')
+          + (pctF>0 ? '<circle cx="90" cy="90" r="'+raio+'" fill="none" stroke="'+cor+'" stroke-opacity=".4" stroke-width="28" stroke-dasharray="'+(circ*pctF/100)+' '+circ+'" stroke-dashoffset="'+off3+'"></circle>' : '')
+          + '</svg>'
+          + '</div>'
+          + '<div style="display:flex;flex-direction:column;gap:12px;">'
+          + '<div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:14px;height:14px;background:'+cor+';flex-shrink:0;margin-top:3px;border-radius:3px;"></div><div style="flex:1;min-width:0;"><div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Parcelado</div><div style="font-size:14px;color:#0f172a;font-weight:800;margin-top:2px;">'+fmtRR(vParc)+'</div><div style="font-size:11px;color:'+cor+';font-weight:700;">'+fmtNN(pctP,1)+'%</div></div></div>'
+          + '<div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:14px;height:14px;background:#000;flex-shrink:0;margin-top:3px;border-radius:3px;"></div><div style="flex:1;min-width:0;"><div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">À vista</div><div style="font-size:14px;color:#0f172a;font-weight:800;margin-top:2px;">'+fmtRR(vAv)+'</div><div style="font-size:11px;color:#000;font-weight:700;">'+fmtNN(pctA,1)+'%</div></div></div>'
+          + '<div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:14px;height:14px;background:'+cor+';opacity:.4;flex-shrink:0;margin-top:3px;border-radius:3px;"></div><div style="flex:1;min-width:0;"><div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Fixas</div><div style="font-size:14px;color:#0f172a;font-weight:800;margin-top:2px;">'+fmtRR(vFixas)+'</div><div style="font-size:11px;color:#64748b;font-weight:700;">'+fmtNN(pctF,1)+'%</div></div></div>'
+          + '<div style="border-top:1px solid #e5e7eb;padding-top:10px;"><div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Total</div><div style="font-size:16px;color:#0f172a;font-weight:900;margin-top:2px;">'+fmtRR(soma)+'</div></div>'
+          + '</div>'
+          + '</div>';
+      }
+      bloco.innerHTML = html;
+      cont.appendChild(bloco);
+      console.log('[FV grafico v483] desenhado');
+    } catch(e){ console.error('[FV grafico v483] erro:', e); }
+  }
+
+  // Tenta instalar quando o modal for criado (delay pra garantir DOM)
+  setTimeout(_instalarObserverGraficoFV, 1000);
+  setTimeout(_instalarObserverGraficoFV, 3000);
+  setTimeout(_instalarObserverGraficoFV, 6000);
 })();
 
 </script>
@@ -14132,4 +14281,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-    </html>
+</html>
