@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v486';
+window.APP_VERSAO = 'v487';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -12269,9 +12269,9 @@ var _eficIv2 = setInterval(function(){
   }
 
   function aplicarThemeColor(){
-    var cor = getCorTema();
+    // Barra de notificação SEMPRE BRANCA (independente do tema)
+    var cor = '#ffffff';
 
-    // Atualiza/cria a meta theme-color (Android Chrome)
     var meta = document.querySelector('meta[name="theme-color"]');
     if(!meta){
       meta = document.createElement('meta');
@@ -12280,11 +12280,10 @@ var _eficIv2 = setInterval(function(){
     }
     meta.content = cor;
 
-    // msapplication-TileColor (Windows)
     var tile = document.querySelector('meta[name="msapplication-TileColor"]');
     if(tile) tile.content = cor;
 
-    console.log('[PWA] theme-color atualizado para:', cor);
+    console.log('[PWA] theme-color (barra notificação) =', cor);
   }
 
   // Aplica no load
@@ -13952,7 +13951,7 @@ var _eficIv2 = setInterval(function(){
   position: fixed;
   inset: 0;
   z-index: 2147483647;
-  background: #22c55e;
+  background: #f3f4f6;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -14014,7 +14013,7 @@ var _eficIv2 = setInterval(function(){
     s.innerHTML = ''
       + '<img src="' + bp + '512.png" class="splash-logo" alt="Logo" onerror="this.style.display=\'none\'">'
       + '<div class="splash-txt">'
-      +   '<span style="color:#fff;font-weight:900;">DIRIJA</span>'
+      +   '<span style="color:#1e293b;font-weight:900;">DIRIJA</span>'
       +   '<span style="color:#000;font-weight:300;">COM</span>'
       +   '<span style="color:#000;font-weight:900;">META</span>'
       + '</div>'
