@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v489';
+window.APP_VERSAO = 'v490';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -8915,8 +8915,9 @@ function cfgDownloadBackup() {
     'despesasDiarias_v2','configDespesasVeiculo','temaAplicativo','temaGlowRGB',
     'abastecimentos_v1','despesasPessoais_v1','despesasVeiculo_v1',
     'cartoesCadastrados_v1','catExtra_pes','catExtra_vei',
-    // v489 - chaves que estavam faltando no backup
-    'gnvConfigAtual_v1','configEficiencia_v1','subcatExtraVei_v1'
+    'gnvConfigAtual_v1','configEficiencia_v1','subcatExtraVei_v1',
+    // v490 - Cadastro de Apps e Ganhos Extras
+    'appsCadastrados_v1','ganhosAppsExtras_v1'
   ];
   var dados = { _exportedAt: new Date().toISOString(), _version: 'v126' };
   KEYS.forEach(function(k){
@@ -8939,8 +8940,9 @@ function cfgRestaurarBackup(input) {
     'despesasDiarias_v2','configDespesasVeiculo','temaAplicativo','temaGlowRGB',
     'abastecimentos_v1','despesasPessoais_v1','despesasVeiculo_v1',
     'cartoesCadastrados_v1','catExtra_pes','catExtra_vei',
-    // v489 - chaves que estavam faltando no backup
-    'gnvConfigAtual_v1','configEficiencia_v1','subcatExtraVei_v1'
+    'gnvConfigAtual_v1','configEficiencia_v1','subcatExtraVei_v1',
+    // v490 - Cadastro de Apps e Ganhos Extras
+    'appsCadastrados_v1','ganhosAppsExtras_v1'
   ];
   var reader = new FileReader();
   reader.onload = function(e) {
@@ -14373,4 +14375,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-                                                                                                                           </html>
+    </html>
