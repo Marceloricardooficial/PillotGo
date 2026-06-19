@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v493';
+window.APP_VERSAO = 'v504';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -13812,50 +13812,14 @@ var _eficIv2 = setInterval(function(){
   function _desenharGraficoFV(cont){
     try {
       if(!cont || !window._fvSel) return;
-      // Calcula totais do mês selecionado
       var ano = window._fvSel.ano;
       var mes = window._fvSel.mes;
       var itens = (typeof todasDespesasVeiculo === 'function') ? todasDespesasVeiculo() : [];
-      // Total geral (mesma lógica do módulo)
       var total = (typeof calcularTotalDoMes === 'function') ? calcularTotalDoMes(itens, ano, mes) : {parcelado:0,avista:0,total:0};
       var vParcTotal = parseFloat(total.parcelado) || 0;
       var vAvTotal = parseFloat(total.avista) || 0;
 
-      // Calcula SÓ as fixas do mês (usando mesma lógica de contagem do módulo)
-      var vFixas = 0;
-      try {
-        itens.forEach(function(item){
-          if(!item || !item.fixa) return; // só fixas
-          var valor = parseFloat(item.valor) || 0;
-          if(valor <= 0) return;
-          var partes = (item.data||'').split('-');
-          if(partes.length !== 3) return;
-          var anoOrig = parseInt(partes[0]);
-          var mesOrig = parseInt(partes[1]) - 1;
-          if(isNaN(anoOrig) || isNaN(mesOrig)) return;
-
-          var ehParc = (typeof ehParcelado === 'function') && ehParcelado(item);
-          var ehMen = (typeof ehMensal === 'function') && ehMensal(item);
-
-          if(ehParc){
-            var n = parseInt(item.parcelas) || 0;
-            var diff = (ano - anoOrig) * 12 + (mes - mesOrig);
-            if(diff < 0) return;
-            if(ehMen){
-              var dentro = (n > 0) ? (diff < n) : true;
-              if(dentro) vFixas += valor;
-            } else if(diff < n){
-              vFixas += valor / n;
-            }
-          } else {
-            if(ano === anoOrig && mes === mesOrig) vFixas += valor;
-          }
-        });
-      } catch(e){ console.warn('[FV fixas calc]', e); }
-
-      // Para o gráfico: separa Parcelado (não-fixas), À vista (não-fixas), e Fixas
-      // Como vFixas pode ter pedaços de ambos, subtraímos do total: vParc = total.parcelado - parteFixaParc, vAv = total.avista - parteFixaAv
-      // Mais simples: calcular parteFixa separada de parcelado e avista
+      // Fixas (parc e avista)
       var vFixaParc = 0, vFixaAv = 0;
       try {
         itens.forEach(function(item){
@@ -13885,64 +13849,211 @@ var _eficIv2 = setInterval(function(){
         });
       } catch(e){}
 
-      var vParc = Math.max(0, vParcTotal - vFixaParc); // parcelado NÃO fixo
-      var vAv = Math.max(0, vAvTotal - vFixaAv);       // à vista NÃO fixo
-      vFixas = vFixaParc + vFixaAv;                     // total fixas
-      var soma = vParc + vAv + vFixas;
-      console.log('[FV grafico v484] parc:', vParc, 'av:', vAv, 'fixas:', vFixas, 'soma:', soma);
+      var vParc = Math.max(0, vParcTotal - vFixaParc);
+      var vAv = Math.max(0, vAvTotal - vFixaAv);
+      var vFixas = vFixaParc + vFixaAv;
+      var vTotalDesp = vParc + vAv + vFixas;
+      var vSemFixas = vParc + vAv;
+
+      // Lucro líquido do mês
+      var vLiquido = 0;
+      try {
+        if(typeof relatoriosDiarios !== 'undefined' && typeof calcularTotaisDoDia === 'function'){
+          var diasNoMes = new Date(ano, mes+1, 0).getDate();
+          for(var d=1; d<=diasNoMes; d++){
+            var key = ano+'-'+String(mes+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+            var dia = relatoriosDiarios[key];
+            if(!dia) continue;
+            var totDia = calcularTotaisDoDia(dia);
+            if(totDia) vLiquido += parseFloat(totDia.lucroLiquido) || 0;
+          }
+        }
+      } catch(e){}
 
       var corStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary');
       var cor = (corStyle && corStyle.trim()) || '#22c55e';
-
       var fmtRR = (typeof fmtR === 'function') ? fmtR : function(v){ return 'R$ '+(v||0).toFixed(2); };
       var fmtNN = (typeof fmtN === 'function') ? fmtN : function(v,d){ return (v||0).toFixed(d||1); };
-      var MESES = (typeof MESES_FULL !== 'undefined') ? MESES_FULL : ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+      window._fvDadosGrafico = {
+        cor: cor, vParc: vParc, vAv: vAv, vFixas: vFixas,
+        vTotalDesp: vTotalDesp, vSemFixas: vSemFixas,
+        vLiquido: vLiquido, fmtRR: fmtRR, fmtNN: fmtNN
+      };
 
       var bloco = document.createElement('div');
       bloco.setAttribute('data-grafico-fv', '1');
-      bloco.style.cssText = 'margin-top:0;padding:18px 16px;background:#fff;';
+      bloco.style.cssText = 'margin-top:0;position:relative;left:50%;transform:translateX(-50%);width:100vw;';
 
       var html = '';
 
-      if(soma <= 0){
-        html += '<div style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:20px;">'
-          + '<svg viewBox="0 0 180 180" style="width:140px;height:140px;">'
-          + '<circle cx="90" cy="90" r="70" fill="none" stroke="#e5e7eb" stroke-width="28"></circle>'
-          + '</svg>'
-          + '<div style="font-size:12px;color:#94a3b8;text-align:center;">Sem despesas registradas neste mês</div>'
-          + '</div>';
-      } else {
-        var pctP = (vParc/soma)*100;
-        var pctA = (vAv/soma)*100;
-        var pctF = (vFixas/soma)*100;
-        var raio = 70;
-        var circ = 2 * Math.PI * raio;
-        // offsets cumulativos
-        var off1 = 0;
-        var off2 = -(circ * pctP/100);
-        var off3 = -(circ * (pctP+pctA)/100);
-        // Cor das fixas = cor do tema com opacidade reduzida (tema mais claro)
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center;">'
-          + '<div style="display:flex;align-items:center;justify-content:center;">'
-          + '<svg viewBox="0 0 180 180" style="width:100%;max-width:180px;height:auto;transform:rotate(-90deg);">'
-          + '<circle cx="90" cy="90" r="'+raio+'" fill="none" stroke="#f1f5f9" stroke-width="28"></circle>'
-          + (pctP>0 ? '<circle cx="90" cy="90" r="'+raio+'" fill="none" stroke="'+cor+'" stroke-width="28" stroke-dasharray="'+(circ*pctP/100)+' '+circ+'" stroke-dashoffset="'+off1+'"></circle>' : '')
-          + (pctA>0 ? '<circle cx="90" cy="90" r="'+raio+'" fill="none" stroke="#000" stroke-width="28" stroke-dasharray="'+(circ*pctA/100)+' '+circ+'" stroke-dashoffset="'+off2+'"></circle>' : '')
-          + (pctF>0 ? '<circle cx="90" cy="90" r="'+raio+'" fill="none" stroke="'+cor+'" stroke-opacity=".4" stroke-width="28" stroke-dasharray="'+(circ*pctF/100)+' '+circ+'" stroke-dashoffset="'+off3+'"></circle>' : '')
-          + '</svg>'
-          + '</div>'
-          + '<div style="display:flex;flex-direction:column;gap:12px;">'
-          + '<div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:14px;height:14px;background:'+cor+';flex-shrink:0;margin-top:3px;border-radius:3px;"></div><div style="flex:1;min-width:0;"><div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Parcelado</div><div style="font-size:14px;color:#0f172a;font-weight:800;margin-top:2px;">'+fmtRR(vParc)+'</div><div style="font-size:11px;color:'+cor+';font-weight:700;">'+fmtNN(pctP,1)+'%</div></div></div>'
-          + '<div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:14px;height:14px;background:#000;flex-shrink:0;margin-top:3px;border-radius:3px;"></div><div style="flex:1;min-width:0;"><div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">À vista</div><div style="font-size:14px;color:#0f172a;font-weight:800;margin-top:2px;">'+fmtRR(vAv)+'</div><div style="font-size:11px;color:#000;font-weight:700;">'+fmtNN(pctA,1)+'%</div></div></div>'
-          + '<div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:14px;height:14px;background:'+cor+';opacity:.4;flex-shrink:0;margin-top:3px;border-radius:3px;"></div><div style="flex:1;min-width:0;"><div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Fixas</div><div style="font-size:14px;color:#0f172a;font-weight:800;margin-top:2px;">'+fmtRR(vFixas)+'</div><div style="font-size:11px;color:#64748b;font-weight:700;">'+fmtNN(pctF,1)+'%</div></div></div>'
-          + '<div style="border-top:1px solid #e5e7eb;padding-top:10px;"><div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Total</div><div style="font-size:16px;color:#0f172a;font-weight:900;margin-top:2px;">'+fmtRR(soma)+'</div></div>'
-          + '</div>'
-          + '</div>';
-      }
+      // Menu de 3 opções (cor do tema, sem imagem)
+      html += '<div id="fvTabsContainer" style="background:'+cor+';display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;">';
+      html += '<button data-tab="0" class="fvTab" style="background:transparent;border:none;color:#fff;font-weight:800;padding:14px 6px;font-size:13px;cursor:pointer;font-family:inherit;text-transform:uppercase;letter-spacing:.5px;">Despesas</button>';
+      html += '<button data-tab="1" class="fvTab" style="background:transparent;border:none;color:#fff;font-weight:800;padding:14px 6px;font-size:13px;cursor:pointer;font-family:inherit;text-transform:uppercase;letter-spacing:.5px;border-left:1px solid rgba(255,255,255,.25);border-right:1px solid rgba(255,255,255,.25);">Comparativo 1</button>';
+      html += '<button data-tab="2" class="fvTab" style="background:transparent;border:none;color:#fff;font-weight:800;padding:14px 6px;font-size:13px;cursor:pointer;font-family:inherit;text-transform:uppercase;letter-spacing:.5px;">Comparativo 2</button>';
+      html += '</div>';
+
+      // Faixa cinza claro (sem imagem)
+      html += '<div style="background:#f3f4f6;padding:12px 16px;text-align:center;border-bottom:1px solid #e5e7eb;">'
+        + '<div id="fvDescBar" style="font-size:14px;color:#1e293b;text-transform:uppercase;letter-spacing:.6px;line-height:1.35;font-weight:600;"></div>'
+        + '</div>';
+
+      // Gráfico: rela.png APENAS aqui, com overlay branco translúcido pra manter legibilidade
+      html += '<div style="position:relative;overflow:hidden;background-image:url(\'https://marceloricardooficial.github.io/PillotGo/rela.png\');background-repeat:no-repeat;background-position:top center;background-size:100% auto;background-color:#fff;">';
+      html += '<div style="position:absolute;inset:0;background:rgba(255,255,255,.92);"></div>';
+      html += '<div id="fvGrafContainer" style="position:relative;z-index:1;padding:24px 14px;min-height:380px;"></div>';
+      html += '</div>';
+
       bloco.innerHTML = html;
       cont.appendChild(bloco);
-      console.log('[FV grafico v483] desenhado');
-    } catch(e){ console.error('[FV grafico v483] erro:', e); }
+
+      window._fvAtualizarGrafico = function(tabIdx){
+        var d = window._fvDadosGrafico;
+        if(!d) return;
+        var contG = document.getElementById('fvGrafContainer');
+        if(!contG) return;
+
+        var raio = 70;
+        var circ = 2 * Math.PI * raio;
+        var fatias = [];
+        var legendas = [];
+        var titulo = '';
+        var formula = '';
+        var saldo = null;
+
+        if(tabIdx === 0){
+          titulo = 'DESPESAS DO MÊS';
+          formula = 'Parcelado + Fixas + À vista';
+          var s = d.vTotalDesp;
+          if(s > 0){
+            var pP = (d.vParc/s)*100, pF = (d.vFixas/s)*100, pA = (d.vAv/s)*100;
+            fatias.push({pct:pP, cor:d.cor, op:1});
+            fatias.push({pct:pF, cor:d.cor, op:.4});
+            fatias.push({pct:pA, cor:'#0f172a', op:1});
+            legendas.push({label:'Parcelado', valor:d.vParc, pct:pP, cor:d.cor, op:1});
+            legendas.push({label:'Fixas', valor:d.vFixas, pct:pF, cor:d.cor, op:.4});
+            legendas.push({label:'À vista', valor:d.vAv, pct:pA, cor:'#0f172a', op:1});
+          }
+        } else if(tabIdx === 1){
+          titulo = 'COMPARATIVO 1';
+          formula = '(Parcelado + Fixas + À vista) - Lucro';
+          var s1 = d.vTotalDesp + d.vLiquido;
+          if(s1 > 0){
+            var pG = (d.vLiquido/s1)*100;
+            var pPnoTot = (d.vParc/s1)*100;
+            var pFnoTot = (d.vFixas/s1)*100;
+            var pAnoTot = (d.vAv/s1)*100;
+            var pD = (d.vTotalDesp/s1)*100;
+            fatias.push({pct:pG, cor:d.cor, op:1});
+            fatias.push({pct:pPnoTot, cor:'#0f172a', op:1});
+            fatias.push({pct:pFnoTot, cor:'#0f172a', op:.6});
+            fatias.push({pct:pAnoTot, cor:'#0f172a', op:.3});
+            var subTot = d.vTotalDesp || 1;
+            legendas.push({label:'Despesa Total', valor:d.vTotalDesp, pct:pD, cor:'#0f172a', op:1});
+            legendas.push({label:'Ganho Líquido', valor:d.vLiquido, pct:pG, cor:d.cor, op:1});
+            saldo = d.vLiquido - d.vTotalDesp;
+          }
+        } else {
+          titulo = 'COMPARATIVO 2';
+          formula = '(Parcelado + À vista) - Lucro';
+          var s2 = d.vSemFixas + d.vLiquido;
+          if(s2 > 0){
+            var pG2 = (d.vLiquido/s2)*100;
+            var pPnoT2 = (d.vParc/s2)*100;
+            var pAnoT2 = (d.vAv/s2)*100;
+            var pD2 = (d.vSemFixas/s2)*100;
+            fatias.push({pct:pG2, cor:d.cor, op:1});
+            fatias.push({pct:pPnoT2, cor:'#0f172a', op:1});
+            fatias.push({pct:pAnoT2, cor:'#0f172a', op:.4});
+            var subTot2 = d.vSemFixas || 1;
+            legendas.push({label:'Despesa S/ Fixas', valor:d.vSemFixas, pct:pD2, cor:'#0f172a', op:1});
+            legendas.push({label:'Ganho Líquido', valor:d.vLiquido, pct:pG2, cor:d.cor, op:1});
+            saldo = d.vLiquido - d.vSemFixas;
+          }
+        }
+
+        var descEl = document.getElementById('fvDescBar');
+        if(descEl) descEl.textContent = formula;
+
+        var html2 = '';
+        // (fórmula agora aparece na faixa cinza acima)
+
+        if(legendas.length === 0){
+          html2 += '<div style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:30px 0;">'
+            + '<svg viewBox="0 0 200 200" style="width:140px;height:140px;">'
+            + '<circle cx="100" cy="100" r="70" fill="none" stroke="#f1f5f9" stroke-width="30"></circle>'
+            + '</svg>'
+            + '<div style="font-size:14px;color:#94a3b8;">Sem dados neste mês</div>'
+            + '</div>';
+        } else {
+          // 2 colunas: gráfico esquerda, legendas direita
+          var off = 0;
+          var arcs = '';
+          fatias.forEach(function(f){
+            if(f.pct > 0){
+              arcs += '<circle cx="100" cy="100" r="'+raio+'" fill="none" stroke="'+f.cor+'" stroke-opacity="'+f.op+'" stroke-width="28" stroke-dasharray="'+(circ*f.pct/100)+' '+circ+'" stroke-dashoffset="'+off+'"></circle>';
+              off -= circ*f.pct/100;
+            }
+          });
+          html2 += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:center;">'
+            // Coluna esquerda - gráfico
+            + '<div style="display:flex;align-items:center;justify-content:center;">'
+            + '<svg viewBox="0 0 200 200" style="width:100%;max-width:170px;height:auto;transform:rotate(-90deg);">'
+            + '<circle cx="100" cy="100" r="'+raio+'" fill="none" stroke="#f1f5f9" stroke-width="28"></circle>'
+            + arcs
+            + '</svg>'
+            + '</div>'
+            // Coluna direita - legendas
+            + '<div style="display:flex;flex-direction:column;gap:0;">';
+          legendas.forEach(function(l, idx){
+            var sep = idx > 0 ? 'border-top:1px dashed #cbd5e1;padding-top:10px;margin-top:10px;' : '';
+            // Layout: label + pct na mesma linha; valor em R$ embaixo
+            html2 += '<div style="'+sep+'">'
+              + '<div style="display:flex;align-items:center;gap:8px;">'
+              +   '<div style="width:12px;height:12px;background:'+l.cor+';opacity:'+l.op+';flex-shrink:0;border-radius:2px;"></div>'
+              +   '<div style="flex:1;min-width:0;font-size:13px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.4px;">'+l.label+'</div>'
+              +   '<div style="font-size:15px;color:'+d.cor+';font-weight:800;flex-shrink:0;">'+d.fmtNN(l.pct,1)+'%</div>'
+              + '</div>'
+              + '<div style="padding-left:20px;margin-top:2px;font-size:15px;color:#0f172a;font-weight:800;">'+d.fmtRR(l.valor)+'</div>'
+              + '</div>';
+          });
+          // Saldo (se for comparativo)
+          if(saldo !== null){
+            var saldoCor = saldo >= 0 ? d.cor : '#ef4444';
+            // Margem de lucro = saldo / ganho líquido (% do ganho que sobra após pagar despesas)
+            var pctMargem = d.vLiquido > 0 ? (saldo / d.vLiquido) * 100 : 0;
+            html2 += '<div style="border-top:1px dashed #cbd5e1;padding-top:10px;margin-top:10px;">'
+              + '<div style="display:flex;align-items:center;gap:8px;">'
+              +   '<div style="width:12px;height:12px;background:'+saldoCor+';flex-shrink:0;border-radius:2px;"></div>'
+              +   '<div style="flex:1;min-width:0;font-size:13px;color:#475569;font-weight:800;text-transform:uppercase;letter-spacing:.4px;">Margem de Lucro</div>'
+              +   '<div style="font-size:15px;color:'+saldoCor+';font-weight:800;flex-shrink:0;">'+(pctMargem >= 0 ? '+' : '')+d.fmtNN(pctMargem,1)+'%</div>'
+              + '</div>'
+              + '<div style="padding-left:20px;margin-top:2px;font-size:15px;color:'+saldoCor+';font-weight:900;">'+(saldo >= 0 ? '+ ' : '- ')+d.fmtRR(Math.abs(saldo))+'</div>'
+              + '</div>';
+          }
+          html2 += '</div></div>';
+        }
+        contG.innerHTML = html2;
+
+        // Marca aba ativa
+        var btns = document.querySelectorAll('.fvTab');
+        btns.forEach(function(b){
+          var ativa = parseInt(b.getAttribute('data-tab')) === tabIdx;
+          b.style.background = ativa ? 'rgba(0,0,0,.35)' : 'transparent';
+          b.style.opacity = ativa ? '1' : '.82';
+        });
+      };
+
+      bloco.querySelectorAll('.fvTab').forEach(function(b){
+        b.addEventListener('click', function(){
+          window._fvAtualizarGrafico(parseInt(b.getAttribute('data-tab')));
+        });
+      });
+
+      window._fvAtualizarGrafico(0);
+      console.log('[FV graficos v498] título preto + abas + 2 colunas');
+    } catch(e){ console.error('[FV grafico v498] erro:', e); }
   }
 
   // Tenta instalar quando o modal for criado (delay pra garantir DOM)
