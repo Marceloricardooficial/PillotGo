@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v505';
+window.APP_VERSAO = 'v506';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -7492,11 +7492,65 @@ window.tnAplicar = function() {
   };
 
   window.deleteDesp = function(tipo, data, idx) {
+    // v506: pergunta antes de excluir (modal customizado)
     var d = getDespesas();
     var obj = tipo==='pes' ? d.pessoal : d.veiculo;
-    if (obj[data]) { obj[data].splice(idx,1); if(!obj[data].length) delete obj[data]; }
-    setDespesas(d);
-    renderDesp(tipo);
+    if(!obj[data] || !obj[data][idx]){ return; }
+    var item = obj[data][idx];
+    var desc = item.descricao || item.categoria || 'Despesa';
+    var valor = parseFloat(item.valor) || 0;
+    var fmtV = 'R$ ' + valor.toFixed(2).replace('.', ',');
+    var tipoLbl = tipo === 'pes' ? 'pessoal' : 'do veículo';
+
+    // Remove modal antigo se existir
+    var old = document.getElementById('modalConfDelDesp');
+    if(old) old.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'modalConfDelDesp';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2147483646;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit;';
+
+    var box = document.createElement('div');
+    box.style.cssText = 'background:#fff;border-radius:14px;max-width:340px;width:100%;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);';
+
+    var dataFmt = '';
+    try { var p = data.split('-'); dataFmt = p[2]+'/'+p[1]+'/'+p[0]; } catch(e){ dataFmt = data; }
+
+    box.innerHTML = ''
+      + '<div style="background:#fee2e2;padding:18px 16px;text-align:center;">'
+      +   '<div style="width:54px;height:54px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">'
+      +     '<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;font-size:24px;"></i>'
+      +   '</div>'
+      +   '<div style="font-size:16px;font-weight:800;color:#991b1b;">Excluir despesa '+tipoLbl+'?</div>'
+      + '</div>'
+      + '<div style="padding:18px 18px 8px;">'
+      +   '<div style="background:#f8fafc;border-radius:10px;padding:12px 14px;">'
+      +     '<div style="font-size:13px;color:#0f172a;font-weight:700;">'+desc+'</div>'
+      +     '<div style="font-size:12px;color:#64748b;margin-top:4px;">'+dataFmt+'</div>'
+      +     '<div style="font-size:16px;color:#ef4444;font-weight:800;margin-top:6px;">'+fmtV+'</div>'
+      +   '</div>'
+      +   '<div style="font-size:12px;color:#64748b;text-align:center;margin-top:12px;line-height:1.4;">Essa ação não pode ser desfeita.</div>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;padding:14px 14px 14px;">'
+      +   '<button id="btnCancDel" style="padding:12px;background:#f1f5f9;color:#0f172a;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;margin-right:6px;font-family:inherit;">Cancelar</button>'
+      +   '<button id="btnConfDel" style="padding:12px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;margin-left:6px;font-family:inherit;">Excluir</button>'
+      + '</div>';
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    function fechar(){ overlay.remove(); }
+    overlay.addEventListener('click', function(e){ if(e.target === overlay) fechar(); });
+    document.getElementById('btnCancDel').onclick = fechar;
+    document.getElementById('btnConfDel').onclick = function(){
+      // Executa exclusão de fato
+      var dd = getDespesas();
+      var oo = tipo==='pes' ? dd.pessoal : dd.veiculo;
+      if(oo[data]){ oo[data].splice(idx,1); if(!oo[data].length) delete oo[data]; }
+      setDespesas(dd);
+      renderDesp(tipo);
+      fechar();
+    };
   };
 
   // ================================================================
@@ -14538,4 +14592,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-    </html>
+                                                                              </html>
