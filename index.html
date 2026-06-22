@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v504';
+window.APP_VERSAO = 'v505';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -13292,6 +13292,24 @@ var _eficIv2 = setInterval(function(){
   // Conta quantas parcelas (parcelamentos distintos) caem num mês
   function contarParcelamentosDoMes(itens, ano, mes){
     var lista = [];
+    // Carrega cartões pra checar dia de fechamento (correção v505)
+    var _cartoesCache = null;
+    function getCartoesFV(){
+      if(_cartoesCache) return _cartoesCache;
+      try { _cartoesCache = JSON.parse(localStorage.getItem('cartoesCadastrados_v1')) || []; }
+      catch(e){ _cartoesCache = []; }
+      return _cartoesCache;
+    }
+    function getDiaFechamento(nomeCartao){
+      if(!nomeCartao) return 0;
+      var cs = getCartoesFV();
+      for(var i=0;i<cs.length;i++){
+        if(cs[i].nome === nomeCartao || cs[i].apelido === nomeCartao){
+          return parseInt(cs[i].diaFechamento) || 0;
+        }
+      }
+      return 0;
+    }
     itens.forEach(function(item){
       if(!ehParcelado(item)) return;
       var valor = parseFloat(item.valor) || 0;
@@ -13299,14 +13317,27 @@ var _eficIv2 = setInterval(function(){
       if(partes.length !== 3) return;
       var anoOrig = parseInt(partes[0]);
       var mesOrig = parseInt(partes[1]) - 1;
+      var diaOrig = parseInt(partes[2]);
       if(isNaN(anoOrig) || isNaN(mesOrig)) return;
       var n = parseInt(item.parcelas) || 0;
-      var mesesDiff = (ano - anoOrig) * 12 + (mes - mesOrig);
-      if(mesesDiff < 0) return;
       var ehM = ehMensal(item);
-      // Para Mensal indeterminado (n<=0): sempre dentro do range
-      // Para Mensal com fim: dentro se mesesDiff < n
-      // Para Parcelado/Financiamento: dentro se mesesDiff < n
+
+      // === CORREÇÃO v505: ajusta o "mês base" da 1ª parcela conforme fechamento do cartão ===
+      // Se a despesa tem cartão e é COMPRA PARCELADA (não Mensal), e foi feita DEPOIS do dia de fechamento,
+      // a 1ª parcela vai pra fatura do mês SEGUINTE.
+      var mesBaseAno = anoOrig;
+      var mesBaseMes = mesOrig;
+      if(!ehM && item.cartao){
+        var diaFech = getDiaFechamento(item.cartao);
+        if(diaFech > 0 && diaOrig > diaFech){
+          // Empurra pro mês seguinte
+          mesBaseMes += 1;
+          if(mesBaseMes > 11){ mesBaseMes = 0; mesBaseAno += 1; }
+        }
+      }
+
+      var mesesDiff = (ano - mesBaseAno) * 12 + (mes - mesBaseMes);
+      if(mesesDiff < 0) return;
       var dentroRange = ehM ? (n <= 0 || mesesDiff < n) : (mesesDiff < n);
       if(dentroRange){
         lista.push({
@@ -13822,6 +13853,16 @@ var _eficIv2 = setInterval(function(){
       // Fixas (parc e avista)
       var vFixaParc = 0, vFixaAv = 0;
       try {
+        // Cache cartões pra checar fechamento (correção v505)
+        var _cs = null;
+        function _diaFech(nome){
+          if(!nome) return 0;
+          if(_cs === null){ try { _cs = JSON.parse(localStorage.getItem('cartoesCadastrados_v1'))||[]; } catch(e){ _cs = []; } }
+          for(var i=0;i<_cs.length;i++){
+            if(_cs[i].nome === nome || _cs[i].apelido === nome) return parseInt(_cs[i].diaFechamento)||0;
+          }
+          return 0;
+        }
         itens.forEach(function(item){
           if(!item || !item.fixa) return;
           var valor = parseFloat(item.valor) || 0;
@@ -13830,9 +13871,18 @@ var _eficIv2 = setInterval(function(){
           if(partes.length !== 3) return;
           var anoOrig = parseInt(partes[0]);
           var mesOrig = parseInt(partes[1]) - 1;
+          var diaOrig = parseInt(partes[2]);
           if(isNaN(anoOrig) || isNaN(mesOrig)) return;
           var ehParc = (typeof ehParcelado === 'function') && ehParcelado(item);
           var ehMen = (typeof ehMensal === 'function') && ehMensal(item);
+          // Ajuste de mês base por fechamento do cartão (só pra parcelados não-mensais com cartão)
+          if(ehParc && !ehMen && item.cartao){
+            var df = _diaFech(item.cartao);
+            if(df > 0 && diaOrig > df){
+              mesOrig += 1;
+              if(mesOrig > 11){ mesOrig = 0; anoOrig += 1; }
+            }
+          }
           if(ehParc){
             var n = parseInt(item.parcelas) || 0;
             var diff = (ano - anoOrig) * 12 + (mes - mesOrig);
