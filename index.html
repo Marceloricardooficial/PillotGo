@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v506';
+window.APP_VERSAO = 'v507';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -7517,23 +7517,23 @@ window.tnAplicar = function() {
     try { var p = data.split('-'); dataFmt = p[2]+'/'+p[1]+'/'+p[0]; } catch(e){ dataFmt = data; }
 
     box.innerHTML = ''
-      + '<div style="background:#fee2e2;padding:18px 16px;text-align:center;">'
+      + '<div style="background:var(--secondary);padding:18px 16px;text-align:center;">'
       +   '<div style="width:54px;height:54px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">'
-      +     '<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;font-size:24px;"></i>'
+      +     '<i class="fa-solid fa-triangle-exclamation" style="color:var(--secondary);font-size:24px;"></i>'
       +   '</div>'
-      +   '<div style="font-size:16px;font-weight:800;color:#991b1b;">Excluir despesa '+tipoLbl+'?</div>'
+      +   '<div style="font-size:16px;font-weight:800;color:#fff;">Excluir despesa '+tipoLbl+'?</div>'
       + '</div>'
       + '<div style="padding:18px 18px 8px;">'
       +   '<div style="background:#f8fafc;border-radius:10px;padding:12px 14px;">'
       +     '<div style="font-size:13px;color:#0f172a;font-weight:700;">'+desc+'</div>'
       +     '<div style="font-size:12px;color:#64748b;margin-top:4px;">'+dataFmt+'</div>'
-      +     '<div style="font-size:16px;color:#ef4444;font-weight:800;margin-top:6px;">'+fmtV+'</div>'
+      +     '<div style="font-size:16px;color:var(--secondary);font-weight:800;margin-top:6px;">'+fmtV+'</div>'
       +   '</div>'
       +   '<div style="font-size:12px;color:#64748b;text-align:center;margin-top:12px;line-height:1.4;">Essa ação não pode ser desfeita.</div>'
       + '</div>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;padding:14px 14px 14px;">'
       +   '<button id="btnCancDel" style="padding:12px;background:#f1f5f9;color:#0f172a;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;margin-right:6px;font-family:inherit;">Cancelar</button>'
-      +   '<button id="btnConfDel" style="padding:12px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;margin-left:6px;font-family:inherit;">Excluir</button>'
+      +   '<button id="btnConfDel" style="padding:12px;background:var(--secondary);color:#fff;border:none;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;margin-left:6px;font-family:inherit;">Excluir</button>'
       + '</div>';
 
     overlay.appendChild(box);
@@ -14592,4 +14592,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-    </html>
+</html>
