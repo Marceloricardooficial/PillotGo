@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v516';
+window.APP_VERSAO = 'v517';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -15202,6 +15202,51 @@ var _eficIv2 = setInterval(function(){
   }
   setInterval(bindAuto, 2000);
 })();
+
+// ============ v517: Meta travada por dia (histórico correto) ============
+(function(){
+  // Aguarda originais existirem
+  var _obterOrig = null, _ensureOrig = null;
+  function _instalar(){
+    if(typeof obterMetaDoDia !== 'function' || typeof ensureDailyDataStructure !== 'function'){
+      setTimeout(_instalar, 500); return;
+    }
+    if(window._metaTravadaV517) return;
+    window._metaTravadaV517 = true;
+
+    _obterOrig = obterMetaDoDia;
+    _ensureOrig = ensureDailyDataStructure;
+
+    // obterMetaDoDia: se o dia tem metaDia travada no relatório, retorna ela
+    window.obterMetaDoDia = function(dateKey){
+      try {
+        if(typeof relatoriosDiarios !== 'undefined' && relatoriosDiarios[dateKey] && typeof relatoriosDiarios[dateKey].metaDia === 'number' && relatoriosDiarios[dateKey].metaDia > 0){
+          return relatoriosDiarios[dateKey].metaDia;
+        }
+      } catch(e){}
+      return _obterOrig(dateKey);
+    };
+
+    // ensureDailyDataStructure: só grava metaDia se ainda NÃO existe (trava primeira vez)
+    window.ensureDailyDataStructure = function(dateKey, forceNew){
+      var r = _ensureOrig(dateKey, forceNew);
+      try {
+        if(r && (typeof r.metaDia !== 'number' || r.metaDia <= 0)){
+          // Primeira vez ou meta zerada: pega da config atual e trava
+          r.metaDia = _obterOrig(dateKey);
+        }
+        // NÃO sobrescreve se já tinha metaDia gravada
+      } catch(e){}
+      return r;
+    };
+
+    console.log('[v517] Meta travada por dia instalada');
+  }
+  setTimeout(_instalar, 800);
+  setTimeout(_instalar, 2500);
+})();
+
+
 
 
 
