@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v507';
+window.APP_VERSAO = 'v516';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -4731,9 +4731,6 @@ window.verificarJornadaEmAndamento = function() {
             </select>
           </div>
         </div>
-        <button class="ana-btn" onclick="gerarAnalytics()">
-          <i class="fa-solid fa-sync-alt"></i> ATUALIZAR RELATÓRIO
-        </button>
         <label style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:11px 13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;cursor:pointer;">
           <input type="checkbox" id="anaIncluirGE" onchange="gerarAnalytics()" style="width:20px;height:20px;flex-shrink:0;accent-color:var(--secondary);">
           <span style="font-size:12px;color:#cbd5e1;line-height:1.4;">Incluir <b style="color:#fff;">Ganhos Extras</b> no lucro<br><span style="font-size:10px;opacity:.7;">Não afeta R$/km nem R$/hora</span></span>
@@ -4746,8 +4743,8 @@ window.verificarJornadaEmAndamento = function() {
           <span style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;">Meta da Semana</span>
           <span id="anaMetaPct" style="font-size:14px;font-weight:900;color:var(--secondary);">0%</span>
         </div>
-        <div style="background:#f1f5f9;border-radius:4px;height:8px;margin-bottom:8px;">
-          <div id="anaMetaFill" style="height:100%;border-radius:4px;background:var(--secondary);width:0%;transition:width .5s;"></div>
+        <div style="background:#f1f5f9;border-radius:6px;height:14px;margin-bottom:8px;">
+          <div id="anaMetaFill" style="height:100%;border-radius:6px;background:var(--secondary);width:0%;transition:width .5s;"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center;">
           <div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;margin-bottom:2px;">Total Meta</div><div id="anaMetaTotal" style="font-size:13px;font-weight:800;color:#1e293b;">R$ 0</div></div>
@@ -9446,24 +9443,40 @@ function cfgRestaurarBackup(input) {
     var fim = document.getElementById('anaDataFim').value;
     if(!ini || !fim) return;
 
-    // Verifica se é semana atual
-    var hoje = new Date();
-    var iniSem = new Date(hoje);
-    var ds = hoje.getDay() === 0 ? 7 : hoje.getDay();
-    iniSem.setDate(hoje.getDate() - ds + 1);
-    var iniSemStr = iniSem.toISOString().split('T')[0];
-    var fimSemStr = new Date(iniSem); fimSemStr.setDate(iniSem.getDate()+6);
-    var fimSemana = fimSemStr.toISOString().split('T')[0];
-    var ehSemana = (ini === iniSemStr && fim === fimSemana);
-
     var metaDiv = document.getElementById('anaMetaSemana');
     if(!metaDiv) return;
 
-    // Mostra só se for semana
-    if(!ehSemana){ metaDiv.style.display = 'none'; return; }
+    // Calcula duração em dias pra decidir título
+    var dIni = new Date(ini + 'T00:00:00');
+    var dFimD = new Date(fim + 'T00:00:00');
+    var diffDias = Math.round((dFimD - dIni) / 86400000) + 1;
+
+    // Define título conforme o período (v515)
+    var rotulo = 'META DO PERÍODO';
+    if(diffDias === 1) rotulo = 'META DO DIA';
+    else if(diffDias === 7) rotulo = 'META DA SEMANA';
+    else if(diffDias >= 28 && diffDias <= 31) rotulo = 'META DO MÊS';
+    else if(diffDias > 31) rotulo = 'META DO ANO';
+
+    var lblEl = metaDiv.querySelector('[data-meta-label]');
+    if(!lblEl){
+      // Procura o span "Meta da Semana" original
+      var spans = metaDiv.querySelectorAll('span');
+      for(var si=0; si<spans.length; si++){
+        var txt = (spans[si].textContent||'').trim().toLowerCase();
+        if(txt.indexOf('meta') >= 0 && txt.indexOf('%') < 0){
+          spans[si].setAttribute('data-meta-label', '1');
+          lblEl = spans[si];
+          break;
+        }
+      }
+    }
+    if(lblEl) lblEl.textContent = rotulo;
+
+    // Sempre exibe (v515: dia, semana, mes, ano - todos)
     metaDiv.style.display = 'block';
 
-    // Calcula meta e lucro da semana
+    // Calcula meta e lucro do período
     var metaTotal = 0, lucroTotal = 0;
     var d = new Date(ini + 'T00:00:00');
     var dFim = new Date(fim + 'T00:00:00');
@@ -11571,9 +11584,9 @@ window.aplicarFiltroRapido = function(idIni, idFim, tipo, callback){
 
 
     container.innerHTML =
-      '<button class="qfBtnAna" onclick="aplicarFiltroRapido(\'anaDataInicio\',\'anaDataFim\',\'dia\',gerarAnalytics)" style="flex:1;padding:6px 4px;background:transparent;border:none;border-right:1px solid rgba(255,255,255,0.12);font-size:12px;font-weight:700;color:var(--secondary);cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Dia</button>' +
-      '<button class="qfBtnAna ativo" onclick="aplicarFiltroRapido(\'anaDataInicio\',\'anaDataFim\',\'semana\',gerarAnalytics)" style="flex:1;padding:6px 4px;background:transparent;border:none;border-right:1px solid rgba(255,255,255,0.12);font-size:12px;font-weight:700;color:#fff;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Semana</button>' +
-      '<button class="qfBtnAna" onclick="aplicarFiltroRapido(\'anaDataInicio\',\'anaDataFim\',\'mes\',gerarAnalytics)" style="flex:1;padding:6px 4px;background:transparent;border:none;border-right:1px solid rgba(255,255,255,0.12);font-size:12px;font-weight:700;color:var(--secondary);cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Mês</button>' +
+      '<button class="qfBtnAna" onclick="aplicarFiltroRapido(\'anaDataInicio\',\'anaDataFim\',\'dia\',gerarAnalytics)" style="flex:1;padding:6px 4px;background:transparent;border:none;border-right:none;font-size:12px;font-weight:700;color:var(--secondary);cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Dia</button>' +
+      '<button class="qfBtnAna ativo" onclick="aplicarFiltroRapido(\'anaDataInicio\',\'anaDataFim\',\'semana\',gerarAnalytics)" style="flex:1;padding:6px 4px;background:transparent;border:none;border-right:none;font-size:12px;font-weight:700;color:#fff;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Semana</button>' +
+      '<button class="qfBtnAna" onclick="aplicarFiltroRapido(\'anaDataInicio\',\'anaDataFim\',\'mes\',gerarAnalytics)" style="flex:1;padding:6px 4px;background:transparent;border:none;border-right:none;font-size:12px;font-weight:700;color:var(--secondary);cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Mês</button>' +
       '<button class="qfBtnAna" onclick="aplicarFiltroRapido(\'anaDataInicio\',\'anaDataFim\',\'ano\',gerarAnalytics)" style="flex:1;padding:6px 4px;background:transparent;border:none;font-size:12px;font-weight:700;color:var(--secondary);cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Ano</button>';
 
     // Insere antes do container dos inputs de data
@@ -14581,6 +14594,617 @@ var _eficIv2 = setInterval(function(){
     }, 2000);
   }
 })();
+
+// ============ v511: Calendário (dia) + navegador de semana + auto-update ============
+(function(){
+  var _calAna = { ano: null, mes: null, diaSel: null };
+  var _semAna = { ref: null }; // Date de qualquer dia da semana atual
+  var _aberto = null; // 'dia' | 'semana' | null
+
+  function _ymd(d){
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function _initDia(){
+    if(_calAna.ano === null){
+      var h = new Date();
+      _calAna.ano = h.getFullYear();
+      _calAna.mes = h.getMonth();
+      _calAna.diaSel = h.getDate();
+    }
+  }
+  function _initSem(){
+    if(!_semAna.ref) _semAna.ref = new Date();
+  }
+  function _intervaloSemana(ref){
+    // Segunda como início da semana
+    var d = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+    var dia = d.getDay(); // 0=dom, 1=seg
+    var diff = (dia === 0 ? -6 : 1 - dia); // ajusta pra segunda
+    var ini = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
+    var fim = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate() + 6);
+    return { ini: ini, fim: fim };
+  }
+  function _semanaDoAno(d){
+    var data = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    data.setDate(data.getDate() + 4 - (data.getDay() || 7));
+    var inicio = new Date(data.getFullYear(), 0, 1);
+    return Math.ceil(((data - inicio) / 86400000 + 1) / 7);
+  }
+
+  function _esconderFiltroDatas(){
+    var ini = document.getElementById('anaDataInicio');
+    if(!ini) return;
+    var grid = ini.closest('.ana-date-grid') || ini.parentElement.parentElement;
+    if(grid && !grid._escondidoV511){
+      grid.style.display = 'none';
+      grid._escondidoV511 = true;
+    }
+  }
+
+  function _aplicarDia(){
+    _initDia();
+    var data = _ymd(new Date(_calAna.ano, _calAna.mes, _calAna.diaSel));
+    var ini = document.getElementById('anaDataInicio');
+    var fim = document.getElementById('anaDataFim');
+    if(ini && fim){
+      ini.value = data; fim.value = data;
+      if(typeof gerarAnalytics === 'function') gerarAnalytics();
+    }
+  }
+  function _aplicarSemana(){
+    _initSem();
+    var r = _intervaloSemana(_semAna.ref);
+    var ini = document.getElementById('anaDataInicio');
+    var fim = document.getElementById('anaDataFim');
+    if(ini && fim){
+      ini.value = _ymd(r.ini); fim.value = _ymd(r.fim);
+      if(typeof gerarAnalytics === 'function') gerarAnalytics();
+    }
+  }
+
+  // Marca botão como ativo (verde) e desmarca outros
+  function _marcarAtivo(qual){
+    var cont = document.getElementById('anaFiltrosRapidos');
+    if(!cont) return;
+    cont.querySelectorAll('.qfBtnAna').forEach(function(b){
+      if(!b.textContent.trim()){
+        var label = b.getAttribute('data-label-orig');
+        if(label) b.textContent = label;
+      }
+      var t = (b.textContent||'').trim().toLowerCase();
+      if(t === qual){
+        b.classList.add('ativo');
+        b.style.background = 'var(--secondary)';
+        b.style.color = '#fff';
+        b.style.fontWeight = '900';
+      } else {
+        b.classList.remove('ativo');
+        b.style.background = 'transparent';
+        b.style.color = 'var(--secondary)';
+        b.style.fontWeight = '700';
+      }
+    });
+    // Desmarca lupa qdo marca outro
+    _desmarcarLupa();
+  }
+  function _desmarcarTodos(){
+    _desmarcarLupa();
+    var cont = document.getElementById('anaFiltrosRapidos');
+    if(!cont) return;
+    cont.querySelectorAll('.qfBtnAna').forEach(function(b){
+      if(!b.textContent.trim()){
+        var label = b.getAttribute('data-label-orig');
+        if(label) b.textContent = label;
+      }
+      b.classList.remove('ativo');
+      b.style.background = 'transparent';
+      b.style.color = 'var(--secondary)'; // volta cor original (container vai voltar a ser preto)
+      b.style.fontWeight = '';
+      b.style.borderBottomLeftRadius = '';
+      b.style.borderBottomRightRadius = '';
+    });
+  }
+
+  function _fecharWidget(){
+    var w = document.getElementById('anaWidgetCal');
+    if(w) w.remove();
+    _pintarContainer(false);
+    _aberto = null;
+  }
+
+  // Pinta/restaura cor do container do menu pra emendar com calendário
+  function _pintarContainer(verde, qual){
+    var cont = document.getElementById('anaFiltrosRapidos');
+    if(!cont) return;
+    if(verde){
+      if(cont._padOrig === undefined) cont._padOrig = cont.style.padding || '14px 0';
+      cont.style.padding = '14px 0 0'; // tira padding-bottom pra emendar com widget
+      cont.style.background = '#000'; // container preto, botão pinta sozinho
+    } else {
+      cont.style.background = '#000';
+      if(cont._padOrig !== undefined){ cont.style.padding = cont._padOrig; cont._padOrig = undefined; }
+    }
+  }
+
+  function _abrirCalendarioDia(){
+    var cont = document.getElementById('anaFiltrosRapidos');
+    if(!cont) return;
+    _fecharWidget();
+    // Pinta o container do botão de verde + tira padding-bottom (emenda visual)
+    _pintarContainer(true, 'dia');
+
+    var cal = document.createElement('div');
+    cal.id = 'anaWidgetCal';
+    cal.style.cssText = 'background:var(--secondary);color:#fff;font-family:inherit;padding:0 18px 16px;margin:0 -16px 0;';
+    cont.parentNode.insertBefore(cal, cont.nextSibling);
+
+    _renderCalendarioDia();
+    _aberto = 'dia';
+  }
+
+  function _renderCalendarioDia(){
+    var cal = document.getElementById('anaWidgetCal');
+    if(!cal) return;
+    var MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    var MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    var DIAS_SEM_ABREV = ['dom','seg','ter','qua','qui','sex','sáb'];
+    var hoje = new Date();
+    var hojeAno = hoje.getFullYear(), hojeMes = hoje.getMonth(), hojeDia = hoje.getDate();
+
+    var dataSelecionada = new Date(_calAna.ano, _calAna.mes, _calAna.diaSel);
+    var dsAno = dataSelecionada.getFullYear();
+    var dsMes = dataSelecionada.getMonth();
+    var dsDia = dataSelecionada.getDate();
+    var dsDiaSem = dataSelecionada.getDay();
+
+    var html = ''
+      + '<div style="padding:18px 20px 4px;text-align:center;">'
+      +   '<div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:1.5px;">'+DIAS_SEM_ABREV[dsDiaSem]+', '+MESES[dsMes]+' '+dsAno+'</div>'
+      + '</div>';
+
+    html += '<div style="display:flex;align-items:center;justify-content:center;padding:8px 22px 16px;position:relative;">';
+    html += '<button id="calPrev" type="button" style="background:rgba(0,0,0,.25);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-family:inherit;flex-shrink:0;margin-right:4px;"><i class="fa-solid fa-chevron-left"></i></button>';
+
+    html += '<div id="calStrip" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;overflow:hidden;">';
+    for(var offset = -3; offset <= 3; offset++){
+      var dt = new Date(dsAno, dsMes, dsDia + offset);
+      var ehCentro = (offset === 0);
+      var ehHoje = (dt.getFullYear() === hojeAno && dt.getMonth() === hojeMes && dt.getDate() === hojeDia);
+      var bg = ehCentro ? '#000' : 'transparent';
+      var border = (ehHoje && !ehCentro) ? '2px solid rgba(255,255,255,.6)' : '2px solid transparent';
+      var zi = ehCentro ? 2 : 1;
+      var scale = ehCentro ? 'scale(1.25)' : (Math.abs(offset)===1 ? 'scale(1)' : 'scale(.82)');
+      var opacity = ehCentro ? '1' : (Math.abs(offset)===1 ? '.9' : (Math.abs(offset)===2 ? '.6' : '.35'));
+      var padding = ehCentro ? '12px 4px' : '10px 4px';
+      var fontSize = ehCentro ? '20px' : '15px';
+      var fontWeight = ehCentro ? '900' : '700';
+      var minWidth = ehCentro ? '52px' : '38px';
+      html += '<button type="button" data-offset="'+offset+'" class="calDiaStrip" style="background:'+bg+';color:#fff;border:'+border+';border-radius:0;padding:'+padding+';min-width:'+minWidth+';cursor:pointer;font-family:inherit;position:relative;z-index:'+zi+';box-sizing:border-box;transform:'+scale+';opacity:'+opacity+';transition:transform .2s,opacity .2s;display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;">'
+        + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;opacity:.85;">'+DIAS_SEM_ABREV[dt.getDay()]+'</div>'
+        + '<div style="font-size:'+fontSize+';font-weight:'+fontWeight+';line-height:1;">'+dt.getDate()+'</div>'
+        + '<div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;opacity:.75;">'+MESES_ABREV[dt.getMonth()]+'</div>'
+        + '</button>';
+    }
+    html += '</div>';
+    html += '<button id="calNext" type="button" style="background:rgba(0,0,0,.25);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-family:inherit;flex-shrink:0;margin-left:4px;"><i class="fa-solid fa-chevron-right"></i></button>';
+    html += '</div>';
+
+    cal.innerHTML = html;
+
+    function _moverDia(delta){
+      var dNovo = new Date(dsAno, dsMes, dsDia + delta);
+      _calAna.ano = dNovo.getFullYear();
+      _calAna.mes = dNovo.getMonth();
+      _calAna.diaSel = dNovo.getDate();
+      _aplicarDia();
+      _renderCalendarioDia();
+    }
+    document.getElementById('calPrev').onclick = function(){ _moverDia(-1); };
+    document.getElementById('calNext').onclick = function(){ _moverDia(+1); };
+    cal.querySelectorAll('.calDiaStrip').forEach(function(b){
+      b.addEventListener('click', function(){
+        var offset = parseInt(b.getAttribute('data-offset'));
+        _moverDia(offset);
+      });
+    });
+
+    var startX = null;
+    var strip = document.getElementById('calStrip');
+    if(strip){
+      strip.addEventListener('touchstart', function(e){ startX = e.touches[0].clientX; }, {passive:true});
+      strip.addEventListener('touchend', function(e){
+        if(startX === null) return;
+        var diff = e.changedTouches[0].clientX - startX;
+        startX = null;
+        if(Math.abs(diff) > 40){ _moverDia(diff > 0 ? -1 : 1); }
+      }, {passive:true});
+    }
+  }
+
+  function _abrirNavSemana(){
+    var cont = document.getElementById('anaFiltrosRapidos');
+    if(!cont) return;
+    _fecharWidget();
+    _pintarContainer(true, 'semana');
+
+    var w = document.createElement('div');
+    w.id = 'anaWidgetCal';
+    w.style.cssText = 'background:var(--secondary);color:#fff;font-family:inherit;padding:0 0 16px;margin:0 -16px 0;';
+    cont.parentNode.insertBefore(w, cont.nextSibling);
+    _renderNavSemana();
+    _aberto = 'semana';
+  }
+
+  function _renderNavSemana(){
+    var w = document.getElementById('anaWidgetCal');
+    if(!w) return;
+    _initSem();
+    var r = _intervaloSemana(_semAna.ref);
+    var hoje = new Date();
+    var hojeIni = _intervaloSemana(hoje);
+    // Verifica se é a semana atual
+    var ehAtual = (r.ini.getTime() === hojeIni.ini.getTime());
+    var rotuloTopo = ehAtual ? 'SEMANA ATUAL' : ('SEMANA ' + _semanaDoAno(r.ini));
+
+    var dd = function(d){ return String(d.getDate()).padStart(2,'0'); };
+    var mm = function(d){ var m=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; return m[d.getMonth()]; };
+
+    var html = ''
+      + '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 30px 6px;">'
+      +   '<button id="semPrev" type="button" style="background:rgba(0,0,0,.25);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-family:inherit;flex-shrink:0;"><i class="fa-solid fa-chevron-left"></i></button>'
+      +   '<div style="text-align:center;flex:1;padding:0 14px;">'
+      +     '<div style="font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:#fff;">'+rotuloTopo+'</div>'
+      +     '<div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:3px;font-weight:600;">'+dd(r.ini)+' '+mm(r.ini)+' — '+dd(r.fim)+' '+mm(r.fim)+' '+r.fim.getFullYear()+'</div>'
+      +   '</div>'
+      +   '<button id="semNext" type="button" style="background:rgba(0,0,0,.25);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-family:inherit;flex-shrink:0;"><i class="fa-solid fa-chevron-right"></i></button>'
+      + '</div>';
+
+    w.innerHTML = html;
+    document.getElementById('semPrev').onclick = function(){
+      var n = new Date(_semAna.ref.getFullYear(), _semAna.ref.getMonth(), _semAna.ref.getDate() - 7);
+      _semAna.ref = n;
+      _aplicarSemana();
+      _renderNavSemana();
+    };
+    document.getElementById('semNext').onclick = function(){
+      var n = new Date(_semAna.ref.getFullYear(), _semAna.ref.getMonth(), _semAna.ref.getDate() + 7);
+      _semAna.ref = n;
+      _aplicarSemana();
+      _renderNavSemana();
+    };
+  }
+
+  // ============ v517: Navegação MÊS / ANO em strip ============
+  var _mesAna = { ano: null, mes: null };
+  var _anoAna = { ano: null };
+
+  function _initMes(){
+    if(_mesAna.ano === null){
+      var h = new Date();
+      _mesAna.ano = h.getFullYear();
+      _mesAna.mes = h.getMonth();
+    }
+  }
+  function _initAno(){
+    if(_anoAna.ano === null){ _anoAna.ano = new Date().getFullYear(); }
+  }
+  function _aplicarMes(){
+    _initMes();
+    var ini = new Date(_mesAna.ano, _mesAna.mes, 1);
+    var fim = new Date(_mesAna.ano, _mesAna.mes+1, 0);
+    var iniIn = document.getElementById('anaDataInicio');
+    var fimIn = document.getElementById('anaDataFim');
+    if(iniIn && fimIn){
+      iniIn.value = _ymd(ini);
+      fimIn.value = _ymd(fim);
+      if(typeof gerarAnalytics==='function') gerarAnalytics();
+    }
+  }
+  function _aplicarAno(){
+    _initAno();
+    var ini = new Date(_anoAna.ano, 0, 1);
+    var fim = new Date(_anoAna.ano, 11, 31);
+    var iniIn = document.getElementById('anaDataInicio');
+    var fimIn = document.getElementById('anaDataFim');
+    if(iniIn && fimIn){
+      iniIn.value = _ymd(ini);
+      fimIn.value = _ymd(fim);
+      if(typeof gerarAnalytics==='function') gerarAnalytics();
+    }
+  }
+
+  function _abrirStripMes(){
+    var cont = document.getElementById('anaFiltrosRapidos');
+    if(!cont) return;
+    _fecharWidget();
+    _pintarContainer(true, 'mes');
+    var w = document.createElement('div');
+    w.id = 'anaWidgetCal';
+    w.style.cssText = 'background:var(--secondary);color:#fff;font-family:inherit;padding:0 0 16px;margin:0 -16px 0;';
+    cont.parentNode.insertBefore(w, cont.nextSibling);
+    _renderStripMes();
+    _aberto = 'mes';
+  }
+  function _renderStripMes(){
+    var w = document.getElementById('anaWidgetCal');
+    if(!w) return;
+    _initMes();
+    var MESES_LONG = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    var MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    var hoje = new Date();
+    var hojeAno = hoje.getFullYear(), hojeMes = hoje.getMonth();
+
+    var html = ''
+      + '<div style="padding:18px 20px 4px;text-align:center;">'
+      +   '<div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:1.5px;">'+MESES_LONG[_mesAna.mes]+' '+_mesAna.ano+'</div>'
+      + '</div>';
+
+    html += '<div style="display:flex;align-items:center;justify-content:center;padding:8px 22px 16px;position:relative;">';
+    html += '<button id="mesPrev" type="button" style="background:rgba(0,0,0,.25);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-family:inherit;flex-shrink:0;margin-right:4px;"><i class="fa-solid fa-chevron-left"></i></button>';
+    html += '<div id="mesStrip" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;overflow:hidden;">';
+    for(var off = -3; off <= 3; off++){
+      var totMes = _mesAna.mes + off;
+      var yr = _mesAna.ano + Math.floor(totMes / 12);
+      var mo = ((totMes % 12) + 12) % 12;
+      var ehCentro = (off === 0);
+      var ehAtual = (yr === hojeAno && mo === hojeMes);
+      var bg = ehCentro ? '#000' : 'transparent';
+      var border = (ehAtual && !ehCentro) ? '2px solid rgba(255,255,255,.6)' : '2px solid transparent';
+      var zi = ehCentro ? 2 : 1;
+      var scale = ehCentro ? 'scale(1.25)' : (Math.abs(off)===1 ? 'scale(1)' : 'scale(.82)');
+      var opacity = ehCentro ? '1' : (Math.abs(off)===1 ? '.9' : (Math.abs(off)===2 ? '.6' : '.35'));
+      var padding = ehCentro ? '12px 4px' : '10px 4px';
+      var fontSize = ehCentro ? '18px' : '14px';
+      var fontWeight = ehCentro ? '900' : '700';
+      var minWidth = ehCentro ? '58px' : '44px';
+      html += '<button type="button" data-off="'+off+'" class="mesStripBtn" style="background:'+bg+';color:#fff;border:'+border+';border-radius:0;padding:'+padding+';min-width:'+minWidth+';cursor:pointer;font-family:inherit;position:relative;z-index:'+zi+';box-sizing:border-box;transform:'+scale+';opacity:'+opacity+';transition:transform .2s,opacity .2s;display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;">'
+        + '<div style="font-size:'+fontSize+';font-weight:'+fontWeight+';line-height:1;text-transform:uppercase;">'+MESES_ABREV[mo]+'</div>'
+        + '<div style="font-size:9px;font-weight:700;letter-spacing:.4px;opacity:.75;margin-top:2px;">'+yr+'</div>'
+        + '</button>';
+    }
+    html += '</div>';
+    html += '<button id="mesNext" type="button" style="background:rgba(0,0,0,.25);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-family:inherit;flex-shrink:0;margin-left:4px;"><i class="fa-solid fa-chevron-right"></i></button>';
+    html += '</div>';
+    w.innerHTML = html;
+
+    function _moverMes(delta){
+      var tot = _mesAna.mes + delta;
+      _mesAna.ano = _mesAna.ano + Math.floor(tot / 12);
+      _mesAna.mes = ((tot % 12) + 12) % 12;
+      _aplicarMes();
+      _renderStripMes();
+    }
+    document.getElementById('mesPrev').onclick = function(){ _moverMes(-1); };
+    document.getElementById('mesNext').onclick = function(){ _moverMes(+1); };
+    w.querySelectorAll('.mesStripBtn').forEach(function(b){
+      b.addEventListener('click', function(){
+        var off = parseInt(b.getAttribute('data-off'));
+        _moverMes(off);
+      });
+    });
+    var startX = null;
+    var strip = document.getElementById('mesStrip');
+    if(strip){
+      strip.addEventListener('touchstart', function(e){ startX = e.touches[0].clientX; }, {passive:true});
+      strip.addEventListener('touchend', function(e){
+        if(startX === null) return;
+        var diff = e.changedTouches[0].clientX - startX;
+        startX = null;
+        if(Math.abs(diff) > 40){ _moverMes(diff > 0 ? -1 : 1); }
+      }, {passive:true});
+    }
+  }
+
+  function _abrirStripAno(){
+    var cont = document.getElementById('anaFiltrosRapidos');
+    if(!cont) return;
+    _fecharWidget();
+    _pintarContainer(true, 'ano');
+    var w = document.createElement('div');
+    w.id = 'anaWidgetCal';
+    w.style.cssText = 'background:var(--secondary);color:#fff;font-family:inherit;padding:0 0 16px;margin:0 -16px 0;';
+    cont.parentNode.insertBefore(w, cont.nextSibling);
+    _renderStripAno();
+    _aberto = 'ano';
+  }
+  function _renderStripAno(){
+    var w = document.getElementById('anaWidgetCal');
+    if(!w) return;
+    _initAno();
+    var hojeAno = new Date().getFullYear();
+
+    var html = ''
+      + '<div style="padding:18px 20px 4px;text-align:center;">'
+      +   '<div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:1.5px;">ANO '+_anoAna.ano+'</div>'
+      + '</div>';
+
+    html += '<div style="display:flex;align-items:center;justify-content:center;padding:8px 22px 16px;position:relative;">';
+    html += '<button id="anoPrev" type="button" style="background:rgba(0,0,0,.25);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-family:inherit;flex-shrink:0;margin-right:4px;"><i class="fa-solid fa-chevron-left"></i></button>';
+    html += '<div id="anoStrip" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;overflow:hidden;">';
+    for(var off = -3; off <= 3; off++){
+      var yr = _anoAna.ano + off;
+      var ehCentro = (off === 0);
+      var ehAtual = (yr === hojeAno);
+      var bg = ehCentro ? '#000' : 'transparent';
+      var border = (ehAtual && !ehCentro) ? '2px solid rgba(255,255,255,.6)' : '2px solid transparent';
+      var zi = ehCentro ? 2 : 1;
+      var scale = ehCentro ? 'scale(1.25)' : (Math.abs(off)===1 ? 'scale(1)' : 'scale(.82)');
+      var opacity = ehCentro ? '1' : (Math.abs(off)===1 ? '.9' : (Math.abs(off)===2 ? '.6' : '.35'));
+      var padding = ehCentro ? '16px 12px' : '13px 8px';
+      var fontSize = ehCentro ? '20px' : '15px';
+      var fontWeight = ehCentro ? '900' : '700';
+      var minWidth = ehCentro ? '68px' : '52px';
+      html += '<button type="button" data-off="'+off+'" class="anoStripBtn" style="background:'+bg+';color:#fff;border:'+border+';border-radius:0;padding:'+padding+';min-width:'+minWidth+';cursor:pointer;font-family:inherit;position:relative;z-index:'+zi+';box-sizing:border-box;transform:'+scale+';opacity:'+opacity+';transition:transform .2s,opacity .2s;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+        + '<div style="font-size:'+fontSize+';font-weight:'+fontWeight+';line-height:1;">'+yr+'</div>'
+        + '</button>';
+    }
+    html += '</div>';
+    html += '<button id="anoNext" type="button" style="background:rgba(0,0,0,.25);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-family:inherit;flex-shrink:0;margin-left:4px;"><i class="fa-solid fa-chevron-right"></i></button>';
+    html += '</div>';
+    w.innerHTML = html;
+
+    function _moverAno(delta){
+      _anoAna.ano += delta;
+      _aplicarAno();
+      _renderStripAno();
+    }
+    document.getElementById('anoPrev').onclick = function(){ _moverAno(-1); };
+    document.getElementById('anoNext').onclick = function(){ _moverAno(+1); };
+    w.querySelectorAll('.anoStripBtn').forEach(function(b){
+      b.addEventListener('click', function(){
+        var off = parseInt(b.getAttribute('data-off'));
+        _moverAno(off);
+      });
+    });
+    var startX = null;
+    var strip = document.getElementById('anoStrip');
+    if(strip){
+      strip.addEventListener('touchstart', function(e){ startX = e.touches[0].clientX; }, {passive:true});
+      strip.addEventListener('touchend', function(e){
+        if(startX === null) return;
+        var diff = e.changedTouches[0].clientX - startX;
+        startX = null;
+        if(Math.abs(diff) > 40){ _moverAno(diff > 0 ? -1 : 1); }
+      }, {passive:true});
+    }
+  }
+
+  // ============ v516: Botão LUPA para filtro custom ============
+  function _injetarLupa(){
+    var cont = document.getElementById('anaFiltrosRapidos');
+    if(!cont || cont._lupaInjetada) return;
+    cont._lupaInjetada = true;
+
+    var lupa = document.createElement('button');
+    lupa.type = 'button';
+    lupa.className = 'qfBtnAnaLupa';
+    lupa.id = 'btnLupaAna';
+    lupa.style.cssText = 'flex:1;padding:6px 4px;background:transparent;border:none;font-size:12px;font-weight:800;color:var(--secondary);cursor:pointer;font-family:inherit;';
+    lupa.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i>';
+    cont.appendChild(lupa);
+
+    lupa.addEventListener('click', function(){
+      if(_aberto === 'lupa'){
+        _fecharWidget();
+        _desmarcarTodos();
+        _mostrarFiltroDatas(false);
+      } else {
+        _fecharWidget();
+        _desmarcarTodos();
+        _marcarLupa();
+        _mostrarFiltroDatas(true);
+        _aberto = 'lupa';
+      }
+    });
+  }
+  function _marcarLupa(){
+    var l = document.getElementById('btnLupaAna');
+    if(l){ l.style.color = '#fff'; l.style.background = 'var(--secondary)'; }
+    var cont = document.getElementById('anaFiltrosRapidos');
+    if(cont){
+      cont.querySelectorAll('.qfBtnAna').forEach(function(b){
+        b.style.background = 'transparent';
+        b.style.color = 'var(--secondary)';
+      });
+    }
+  }
+  function _desmarcarLupa(){
+    var l = document.getElementById('btnLupaAna');
+    if(l){ l.style.color = 'var(--secondary)'; l.style.background = 'transparent'; }
+  }
+  function _mostrarFiltroDatas(mostrar){
+    var ini = document.getElementById('anaDataInicio');
+    if(!ini) return;
+    var grid = ini.closest('.ana-date-grid') || ini.parentElement.parentElement;
+    if(grid){ grid.style.display = mostrar ? '' : 'none'; }
+  }
+
+  function _hookAbas(){
+    var cont = document.getElementById('anaFiltrosRapidos');
+    if(!cont || cont._hookedV511) return;
+    cont._hookedV511 = true;
+
+    cont.querySelectorAll('.qfBtnAna').forEach(function(btn){
+      if(!btn.getAttribute('data-label-orig')){
+        btn.setAttribute('data-label-orig', btn.textContent.trim());
+      }
+      btn.addEventListener('click', function(){
+        var t = (btn.textContent||'').trim().toLowerCase();
+        if(!t){ t = (btn.getAttribute('data-label-orig')||'').toLowerCase(); }
+        setTimeout(function(){
+          if(t === 'dia'){
+            if(_aberto === 'dia'){ _fecharWidget(); _desmarcarTodos(); }
+            else { _initDia(); _aplicarDia(); _marcarAtivo('dia'); _abrirCalendarioDia(); }
+          } else if(t === 'semana'){
+            if(_aberto === 'semana'){ _fecharWidget(); _desmarcarTodos(); }
+            else { _initSem(); _aplicarSemana(); _marcarAtivo('semana'); _abrirNavSemana(); }
+          } else if(t === 'mês' || t === 'mes'){
+            if(_aberto === 'mes'){ _fecharWidget(); _desmarcarTodos(); }
+            else { _initMes(); _aplicarMes(); _marcarAtivo(t); _abrirStripMes(); }
+          } else if(t === 'ano'){
+            if(_aberto === 'ano'){ _fecharWidget(); _desmarcarTodos(); }
+            else { _initAno(); _aplicarAno(); _marcarAtivo('ano'); _abrirStripAno(); }
+          } else {
+            _fecharWidget();
+          }
+        }, 50);
+      }, true);
+    });
+  }
+
+  function _inicializar(){
+    _esconderFiltroDatas();
+    _hookAbas();
+    _injetarLupa();
+    _initSem();
+    setTimeout(function(){
+      _aplicarSemana();
+      _marcarAtivo('semana');
+      _abrirNavSemana();
+    }, 80);
+  }
+
+  function _instalar(){
+    if(typeof window.abrirAnalytics !== 'function'){
+      setTimeout(_instalar, 600); return;
+    }
+    if(window.abrirAnalytics._v511Hooked) return;
+    var orig = window.abrirAnalytics;
+    window.abrirAnalytics = function(){
+      _calAna = { ano: null, mes: null, diaSel: null };
+      _semAna = { ref: null };
+      _mesAna = { ano: null, mes: null };
+      _anoAna = { ano: null };
+      _aberto = null;
+      var r = orig.apply(this, arguments);
+      setTimeout(_inicializar, 250);
+      return r;
+    };
+    window.abrirAnalytics._v511Hooked = true;
+  }
+  setTimeout(_instalar, 1200);
+  setTimeout(_instalar, 3000);
+})();
+
+// ============ v511: Auto-update do relatório quando muda app/incluir GE ============
+(function(){
+  function bindAuto(){
+    var sel = document.getElementById('anaApp');
+    if(sel && !sel._autoV511){
+      sel.addEventListener('change', function(){ if(typeof gerarAnalytics==='function') gerarAnalytics(); });
+      sel._autoV511 = true;
+    }
+    var chk = document.getElementById('anaIncluirGE');
+    if(chk && !chk._autoV511){
+      chk.addEventListener('change', function(){ if(typeof gerarAnalytics==='function') gerarAnalytics(); });
+      chk._autoV511 = true;
+    }
+  }
+  setInterval(bindAuto, 2000);
+})();
+
+
+
 </script>
 
 <style>
@@ -14589,6 +15213,7 @@ var _eficIv2 = setInterval(function(){
   to { transform: translateY(0); opacity: 1; }
 }
 </style>
+
 
 
 </body>
