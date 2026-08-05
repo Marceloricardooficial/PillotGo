@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v517';
+window.APP_VERSAO = 'v524';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -15246,6 +15246,45 @@ var _eficIv2 = setInterval(function(){
   setTimeout(_instalar, 2500);
 })();
 
+// ============ v521: Fix meta 0 tratado como 250 (bug do || no obterMetaDoDia) ============
+(function(){
+  function _instalar(){
+    if(typeof obterMetaDoDia !== 'function' || typeof carregarMetasDiarias !== 'function'){
+      setTimeout(_instalar, 500); return;
+    }
+    if(window._metaZeroV521) return;
+    window._metaZeroV521 = true;
+
+    // v524: dias passados usam metaDia gravada; HOJE e futuro sempre usam formulário atual
+    window.obterMetaDoDia = function(dateKey){
+      try {
+        var hoje = (typeof TODAY_DATE_STRING !== 'undefined') ? TODAY_DATE_STRING : new Date().toISOString().split('T')[0];
+        var ehPassado = (dateKey < hoje);
+
+        // 1) Só respeita metaDia gravada se for dia PASSADO
+        if(ehPassado && typeof relatoriosDiarios !== 'undefined' && relatoriosDiarios[dateKey] && typeof relatoriosDiarios[dateKey].metaDia === 'number'){
+          return relatoriosDiarios[dateKey].metaDia;
+        }
+        // 2) Meta customizada por data específica (metasDiariasPorDia)
+        var md = carregarMetasDiarias();
+        if(md && typeof md[dateKey] === 'number') return md[dateKey];
+        // 3) Formulário atual do dia da semana (respeita 0 e vazio como 0)
+        var dt = new Date(dateKey+'T00:00:00');
+        var dias = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+        var diaSem = dias[dt.getDay()];
+        var v = (typeof metas !== 'undefined' && metas) ? metas[diaSem] : undefined;
+        if(typeof v === 'number') return v;
+        return 0;
+      } catch(e){ return 0; }
+    };
+    console.log('[v521] obterMetaDoDia agora respeita 0');
+  }
+  setTimeout(_instalar, 1200);
+  setTimeout(_instalar, 3000);
+})();
+
+
+
 
 
 
@@ -15258,6 +15297,7 @@ var _eficIv2 = setInterval(function(){
   to { transform: translateY(0); opacity: 1; }
 }
 </style>
+
 
 
 
