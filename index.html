@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v524';
+window.APP_VERSAO = 'v525';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -15282,6 +15282,91 @@ var _eficIv2 = setInterval(function(){
   setTimeout(_instalar, 1200);
   setTimeout(_instalar, 3000);
 })();
+
+// ============ v525: Reordena itens do menu dropUpMenu ============
+(function(){
+  var ORDEM = [
+    { chaves: ['despesa','gasto'], nome: 'Gastos e Despesas' },
+    { chaves: ['combust','gnv','parâmetro'], nome: 'Parâmetros do Combustível' },
+    { chaves: ['meta','defina'], nome: 'Defina suas Metas' },
+    { chaves: ['análise','analise','performance'], nome: 'Análise de Performance' },
+    { chaves: ['financeiro','veículo','veiculo'], nome: 'Financeiro Veículo' },
+    { chaves: ['tema','escolha'], nome: 'Escolha seu Tema' },
+    { chaves: ['ganho','extra'], nome: 'Ganhos Extras' },
+    { chaves: ['cadastro','app'], nome: 'Cadastro de Apps' },
+    { chaves: ['sistema','configura','backup','restaura','zerar','salvar imagem'], nome: 'Configurações do Sistema' }
+  ];
+
+  function normaliza(s){
+    return (s||'').toLowerCase().replace(/[àáâã]/g,'a').replace(/[éê]/g,'e').replace(/[íî]/g,'i').replace(/[óô]/g,'o').replace(/[úû]/g,'u').replace(/ç/g,'c');
+  }
+
+  function scoreItem(txt, chaves){
+    var n = normaliza(txt);
+    var s = 0;
+    chaves.forEach(function(c){
+      if(n.indexOf(normaliza(c)) >= 0) s++;
+    });
+    return s;
+  }
+
+  function reordenar(){
+    var menu = document.getElementById('dropUpMenu');
+    if(!menu) return false;
+
+    var itens = Array.from(menu.querySelectorAll('.drop-up-item'));
+    if(itens.length < 3) return false; // aguarda todos os itens serem injetados
+
+    // Para cada item, acha o melhor score em cada slot ORDEM
+    var usados = new Set();
+    var novaOrdem = [];
+
+    ORDEM.forEach(function(slot, slotIdx){
+      var melhor = null;
+      var melhorScore = 0;
+      itens.forEach(function(item, idx){
+        if(usados.has(idx)) return;
+        var sc = scoreItem(item.textContent, slot.chaves);
+        if(sc > melhorScore){
+          melhorScore = sc;
+          melhor = { item: item, idx: idx };
+        }
+      });
+      if(melhor){
+        usados.add(melhor.idx);
+        novaOrdem.push(melhor.item);
+      }
+    });
+
+    // Itens que não bateram com nenhum slot vão pro final
+    itens.forEach(function(item, idx){
+      if(!usados.has(idx)) novaOrdem.push(item);
+    });
+
+    // Reanexa em ordem (mantém referências e handlers)
+    novaOrdem.forEach(function(el){ menu.appendChild(el); });
+
+    // Remove classe 'divider-top' de todos e adiciona no último bloco (config sistema)
+    itens.forEach(function(el){ el.classList.remove('divider-top'); });
+    if(novaOrdem.length){
+      var ultimo = novaOrdem[novaOrdem.length - 1];
+      if(ultimo) ultimo.classList.add('divider-top');
+    }
+
+    return true;
+  }
+
+  // Roda várias vezes pra pegar itens que ainda vão ser injetados
+  var tentativas = 0;
+  function tentar(){
+    tentativas++;
+    var ok = reordenar();
+    if(tentativas < 20) setTimeout(tentar, 400);
+  }
+  setTimeout(tentar, 800);
+})();
+
+
 
 
 
