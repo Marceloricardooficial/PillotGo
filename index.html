@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v528';
+window.APP_VERSAO = 'v529';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -15568,6 +15568,171 @@ var _eficIv2 = setInterval(function(){
   setTimeout(_hook, 1500);
 })();
 
+// ============ v529: Aba DIA ativa ao abrir Análise + Bloco Desempenho ============
+(function(){
+  // Parte 1: Aba DIA ativa ao abrir Analise
+  function _hookAbrir(){
+    if(typeof window.abrirAnalytics === 'function' && !window.abrirAnalytics._v529){
+      var o = window.abrirAnalytics;
+      window.abrirAnalytics = function(){
+        var r = o.apply(this, arguments);
+        setTimeout(function(){
+          // Simula clique na aba DIA se nada estiver ativo
+          try {
+            var cont = document.getElementById('anaFiltrosRapidos');
+            if(!cont) return;
+            var btns = cont.querySelectorAll('.qfBtnAna');
+            var jaAtivo = false;
+            btns.forEach(function(b){
+              if(b.classList.contains('ativo') || (b.style && b.style.background === 'var(--secondary)')) jaAtivo = true;
+            });
+            if(!jaAtivo){
+              for(var i=0; i<btns.length; i++){
+                var t = (btns[i].textContent||btns[i].getAttribute('data-label-orig')||'').trim().toLowerCase();
+                if(t === 'dia'){ btns[i].click(); break; }
+              }
+            }
+          } catch(e){}
+        }, 500);
+        return r;
+      };
+      window.abrirAnalytics._v529 = true;
+    } else {
+      setTimeout(_hookAbrir, 800);
+    }
+  }
+  setTimeout(_hookAbrir, 1200);
+
+  // Parte 2: Bloco Desempenho embaixo dos 4 stats
+  function _msgScore(s){
+    if(s >= 85) return { txt:'Excelente', cor:'#22c55e', ico:'fa-trophy' };
+    if(s >= 70) return { txt:'Muito bom', cor:'#16a34a', ico:'fa-thumbs-up' };
+    if(s >= 55) return { txt:'Bom', cor:'#84cc16', ico:'fa-check' };
+    if(s >= 40) return { txt:'Regular', cor:'#eab308', ico:'fa-triangle-exclamation' };
+    if(s >= 25) return { txt:'Fraco', cor:'#f97316', ico:'fa-arrow-trend-down' };
+    return { txt:'Ruim', cor:'#ef4444', ico:'fa-circle-xmark' };
+  }
+  function _classific(v, ruim, bom, otimo){
+    if(v >= otimo) return { txt:'Ótimo', cor:'#22c55e' };
+    if(v >= bom) return { txt:'Bom', cor:'#84cc16' };
+    if(v >= ruim) return { txt:'Regular', cor:'#eab308' };
+    return { txt:'Baixo', cor:'#ef4444' };
+  }
+
+  function _garantirBloco(){
+    var grid = document.querySelector('.ana-stats-grid');
+    if(!grid) return null;
+    var bloco = document.getElementById('anaDesempenho');
+    if(bloco) return bloco;
+    bloco = document.createElement('div');
+    bloco.id = 'anaDesempenho';
+    bloco.style.cssText = ''
+      + 'background:#fff;'
+      + 'padding:14px 20px 18px;'
+      + 'border-bottom:1px solid #f1f5f9;'
+      + 'font-family:inherit;';
+    grid.parentNode.insertBefore(bloco, grid.nextSibling);
+    return bloco;
+  }
+
+  function _lerNum(id){
+    var el = document.getElementById(id);
+    if(!el) return 0;
+    var s = (el.textContent||'').replace(/[^0-9,.-]/g,'').replace(',','.');
+    return parseFloat(s)||0;
+  }
+
+  function _atualizar(){
+    var bloco = _garantirBloco();
+    if(!bloco) return;
+    if(typeof eficCarregar !== 'function') return;
+
+    var cfg = eficCarregar();
+    var rsKm = _lerNum('anaRsKm');
+    var rsHr = _lerNum('anaRsHr');
+    var score = (typeof calcularEficiencia === 'function') ? calcularEficiencia(rsKm, rsHr) : 0;
+    var msg = _msgScore(score);
+    var cKm = _classific(rsKm, cfg.kmRuim, cfg.kmBom, cfg.kmOtimo);
+    var cHr = _classific(rsHr, cfg.hrRuim, cfg.hrBom, cfg.hrOtimo);
+
+    bloco.innerHTML = ''
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
+      +   '<div style="font-weight:800;font-size:12px;text-transform:uppercase;color:#1e293b;letter-spacing:.5px;"><i class="fa-solid fa-gauge-high" style="color:var(--secondary);margin-right:6px;"></i>Desempenho</div>'
+      +   '<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:'+msg.cor+';color:#fff;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;"><i class="fa-solid '+msg.ico+'"></i>'+msg.txt+'</div>'
+      + '</div>'
+      // Barra de score
+      + '<div style="height:10px;background:#f1f5f9;border-radius:999px;overflow:hidden;margin-bottom:16px;position:relative;">'
+      +   '<div style="height:100%;width:'+Math.round(score)+'%;background:linear-gradient(90deg,#ef4444 0%,#eab308 50%,#22c55e 100%);border-radius:999px;transition:width .4s;"></div>'
+      + '</div>'
+      // Detalhamento
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+      +   '<div style="background:#f8fafc;border-radius:10px;padding:10px 12px;border-left:3px solid '+cKm.cor+';">'
+      +     '<div style="font-size:10px;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:4px;">R$/KM</div>'
+      +     '<div style="display:flex;align-items:baseline;gap:6px;">'
+      +       '<span style="font-size:15px;font-weight:900;color:#0f172a;">R$ '+rsKm.toFixed(2).replace(".",",")+'</span>'
+      +       '<span style="font-size:10px;font-weight:800;color:'+cKm.cor+';">'+cKm.txt+'</span>'
+      +     '</div>'
+      +     '<div style="font-size:9px;color:#94a3b8;margin-top:2px;">alvo: R$ '+cfg.kmOtimo.toFixed(2).replace(".",",")+'</div>'
+      +   '</div>'
+      +   '<div style="background:#f8fafc;border-radius:10px;padding:10px 12px;border-left:3px solid '+cHr.cor+';">'
+      +     '<div style="font-size:10px;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:4px;">R$/HORA</div>'
+      +     '<div style="display:flex;align-items:baseline;gap:6px;">'
+      +       '<span style="font-size:15px;font-weight:900;color:#0f172a;">R$ '+rsHr.toFixed(2).replace(".",",")+'</span>'
+      +       '<span style="font-size:10px;font-weight:800;color:'+cHr.cor+';">'+cHr.txt+'</span>'
+      +     '</div>'
+      +     '<div style="font-size:9px;color:#94a3b8;margin-top:2px;">alvo: R$ '+cfg.hrOtimo.toFixed(0)+'</div>'
+      +   '</div>'
+      + '</div>'
+      + '<div style="margin-top:12px;font-size:10px;color:#64748b;text-align:center;">Score: <b style="color:#0f172a;">'+Math.round(score)+'/100</b> · Config em <b>Cadastro de Apps</b></div>';
+  }
+
+  setInterval(function(){
+    var g = document.querySelector('.ana-stats-grid');
+    if(g && g.offsetParent !== null){ _atualizar(); }
+  }, 800);
+})();
+
+// ============ v530: Grava metaDia de HOJE toda vez que salvarDados (pra congelar quando virar passado) ============
+(function(){
+  function _instalar(){
+    if(typeof salvarDados !== 'function'){ setTimeout(_instalar, 500); return; }
+    if(window._gravaMetaHojeV530) return;
+    window._gravaMetaHojeV530 = true;
+
+    var _orig = salvarDados;
+    window.salvarDados = function(){
+      try {
+        var hoje = (typeof TODAY_DATE_STRING !== 'undefined') ? TODAY_DATE_STRING : new Date().toISOString().split('T')[0];
+        if(typeof relatoriosDiarios !== 'undefined' && relatoriosDiarios[hoje]){
+          // Calcula meta usando formulário atual (SEM passar pelo wrap que checa metaDia)
+          var metaAtual = 0;
+          try {
+            var mdCustom = (typeof carregarMetasDiarias === 'function') ? carregarMetasDiarias() : {};
+            if(mdCustom && typeof mdCustom[hoje] === 'number'){
+              metaAtual = mdCustom[hoje];
+            } else {
+              var dt = new Date(hoje+'T00:00:00');
+              var dias = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+              var diaSem = dias[dt.getDay()];
+              var v = (typeof metas !== 'undefined' && metas) ? metas[diaSem] : undefined;
+              metaAtual = (typeof v === 'number') ? v : 0;
+            }
+          } catch(e){}
+          relatoriosDiarios[hoje].metaDia = metaAtual;
+        }
+      } catch(e){}
+      return _orig.apply(this, arguments);
+    };
+    console.log('[v530] Grava metaDia de hoje toda vez que salva');
+  }
+  setTimeout(_instalar, 1500);
+  setTimeout(_instalar, 3500);
+})();
+
+
+
+
+
 
 
 
@@ -15593,4 +15758,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-                                   </html>
+</html>
