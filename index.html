@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v529';
+window.APP_VERSAO = 'v533';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -15568,129 +15568,7 @@ var _eficIv2 = setInterval(function(){
   setTimeout(_hook, 1500);
 })();
 
-// ============ v529: Aba DIA ativa ao abrir Análise + Bloco Desempenho ============
-(function(){
-  // Parte 1: Aba DIA ativa ao abrir Analise
-  function _hookAbrir(){
-    if(typeof window.abrirAnalytics === 'function' && !window.abrirAnalytics._v529){
-      var o = window.abrirAnalytics;
-      window.abrirAnalytics = function(){
-        var r = o.apply(this, arguments);
-        setTimeout(function(){
-          // Simula clique na aba DIA se nada estiver ativo
-          try {
-            var cont = document.getElementById('anaFiltrosRapidos');
-            if(!cont) return;
-            var btns = cont.querySelectorAll('.qfBtnAna');
-            var jaAtivo = false;
-            btns.forEach(function(b){
-              if(b.classList.contains('ativo') || (b.style && b.style.background === 'var(--secondary)')) jaAtivo = true;
-            });
-            if(!jaAtivo){
-              for(var i=0; i<btns.length; i++){
-                var t = (btns[i].textContent||btns[i].getAttribute('data-label-orig')||'').trim().toLowerCase();
-                if(t === 'dia'){ btns[i].click(); break; }
-              }
-            }
-          } catch(e){}
-        }, 500);
-        return r;
-      };
-      window.abrirAnalytics._v529 = true;
-    } else {
-      setTimeout(_hookAbrir, 800);
-    }
-  }
-  setTimeout(_hookAbrir, 1200);
 
-  // Parte 2: Bloco Desempenho embaixo dos 4 stats
-  function _msgScore(s){
-    if(s >= 85) return { txt:'Excelente', cor:'#22c55e', ico:'fa-trophy' };
-    if(s >= 70) return { txt:'Muito bom', cor:'#16a34a', ico:'fa-thumbs-up' };
-    if(s >= 55) return { txt:'Bom', cor:'#84cc16', ico:'fa-check' };
-    if(s >= 40) return { txt:'Regular', cor:'#eab308', ico:'fa-triangle-exclamation' };
-    if(s >= 25) return { txt:'Fraco', cor:'#f97316', ico:'fa-arrow-trend-down' };
-    return { txt:'Ruim', cor:'#ef4444', ico:'fa-circle-xmark' };
-  }
-  function _classific(v, ruim, bom, otimo){
-    if(v >= otimo) return { txt:'Ótimo', cor:'#22c55e' };
-    if(v >= bom) return { txt:'Bom', cor:'#84cc16' };
-    if(v >= ruim) return { txt:'Regular', cor:'#eab308' };
-    return { txt:'Baixo', cor:'#ef4444' };
-  }
-
-  function _garantirBloco(){
-    var grid = document.querySelector('.ana-stats-grid');
-    if(!grid) return null;
-    var bloco = document.getElementById('anaDesempenho');
-    if(bloco) return bloco;
-    bloco = document.createElement('div');
-    bloco.id = 'anaDesempenho';
-    bloco.style.cssText = ''
-      + 'background:#fff;'
-      + 'padding:14px 20px 18px;'
-      + 'border-bottom:1px solid #f1f5f9;'
-      + 'font-family:inherit;';
-    grid.parentNode.insertBefore(bloco, grid.nextSibling);
-    return bloco;
-  }
-
-  function _lerNum(id){
-    var el = document.getElementById(id);
-    if(!el) return 0;
-    var s = (el.textContent||'').replace(/[^0-9,.-]/g,'').replace(',','.');
-    return parseFloat(s)||0;
-  }
-
-  function _atualizar(){
-    var bloco = _garantirBloco();
-    if(!bloco) return;
-    if(typeof eficCarregar !== 'function') return;
-
-    var cfg = eficCarregar();
-    var rsKm = _lerNum('anaRsKm');
-    var rsHr = _lerNum('anaRsHr');
-    var score = (typeof calcularEficiencia === 'function') ? calcularEficiencia(rsKm, rsHr) : 0;
-    var msg = _msgScore(score);
-    var cKm = _classific(rsKm, cfg.kmRuim, cfg.kmBom, cfg.kmOtimo);
-    var cHr = _classific(rsHr, cfg.hrRuim, cfg.hrBom, cfg.hrOtimo);
-
-    bloco.innerHTML = ''
-      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
-      +   '<div style="font-weight:800;font-size:12px;text-transform:uppercase;color:#1e293b;letter-spacing:.5px;"><i class="fa-solid fa-gauge-high" style="color:var(--secondary);margin-right:6px;"></i>Desempenho</div>'
-      +   '<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:'+msg.cor+';color:#fff;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;"><i class="fa-solid '+msg.ico+'"></i>'+msg.txt+'</div>'
-      + '</div>'
-      // Barra de score
-      + '<div style="height:10px;background:#f1f5f9;border-radius:999px;overflow:hidden;margin-bottom:16px;position:relative;">'
-      +   '<div style="height:100%;width:'+Math.round(score)+'%;background:linear-gradient(90deg,#ef4444 0%,#eab308 50%,#22c55e 100%);border-radius:999px;transition:width .4s;"></div>'
-      + '</div>'
-      // Detalhamento
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
-      +   '<div style="background:#f8fafc;border-radius:10px;padding:10px 12px;border-left:3px solid '+cKm.cor+';">'
-      +     '<div style="font-size:10px;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:4px;">R$/KM</div>'
-      +     '<div style="display:flex;align-items:baseline;gap:6px;">'
-      +       '<span style="font-size:15px;font-weight:900;color:#0f172a;">R$ '+rsKm.toFixed(2).replace(".",",")+'</span>'
-      +       '<span style="font-size:10px;font-weight:800;color:'+cKm.cor+';">'+cKm.txt+'</span>'
-      +     '</div>'
-      +     '<div style="font-size:9px;color:#94a3b8;margin-top:2px;">alvo: R$ '+cfg.kmOtimo.toFixed(2).replace(".",",")+'</div>'
-      +   '</div>'
-      +   '<div style="background:#f8fafc;border-radius:10px;padding:10px 12px;border-left:3px solid '+cHr.cor+';">'
-      +     '<div style="font-size:10px;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:4px;">R$/HORA</div>'
-      +     '<div style="display:flex;align-items:baseline;gap:6px;">'
-      +       '<span style="font-size:15px;font-weight:900;color:#0f172a;">R$ '+rsHr.toFixed(2).replace(".",",")+'</span>'
-      +       '<span style="font-size:10px;font-weight:800;color:'+cHr.cor+';">'+cHr.txt+'</span>'
-      +     '</div>'
-      +     '<div style="font-size:9px;color:#94a3b8;margin-top:2px;">alvo: R$ '+cfg.hrOtimo.toFixed(0)+'</div>'
-      +   '</div>'
-      + '</div>'
-      + '<div style="margin-top:12px;font-size:10px;color:#64748b;text-align:center;">Score: <b style="color:#0f172a;">'+Math.round(score)+'/100</b> · Config em <b>Cadastro de Apps</b></div>';
-  }
-
-  setInterval(function(){
-    var g = document.querySelector('.ana-stats-grid');
-    if(g && g.offsetParent !== null){ _atualizar(); }
-  }, 800);
-})();
 
 // ============ v530: Grava metaDia de HOJE toda vez que salvarDados (pra congelar quando virar passado) ============
 (function(){
@@ -15729,6 +15607,200 @@ var _eficIv2 = setInterval(function(){
   setTimeout(_instalar, 3500);
 })();
 
+// ============ v531: Desempenho com donut + rating estrelas ============
+(function(){
+  function _hookAbrir(){
+    if(typeof window.abrirAnalytics === 'function' && !window.abrirAnalytics._v531){
+      var o = window.abrirAnalytics;
+      window.abrirAnalytics = function(){
+        var r = o.apply(this, arguments);
+        setTimeout(function(){
+          try {
+            var cont = document.getElementById('anaFiltrosRapidos');
+            if(!cont) return;
+            var btns = cont.querySelectorAll('.qfBtnAna');
+            var jaAtivo = false;
+            btns.forEach(function(b){
+              if(b.classList.contains('ativo') || (b.style && b.style.background === 'var(--secondary)')) jaAtivo = true;
+            });
+            if(!jaAtivo){
+              for(var i=0; i<btns.length; i++){
+                var t = (btns[i].textContent||btns[i].getAttribute('data-label-orig')||'').trim().toLowerCase();
+                if(t === 'dia'){ btns[i].click(); break; }
+              }
+            }
+          } catch(e){}
+        }, 500);
+        return r;
+      };
+      window.abrirAnalytics._v531 = true;
+    } else {
+      setTimeout(_hookAbrir, 800);
+    }
+  }
+  setTimeout(_hookAbrir, 1200);
+
+  function _lerNum(id){
+    var el = document.getElementById(id);
+    if(!el) return 0;
+    var s = (el.textContent||'').replace(/[^0-9,.-]/g,'').replace(',','.');
+    return parseFloat(s)||0;
+  }
+
+  // Classifica em 4 níveis reais + sem dados. Escala:
+  // <ruim = Ruim (2⭐), ruim..bom = Médio (3⭐), bom..otimo = Bom (4⭐), >=otimo = Excelente (5⭐)
+  function _nivel(v, ruim, bom, otimo){
+    if(v <= 0) return { estrelas:0, txt:'Sem dados' };
+    if(v < ruim) return { estrelas:2, txt:'Ruim' };
+    if(v < bom) return { estrelas:3, txt:'Médio' };
+    if(v < otimo) return { estrelas:4, txt:'Bom' };
+    return { estrelas:5, txt:'Excelente' };
+  }
+
+  function _garantirBloco(){
+    var grid = document.querySelector('.ana-stats-grid');
+    if(!grid) return null;
+    var bloco = document.getElementById('anaDesempenho');
+    if(bloco) return bloco;
+    bloco = document.createElement('div');
+    bloco.id = 'anaDesempenho';
+    bloco.style.cssText = 'background:#fff;padding:12px 20px 16px;border-bottom:1px solid #f1f5f9;font-family:inherit;';
+    grid.parentNode.insertBefore(bloco, grid.nextSibling);
+    return bloco;
+  }
+
+  function _donutSVG(pct, cor){
+    var r = 42, c = 2 * Math.PI * r;
+    var offset = c * (1 - pct/100);
+    return ''
+      + '<svg width="110" height="110" viewBox="0 0 110 110" style="transform:rotate(-90deg);">'
+      +   '<circle cx="55" cy="55" r="'+r+'" fill="none" stroke="#f1f5f9" stroke-width="10"/>'
+      +   '<circle class="anaDonutStroke" cx="55" cy="55" r="'+r+'" fill="none" stroke="'+cor+'" stroke-width="10" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+c+'" data-offset="'+offset+'" style="transition:stroke-dashoffset 1.4s cubic-bezier(.4,0,.2,1);"/>'
+      + '</svg>';
+  }
+
+  function _estrelas(n){
+    var out = '';
+    for(var i=1; i<=5; i++){
+      var preenchida = i <= n;
+      out += '<i class="fa-solid fa-star" style="color:'+(preenchida?'var(--secondary)':'#e2e8f0')+';font-size:11px;margin-right:1px;"></i>';
+    }
+    return out;
+  }
+
+  function _atualizar(){
+    var bloco = _garantirBloco();
+    if(!bloco) return;
+    // Fallback de config se eficCarregar não existir
+    var cfg;
+    try {
+      cfg = (typeof eficCarregar === 'function') ? eficCarregar() : null;
+    } catch(e){ cfg = null; }
+    if(!cfg){
+      // Tenta ler direto do localStorage
+      try {
+        var cfgJson = localStorage.getItem('configEficiencia') || localStorage.getItem('eficConfig') || '{}';
+        cfg = JSON.parse(cfgJson);
+      } catch(e){ cfg = {}; }
+    }
+    if(typeof cfg.kmRuim !== 'number') cfg.kmRuim = 1.5;
+    if(typeof cfg.kmBom !== 'number') cfg.kmBom = 2.0;
+    if(typeof cfg.kmOtimo !== 'number') cfg.kmOtimo = 2.5;
+    if(typeof cfg.hrRuim !== 'number') cfg.hrRuim = 25;
+    if(typeof cfg.hrBom !== 'number') cfg.hrBom = 40;
+    if(typeof cfg.hrOtimo !== 'number') cfg.hrOtimo = 60;
+
+    var rsKm = _lerNum('anaRsKm');
+    var rsHr = _lerNum('anaRsHr');
+    var score = 0;
+    try {
+      if(typeof calcularEficiencia === 'function') score = Math.round(calcularEficiencia(rsKm, rsHr));
+    } catch(e){}
+    // Fallback pontos
+    if(!score){
+      var pKm = rsKm >= cfg.kmOtimo ? 100 : rsKm >= cfg.kmBom ? 75 : rsKm >= cfg.kmRuim ? 50 : rsKm > 0 ? 25 : 0;
+      var pHr = rsHr >= cfg.hrOtimo ? 100 : rsHr >= cfg.hrBom ? 75 : rsHr >= cfg.hrRuim ? 50 : rsHr > 0 ? 25 : 0;
+      score = Math.round((pKm + pHr) / 2);
+    }
+    console.log('[v531] rsKm='+rsKm+' rsHr='+rsHr+' score='+score);
+    var nvKm = _nivel(rsKm, cfg.kmRuim, cfg.kmBom, cfg.kmOtimo);
+    var nvHr = _nivel(rsHr, cfg.hrRuim, cfg.hrBom, cfg.hrOtimo);
+
+    // Só re-renderiza se algum valor mudou (evita loop de animação)
+    var novaChave = score+'|'+rsKm.toFixed(2)+'|'+rsHr.toFixed(2)+'|'+nvKm.txt+'|'+nvHr.txt;
+    if(bloco._chave === novaChave) return;
+    bloco._chave = novaChave;
+
+    bloco.innerHTML = ''
+      + '<div style="font-weight:800;font-size:11px;text-transform:uppercase;color:#1e293b;letter-spacing:.5px;margin-bottom:10px;"><i class="fa-solid fa-gauge-high" style="color:var(--secondary);margin-right:6px;"></i>Desempenho</div>'
+      + '<div style="display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;">'
+      // Coluna 1: Donut de score
+      +   '<div style="position:relative;width:110px;height:110px;">'
+      +     _donutSVG(score, 'var(--secondary)')
+      +     '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">'
+      +       '<div id="anaScoreNum" data-target="'+score+'" style="font-size:22px;font-weight:900;color:#0f172a;line-height:1;">0</div>'
+      +       '<div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-top:2px;">Score</div>'
+      +     '</div>'
+      +   '</div>'
+      // Coluna 2: R$/km e R$/hr soltos (sem bandeja)
+      +   '<div style="display:flex;flex-direction:column;gap:8px;padding:2px 0;">'
+      +     '<div>'
+      +       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">'
+      +         '<span style="font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">R$/KM</span>'
+      +         '<span style="font-size:13px;font-weight:900;color:#0f172a;">R$ '+rsKm.toFixed(2).replace(".",",")+'</span>'
+      +       '</div>'
+      +       '<div style="display:flex;align-items:center;justify-content:space-between;">'
+      +         '<div>'+_estrelas(nvKm.estrelas)+'</div>'
+      +         '<span style="font-size:10px;font-weight:800;color:var(--secondary);text-transform:uppercase;letter-spacing:.5px;">'+nvKm.txt+'</span>'
+      +       '</div>'
+      +     '</div>'
+      +     '<div>'
+      +       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">'
+      +         '<span style="font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">R$/HORA</span>'
+      +         '<span style="font-size:13px;font-weight:900;color:#0f172a;">R$ '+rsHr.toFixed(2).replace(".",",")+'</span>'
+      +       '</div>'
+      +       '<div style="display:flex;align-items:center;justify-content:space-between;">'
+      +         '<div>'+_estrelas(nvHr.estrelas)+'</div>'
+      +         '<span style="font-size:10px;font-weight:800;color:var(--secondary);text-transform:uppercase;letter-spacing:.5px;">'+nvHr.txt+'</span>'
+      +       '</div>'
+      +     '</div>'
+      +   '</div>'
+      + '</div>';
+
+    // Animação: donut preenche do zero até offset alvo
+    setTimeout(function(){
+      var stroke = bloco.querySelector('.anaDonutStroke');
+      if(stroke){
+        var offAlvo = stroke.getAttribute('data-offset');
+        stroke.style.strokeDashoffset = offAlvo;
+      }
+      // Anima número do score subindo 0 → target
+      var nEl = document.getElementById('anaScoreNum');
+      if(nEl){
+        var alvo = parseInt(nEl.getAttribute('data-target'))||0;
+        var atual = 0;
+        var dur = 1400, ini = Date.now();
+        function step(){
+          var t = Math.min(1, (Date.now()-ini)/dur);
+          // easing out
+          var e = 1 - Math.pow(1-t, 3);
+          nEl.textContent = Math.round(alvo * e);
+          if(t<1) requestAnimationFrame(step);
+          else nEl.textContent = alvo;
+        }
+        requestAnimationFrame(step);
+      }
+    }, 50);
+  }
+
+  setInterval(function(){
+    var g = document.querySelector('.ana-stats-grid');
+    if(g && g.offsetParent !== null){ _atualizar(); }
+  }, 800);
+})();
+
+
+
 
 
 
@@ -15758,4 +15830,4 @@ var _eficIv2 = setInterval(function(){
 
 
 </body>
-</html>
+                                                                                                                                                                                                 </html>
