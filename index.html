@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v533';
+window.APP_VERSAO = 'v534';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -15487,21 +15487,21 @@ var _eficIv2 = setInterval(function(){
       balao.style.cssText = ''
         + 'position:absolute;'
         + 'left:50%;'
-        + 'top:-22px;'
+        + 'top:-24px;'
         + 'transform:translateX(-50%);'
         + 'background:#fff;'
         + 'color:#0f172a;'
-        + 'padding:6px 6px 6px 16px;'
+        + 'padding:5px 5px 5px 18px;'
         + 'border-radius:999px;'
         + 'box-shadow:0 4px 14px rgba(0,0,0,.15);'
         + 'display:flex;'
         + 'align-items:center;'
-        + 'gap:10px;'
+        + 'gap:12px;'
         + 'font-family:inherit;'
         + 'z-index:5;'
         + 'white-space:nowrap;'
         + 'pointer-events:none;'
-        + 'height:44px;'
+        + 'height:62px;'
         + 'box-sizing:border-box;';
       // Setinha embaixo
       var seta = document.createElement('div');
@@ -15536,10 +15536,15 @@ var _eficIv2 = setInterval(function(){
       } catch(e){}
       var numStr = num.toLocaleString('pt-BR');
       cont.innerHTML = ''
-        + '<i class="fa-solid fa-bullseye" style="color:var(--secondary);font-size:16px;"></i>'
-        + '<span style="font-size:10px;font-weight:700;color:#64748b;margin-right:-6px;">R$</span>'
-        + '<span style="font-size:15px;font-weight:800;color:#0f172a;">' + numStr + '</span>'
-        + '<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--secondary);color:#fff;font-size:10px;font-weight:900;">' + v.pct + '</span>';
+        + '<i class="fa-solid fa-bullseye" style="color:var(--secondary);font-size:18px;"></i>'
+        + '<div style="display:flex;flex-direction:column;line-height:1.1;">'
+        +   '<span style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:1px;">Sua meta é de:</span>'
+        +   '<div style="display:flex;align-items:baseline;gap:2px;">'
+        +     '<span style="font-size:9px;font-weight:700;color:#64748b;">R$</span>'
+        +     '<span style="font-size:16px;font-weight:900;color:#0f172a;">' + numStr + '</span>'
+        +   '</div>'
+        + '</div>'
+        + '<span style="display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;background:var(--secondary);color:#fff;font-size:13px;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,.15);">' + v.pct + '</span>';
     }
     return true;
   }
@@ -15799,6 +15804,120 @@ var _eficIv2 = setInterval(function(){
   }, 800);
 })();
 
+// ============ v534: Mostra valor dos Ganhos Extras do período ao lado do toggle ============
+(function(){
+  function calcTotal(){
+    try {
+      if(typeof carregarGanhosExtrasList !== 'function') return 0;
+      var ini = document.getElementById('anaDataInicio')?.value || '';
+      var fim = document.getElementById('anaDataFim')?.value || '';
+      var total = 0;
+      carregarGanhosExtrasList().forEach(function(g){
+        if(ini && g.data < ini) return;
+        if(fim && g.data > fim) return;
+        total += parseFloat(g.valor||0);
+      });
+      return total;
+    } catch(e){ return 0; }
+  }
+
+  function atualizar(){
+    var chk = document.getElementById('anaIncluirGE');
+    if(!chk) return;
+    var label = chk.closest('label') || chk.parentElement;
+    if(!label) return;
+
+    // Cria/atualiza badge com valor
+    var badge = document.getElementById('anaGEValor');
+    if(!badge){
+      badge = document.createElement('span');
+      badge.id = 'anaGEValor';
+      badge.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;background:var(--secondary);color:#fff;font-size:12px;font-weight:900;margin-left:auto;flex-shrink:0;white-space:nowrap;transition:all .3s;';
+      label.appendChild(badge);
+      // Garante que o label é flex row (pra badge ir pra direita)
+      if(getComputedStyle(label).display !== 'flex'){
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+      }
+    }
+
+    var total = calcTotal();
+    var totalStr = 'R$ ' + total.toFixed(2).replace('.',',');
+    badge.textContent = totalStr;
+    // Se toggle desligado, badge fica cinza/apagado
+    if(!chk.checked){
+      badge.style.background = '#334155';
+      badge.style.opacity = '.6';
+    } else {
+      badge.style.background = 'var(--secondary)';
+      badge.style.opacity = '1';
+    }
+  }
+
+  setInterval(function(){
+    var chk = document.getElementById('anaIncluirGE');
+    if(chk && chk.offsetParent !== null) atualizar();
+  }, 800);
+})();
+
+// ============ v535: Faixa preta com Lucro do período embaixo do gráfico da meta ============
+(function(){
+  function _lerLucro(){
+    var el = document.getElementById('anaLucro');
+    if(!el) return 0;
+    var s = (el.textContent||'').replace(/[^0-9,.-]/g,'').replace(',','.');
+    return parseFloat(s)||0;
+  }
+
+  function _garantirFaixa(){
+    var meta = document.getElementById('anaMetaSemana');
+    if(!meta) return null;
+    var faixa = document.getElementById('anaLucroFaixa');
+    if(faixa) return faixa;
+    faixa = document.createElement('div');
+    faixa.id = 'anaLucroFaixa';
+    faixa.style.cssText = ''
+      + 'background:#000;'
+      + 'color:#fff;'
+      + 'padding:12px 20px 14px;'
+      + 'text-align:center;'
+      + 'font-family:inherit;'
+      + 'width:100%;'
+      + 'box-sizing:border-box;'
+      + 'margin:0;';
+    meta.parentNode.insertBefore(faixa, meta.nextSibling);
+    return faixa;
+  }
+
+  function _atualizar(){
+    var faixa = _garantirFaixa();
+    if(!faixa) return;
+    var lucro = _lerLucro();
+    var novaChave = lucro.toFixed(2);
+    if(faixa._chave === novaChave) return;
+    faixa._chave = novaChave;
+    var lucroStr = 'R$ ' + lucro.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g, function(m,i,f){
+      // Formata milhar com ponto (só na parte inteira)
+      return m;
+    });
+    // Formatação BR
+    lucroStr = 'R$ ' + Math.round(lucro).toLocaleString('pt-BR');
+
+    faixa.innerHTML = ''
+      + '<div style="font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;opacity:.75;">Seu lucro nesse período foi de:</div>'
+      + '<div style="font-size:26px;font-weight:900;color:var(--secondary);line-height:1;">' + lucroStr + '</div>';
+  }
+
+  setInterval(function(){
+    var m = document.getElementById('anaMetaSemana');
+    if(m && m.offsetParent !== null){ _atualizar(); }
+  }, 800);
+})();
+
+
+
+
+
 
 
 
@@ -15829,5 +15948,6 @@ var _eficIv2 = setInterval(function(){
 
 
 
+
 </body>
-                                                                                                                                                                                                 </html>
+  </html>
