@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v544';
+window.APP_VERSAO = 'v547';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -9074,7 +9074,8 @@ function cfgRestaurarBackup(input) {
     for(var i=0;i<all.length;i++){
       var el=all[i];
       var cs;
-      try { cs=window.getComputedStyle(el); } catch(e){ continue; }
+      var view = doc.defaultView || window;   // precisa ser a view DO documento clonado
+      try { cs=view.getComputedStyle(el); } catch(e){ continue; }
       var props=['color','backgroundColor','borderColor','borderTopColor','borderRightColor','borderBottomColor','borderLeftColor','fill','stroke','outlineColor','boxShadow','background','backgroundImage'];
       props.forEach(function(p){
         var v=cs[p];
@@ -9085,6 +9086,15 @@ function cfgRestaurarBackup(input) {
           } catch(e) {}
         }
       });
+      // Sombras e animacoes com funcoes de cor modernas nao sao convertiveis:
+      // removidas no clone para nao travarem o parser (nao afetam a tela real).
+      try {
+        var sh = cs.boxShadow;
+        if(sh && (sh.indexOf('color-mix')>-1 || sh.indexOf('oklch')>-1 || sh.indexOf('color(')>-1)){
+          el.style.boxShadow='none';
+        }
+        if(cs.animationName && cs.animationName!=='none'){ el.style.animation='none'; }
+      } catch(e){}
     }
   }
 
@@ -9544,7 +9554,8 @@ function cfgRestaurarBackup(input) {
     for(var i=0;i<all.length;i++){
       var el=all[i];
       var cs;
-      try { cs=window.getComputedStyle(el); } catch(e){ continue; }
+      var view = doc.defaultView || window;   // precisa ser a view DO documento clonado
+      try { cs=view.getComputedStyle(el); } catch(e){ continue; }
       var props=['color','backgroundColor','borderColor','borderTopColor','borderRightColor','borderBottomColor','borderLeftColor','fill','stroke','outlineColor','boxShadow','background','backgroundImage'];
       props.forEach(function(p){
         var v=cs[p];
@@ -15846,8 +15857,9 @@ var _eficIv2 = setInterval(function(){
     var divi = document.getElementById('anaDivisor');
 
     // estrutura intacta? nada a fazer
-    if(grid && linha && colL && divi && grid.contains(label) && linha.contains(chk)
-       && grid.contains(colL) && grid.contains(divi)){
+    var swOk = document.getElementById('anaSwitchUI');
+    if(grid && linha && colL && divi && swOk && grid.contains(label) && linha.contains(chk)
+       && linha.contains(swOk) && grid.contains(colL) && grid.contains(divi)){
       return { grid:grid, linha:linha, colL:colL, label:label };
     }
 
@@ -15901,7 +15913,22 @@ var _eficIv2 = setInterval(function(){
     if(linha.parentNode !== label) label.appendChild(linha);
     if(chk.parentNode !== linha) linha.appendChild(chk);
     chk.removeAttribute('style');
-    chk.className = 'anaSwitch';
+    chk.className = 'anaSwitchInput';
+
+    // visual do switch em elementos reais (html2canvas nao lida bem com
+    // pseudo-elemento aplicado em <input>)
+    var sw = document.getElementById('anaSwitchUI');
+    if(!sw){
+      sw = document.createElement('span');
+      sw.id = 'anaSwitchUI';
+      sw.className = 'anaSwitchUI';
+      var dot = document.createElement('span');
+      dot.className = 'anaSwitchDot';
+      sw.appendChild(dot);
+    }
+    if(sw.previousSibling !== chk || sw.parentNode !== linha){
+      linha.insertBefore(sw, chk.nextSibling);
+    }
 
     var box = document.getElementById('anaGEValor');
     if(!box){
@@ -15915,6 +15942,10 @@ var _eficIv2 = setInterval(function(){
   }
 
   function atualizar(){
+    // durante o compartilhamento existe um clone do modal no documento;
+    // mexer no DOM nesse momento corrompe a captura
+    if(document.querySelectorAll('#anaResumoGrid').length > 1) return;
+
     var st = montar();
     if(!st) return;
 
@@ -15963,6 +15994,76 @@ var _eficIv2 = setInterval(function(){
     if(e.target && e.target.id === 'anaIncluirGE') setTimeout(atualizar, 0);
   }, true);
 })();
+
+// ============ v547: Blindagem do html2canvas contra propriedade vazia ============
+// O parser do html2canvas 1.4.1 lanca "Error parsing CSS component value,
+// unexpected EOF" quando getComputedStyle devolve string vazia para alguma
+// propriedade que ele le. O caso classico em WebKit/iOS e paint-order.
+// A lista abaixo e proposital e curta: so propriedades cujo valor neutro NAO
+// altera o layout. Nada de display, position, margin ou padding aqui - se uma
+// dessas fosse sobrescrita por engano, a imagem sairia com o layout quebrado.
+(function(){
+  var PADROES = {
+    paintOrder:'normal',
+    letterSpacing:'normal',
+    fontVariant:'normal',
+    textDecorationLine:'none',
+    textDecorationColor:'rgb(0, 0, 0)',
+    listStyleType:'none',
+    listStylePosition:'outside',
+    listStyleImage:'none',
+    wordBreak:'normal',
+    overflowWrap:'normal',
+    direction:'ltr',
+    backgroundClip:'border-box',
+    backgroundOrigin:'padding-box'
+  };
+  var NOMES = Object.keys(PADROES);
+
+  function sanear(doc){
+    var win = doc.defaultView || window;
+    var els = doc.querySelectorAll('*');
+    var corrigidos = 0;
+    for(var i=0; i<els.length; i++){
+      var el = els[i], cs;
+      try { cs = win.getComputedStyle(el); } catch(e){ continue; }
+      if(!cs) continue;
+      for(var j=0; j<NOMES.length; j++){
+        var nome = NOMES[j], v;
+        try { v = cs[nome]; } catch(e){ continue; }
+        // so age em string vazia de verdade; undefined significa que o
+        // navegador nao tem a propriedade, e ai nao ha o que corrigir
+        if(v === ''){
+          try { el.style[nome] = PADROES[nome]; corrigidos++; } catch(e){}
+        }
+      }
+    }
+    return corrigidos;
+  }
+
+  function instalar(){
+    if(typeof window.html2canvas !== 'function'){ setTimeout(instalar, 400); return; }
+    if(window.html2canvas._blindado) return;
+    var orig = window.html2canvas;
+    var novo = function(elemento, opcoes){
+      opcoes = opcoes || {};
+      var onCloneUsuario = opcoes.onclone;
+      opcoes.onclone = function(docClonado, elClonado){
+        try { sanear(docClonado); } catch(e){}
+        if(typeof onCloneUsuario === 'function'){
+          return onCloneUsuario(docClonado, elClonado);
+        }
+      };
+      return orig.call(this, elemento, opcoes);
+    };
+    novo._blindado = true;
+    for(var k in orig){ if(orig.hasOwnProperty(k)) novo[k] = orig[k]; }
+    window.html2canvas = novo;
+  }
+  instalar();
+})();
+
+
 
 
 
@@ -16018,7 +16119,7 @@ var _eficIv2 = setInterval(function(){
 /* v538: resumo em 2 colunas - lucro do periodo | incluir ganho extra */
 #anaResumoGrid{
   display:grid;
-  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  grid-template-columns:1fr auto 1fr;
   gap:0;
   align-items:center;
   margin-top:14px;
@@ -16052,35 +16153,55 @@ var _eficIv2 = setInterval(function(){
   white-space:nowrap;
 }
 #anaResumoGrid .anaLucroCif{ font-size:13px; font-weight:700; color:#fff; }
-#anaResumoGrid .anaLucroNum{ font-size:clamp(20px, 6.7vw, 26px); font-weight:900; letter-spacing:0; }
-#anaResumoGrid .anaLucroNum.anaLucroNumSm{ font-size:clamp(17px, 5.4vw, 21px); }
-#anaResumoGrid .anaLucroNum.anaLucroNumXS{ font-size:clamp(15px, 4.6vw, 19px); }
-#anaResumoGrid .anaLucroNum.anaLucroNumXXS{ font-size:clamp(13px, 3.9vw, 16px); }
+/* tamanhos fixos por faixa de tela - clamp() quebra o parser do html2canvas */
+#anaResumoGrid .anaLucroNum{ font-size:25px; font-weight:900; letter-spacing:0; }
+#anaResumoGrid .anaLucroNum.anaLucroNumSm{ font-size:20px; }
+#anaResumoGrid .anaLucroNum.anaLucroNumXS{ font-size:17px; }
+#anaResumoGrid .anaLucroNum.anaLucroNumXXS{ font-size:14px; }
+@media (max-width:374px){
+  #anaResumoGrid .anaLucroNum{ font-size:23px; }
+  #anaResumoGrid .anaLucroNum.anaLucroNumSm{ font-size:18px; }
+  #anaResumoGrid .anaLucroNum.anaLucroNumXS{ font-size:15px; }
+  #anaResumoGrid .anaLucroNum.anaLucroNumXXS{ font-size:13px; }
+}
+@media (max-width:339px){
+  #anaResumoGrid .anaLucroNum{ font-size:19px; }
+  #anaResumoGrid .anaLucroNum.anaLucroNumSm{ font-size:15px; }
+  #anaResumoGrid .anaLucroNum.anaLucroNumXS{ font-size:13px; }
+  #anaResumoGrid .anaLucroNum.anaLucroNumXXS{ font-size:11px; }
+}
 
 #anaResumoGrid .anaColGE{ cursor:pointer; display:block; }
 #anaGELbl{ font-size:13px !important; margin-bottom:6px; white-space:nowrap; }
 #anaGELbl .anaGEDestaque{ color:var(--secondary); font-weight:700; letter-spacing:.3px; }
 #anaGELinha{ display:flex; align-items:center; gap:9px; width:100%; }
 
-/* switch de ligar/desligar */
-input.anaSwitch{
-  appearance:none; -webkit-appearance:none;
-  width:40px !important; height:23px !important;
-  flex:0 0 auto !important;
-  margin:0 !important; padding:0 !important;
-  border:none !important; border-radius:999px !important;
+/* switch de ligar/desligar - elementos reais, sem pseudo-elemento em input */
+input.anaSwitchInput{
+  display:none;   /* o clique continua vindo do <label>; fora do alcance do html2canvas */
+}
+.anaSwitchUI{
+  display:inline-block;
+  position:relative;
+  width:40px; height:23px;
+  flex:0 0 auto;
+  border-radius:999px;
   background:rgba(255,255,255,.22);
-  position:relative; cursor:pointer;
+  cursor:pointer;
   transition:background-color .25s ease;
 }
-input.anaSwitch::after{
-  content:''; position:absolute; top:3px; left:3px;
-  width:17px; height:17px; border-radius:50%;
-  background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3);
-  transition:transform .25s cubic-bezier(.34,1.4,.64,1);
+.anaSwitchDot{
+  display:block;
+  position:absolute;
+  top:3px; left:3px;
+  width:17px; height:17px;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.3);
+  transition:transform .25s ease;
 }
-input.anaSwitch:checked{ background:var(--secondary); }
-input.anaSwitch:checked::after{ transform:translateX(17px); }
+input.anaSwitchInput:checked + .anaSwitchUI{ background:var(--secondary); }
+input.anaSwitchInput:checked + .anaSwitchUI .anaSwitchDot{ transform:translateX(17px); }
 
 /* caixinha do valor do ganho extra */
 .anaGEBox{
@@ -16109,4 +16230,4 @@ input.anaSwitch:checked::after{ transform:translateX(17px); }
 
 
 </body>
-                                                   </html>
+                                                                                                                                                            </html>
