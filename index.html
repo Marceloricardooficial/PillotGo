@@ -3797,7 +3797,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v533';
+window.APP_VERSAO = 'v544';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -15382,6 +15382,7 @@ var _eficIv2 = setInterval(function(){
     var kids = box.children;
     for(var i=0; i<kids.length; i++){
       var el = kids[i];
+      if(el.id === 'anaMetaBalao') continue; // nunca esconder o balão da meta
       var t = (el.textContent||'').toLowerCase();
       // Header tem "meta" e "%"
       if(t.indexOf('meta') >= 0 && t.indexOf('%') >= 0){
@@ -15525,6 +15526,8 @@ var _eficIv2 = setInterval(function(){
       box.appendChild(balao);
     }
 
+    balao.style.display = 'flex';
+
     var v = pegarValores();
     var cont = document.getElementById('anaMetaBalaoConteudo');
     if(cont){
@@ -15537,9 +15540,14 @@ var _eficIv2 = setInterval(function(){
       var numStr = num.toLocaleString('pt-BR');
       cont.innerHTML = ''
         + '<i class="fa-solid fa-bullseye" style="color:var(--secondary);font-size:16px;"></i>'
-        + '<span style="font-size:10px;font-weight:700;color:#64748b;margin-right:-6px;">R$</span>'
-        + '<span style="font-size:15px;font-weight:800;color:#0f172a;">' + numStr + '</span>'
-        + '<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--secondary);color:#fff;font-size:10px;font-weight:900;">' + v.pct + '</span>';
+        + '<div style="display:flex;flex-direction:column;line-height:1;gap:1px;">'
+        +   '<span style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;">Sua meta é de:</span>'
+        +   '<div style="display:flex;align-items:baseline;gap:2px;">'
+        +     '<span style="font-size:10px;font-weight:700;color:#64748b;">R$</span>'
+        +     '<span style="font-size:17px;font-weight:800;color:#0f172a;">' + numStr + '</span>'
+        +   '</div>'
+        + '</div>'
+        + '<span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:var(--secondary);color:#fff;font-size:14px;font-weight:900;margin:-6px -6px -6px 2px;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.15);">' + v.pct + '</span>';
     }
     return true;
   }
@@ -15799,6 +15807,173 @@ var _eficIv2 = setInterval(function(){
   }, 800);
 })();
 
+// ============ v538: Resumo em 2 colunas (lucro | incluir ganho extra) ============
+(function(){
+  function lerLucro(){
+    var el = document.getElementById('anaValLucro');
+    if(!el) return null;
+    var s = (el.textContent||'').replace(/[^0-9,.-]/g,'').replace(/\./g,'').replace(',','.');
+    var n = parseFloat(s);
+    return isNaN(n) ? null : n;
+  }
+
+  function totalGE(){
+    try {
+      if(typeof carregarGanhosExtrasList !== 'function') return 0;
+      var ini = (document.getElementById('anaDataInicio')||{}).value || '';
+      var fim = (document.getElementById('anaDataFim')||{}).value || '';
+      var t = 0;
+      carregarGanhosExtrasList().forEach(function(g){
+        if(ini && g.data < ini) return;
+        if(fim && g.data > fim) return;
+        t += parseFloat(g.valor||0);
+      });
+      return t;
+    } catch(e){ return 0; }
+  }
+
+  // Monta a estrutura uma vez; refaz se algo tiver sido desmontado
+  function montar(){
+    var chk = document.getElementById('anaIncluirGE');
+    if(!chk) return null;
+    var label = chk.closest('label');
+    if(!label) return null;
+
+    var grid = document.getElementById('anaResumoGrid');
+    var linha = document.getElementById('anaGELinha');
+    var colL  = document.getElementById('anaColLucro');
+
+    var divi = document.getElementById('anaDivisor');
+
+    // estrutura intacta? nada a fazer
+    if(grid && linha && colL && divi && grid.contains(label) && linha.contains(chk)
+       && grid.contains(colL) && grid.contains(divi)){
+      return { grid:grid, linha:linha, colL:colL, label:label };
+    }
+
+    if(!grid){
+      if(!label.parentNode) return null;
+      grid = document.createElement('div');
+      grid.id = 'anaResumoGrid';
+      label.parentNode.insertBefore(grid, label);
+    }
+
+    if(!colL){
+      colL = document.createElement('div');
+      colL.id = 'anaColLucro';
+      colL.className = 'anaCol';
+    }
+    if(colL.parentNode !== grid) grid.appendChild(colL);
+
+    // divisor pontilhado entre as colunas
+    if(!divi){
+      divi = document.createElement('div');
+      divi.id = 'anaDivisor';
+    }
+    if(divi.parentNode !== grid) grid.appendChild(divi);
+
+    // o proprio label vira a coluna da direita
+    label.removeAttribute('style');
+    label.className = 'anaCol anaColGE';
+    if(label.parentNode !== grid) grid.appendChild(label);
+
+    // esconde o texto original do label
+    Array.prototype.forEach.call(label.children, function(el){
+      if(el.tagName === 'SPAN' && el.id !== 'anaGEValor') el.style.display = 'none';
+    });
+
+    // rotulo novo
+    var lbl = document.getElementById('anaGELbl');
+    if(!lbl){
+      lbl = document.createElement('div');
+      lbl.id = 'anaGELbl';
+      lbl.className = 'anaColLbl';
+    }
+    var htmlLbl = 'Acrescentar<br><span class="anaGEDestaque">GANHO EXTRA</span>';
+    if(lbl.innerHTML !== htmlLbl) lbl.innerHTML = htmlLbl;
+    if(lbl.parentNode !== label) label.insertBefore(lbl, label.firstChild);
+
+    // linha com switch + valor
+    if(!linha){
+      linha = document.createElement('div');
+      linha.id = 'anaGELinha';
+    }
+    if(linha.parentNode !== label) label.appendChild(linha);
+    if(chk.parentNode !== linha) linha.appendChild(chk);
+    chk.removeAttribute('style');
+    chk.className = 'anaSwitch';
+
+    var box = document.getElementById('anaGEValor');
+    if(!box){
+      box = document.createElement('span');
+      box.id = 'anaGEValor';
+      box.className = 'anaGEBox';
+    }
+    if(box.parentNode !== linha) linha.appendChild(box);
+
+    return { grid:grid, linha:linha, colL:colL, label:label };
+  }
+
+  function atualizar(){
+    var st = montar();
+    if(!st) return;
+
+    // ---- coluna esquerda: lucro ----
+    var lucro = lerLucro();
+    var lucroStr = (lucro === null) ? '--' : lucro.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    if(st.colL._chave !== lucroStr){
+      st.colL._chave = lucroStr;
+      // numero longo (ex: filtro de ano) reduz a fonte para nao estourar a coluna
+      var n = lucroStr.length;
+      var clsNum = n >= 13 ? ' anaLucroNumXXS'
+                 : n >= 11 ? ' anaLucroNumXS'
+                 : n >= 9  ? ' anaLucroNumSm' : '';
+      // faixas calibradas para a coluna de ~154px (com divisor e margens)
+      st.colL.innerHTML = ''
+        + '<div class="anaColLbl">Seus ganhos foram de:</div>'
+        + '<div class="anaLucroVal"><span class="anaLucroCif">R$</span><span class="anaLucroNum' + clsNum + '">' + lucroStr + '</span></div>';
+    }
+
+    // ---- coluna direita: valor do ganho extra ----
+    var box = document.getElementById('anaGEValor');
+    var chk = document.getElementById('anaIncluirGE');
+    if(!box || !chk) return;
+    box.style.display = 'inline-flex';
+
+    var ativo = !!chk.checked;
+    var geStr = totalGE().toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    var chave = geStr + '|' + ativo;
+    if(box._chave === chave) return;
+    var mudouEstado = (box._chave !== undefined && box._estado !== ativo);
+    box._chave = chave;
+    box._estado = ativo;
+
+    box.innerHTML = '<span class="anaGECifrao">R$</span><span class="anaGENum">' + geStr + '</span>';
+    box.classList.toggle('ativo', ativo);
+    box.classList.remove('anaGEPop');
+    if(mudouEstado && ativo){
+      void box.offsetWidth;
+      box.classList.add('anaGEPop');
+    }
+  }
+
+  setInterval(atualizar, 500);
+  setTimeout(atualizar, 300);
+  document.addEventListener('change', function(e){
+    if(e.target && e.target.id === 'anaIncluirGE') setTimeout(atualizar, 0);
+  }, true);
+})();
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -15827,7 +16002,111 @@ var _eficIv2 = setInterval(function(){
 </style>
 
 
+<style>
+/* v535: elimina a barra de rolagem horizontal do modal de Analise.
+   Os widgets de navegacao usam margin lateral negativa (full-bleed) e
+   sangravam alguns px; o modal so tinha overflow-y definido.
+   Corta apenas o eixo X - o balao da meta sangra na vertical, nao e afetado. */
+#modalAnalytics { overflow-x: hidden !important; }
+</style>
+
+
+
+
+
+<style>
+/* v538: resumo em 2 colunas - lucro do periodo | incluir ganho extra */
+#anaResumoGrid{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  gap:0;
+  align-items:center;
+  margin-top:14px;
+  margin-bottom:30px;      /* respiro de ~2 paragrafos antes da proxima secao */
+  font-family:inherit;
+}
+#anaDivisor{
+  align-self:center;
+  width:0;
+  height:46px;
+  border-left:1px dotted rgba(255,255,255,.55);
+}
+#anaColLucro{ text-align:right; padding-right:16px; }
+#anaResumoGrid .anaColGE{ text-align:left; padding-left:16px; }
+#anaResumoGrid .anaLucroVal{ justify-content:flex-end; }
+#anaGELinha{ justify-content:flex-start; }
+#anaResumoGrid .anaCol{ min-width:0; }
+#anaResumoGrid .anaColLbl{
+  font-family:'Roboto', sans-serif !important;  /* Poppins so tem 600/700 carregados */
+  font-size:11.5px;
+  font-weight:400 !important;
+  color:#fff;
+  letter-spacing:.2px;
+  line-height:1.35;
+  opacity:.92;
+  margin-bottom:4px;
+}
+#anaResumoGrid .anaLucroVal{
+  display:flex; align-items:baseline; gap:3px;
+  color:var(--secondary); line-height:1;
+  white-space:nowrap;
+}
+#anaResumoGrid .anaLucroCif{ font-size:13px; font-weight:700; color:#fff; }
+#anaResumoGrid .anaLucroNum{ font-size:clamp(20px, 6.7vw, 26px); font-weight:900; letter-spacing:0; }
+#anaResumoGrid .anaLucroNum.anaLucroNumSm{ font-size:clamp(17px, 5.4vw, 21px); }
+#anaResumoGrid .anaLucroNum.anaLucroNumXS{ font-size:clamp(15px, 4.6vw, 19px); }
+#anaResumoGrid .anaLucroNum.anaLucroNumXXS{ font-size:clamp(13px, 3.9vw, 16px); }
+
+#anaResumoGrid .anaColGE{ cursor:pointer; display:block; }
+#anaGELbl{ font-size:13px !important; margin-bottom:6px; white-space:nowrap; }
+#anaGELbl .anaGEDestaque{ color:var(--secondary); font-weight:700; letter-spacing:.3px; }
+#anaGELinha{ display:flex; align-items:center; gap:9px; width:100%; }
+
+/* switch de ligar/desligar */
+input.anaSwitch{
+  appearance:none; -webkit-appearance:none;
+  width:40px !important; height:23px !important;
+  flex:0 0 auto !important;
+  margin:0 !important; padding:0 !important;
+  border:none !important; border-radius:999px !important;
+  background:rgba(255,255,255,.22);
+  position:relative; cursor:pointer;
+  transition:background-color .25s ease;
+}
+input.anaSwitch::after{
+  content:''; position:absolute; top:3px; left:3px;
+  width:17px; height:17px; border-radius:50%;
+  background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3);
+  transition:transform .25s cubic-bezier(.34,1.4,.64,1);
+}
+input.anaSwitch:checked{ background:var(--secondary); }
+input.anaSwitch:checked::after{ transform:translateX(17px); }
+
+/* caixinha do valor do ganho extra */
+.anaGEBox{
+  flex-shrink:0;
+  display:inline-flex; align-items:baseline; gap:3px;
+  padding:5px 10px; border-radius:999px;
+  background:rgba(255,255,255,.06);
+  border:2px solid rgba(255,255,255,.14);
+  color:#94a3b8; white-space:nowrap;
+  transition:border-color .25s ease, color .25s ease, background-color .25s ease, box-shadow .25s ease;
+}
+.anaGEBox .anaGECifrao{ font-size:9px; font-weight:700; opacity:.85; }
+.anaGEBox .anaGENum{ font-size:12px; font-weight:900; letter-spacing:.2px; }
+.anaGEBox.ativo{
+  border-color:var(--secondary); color:var(--secondary);
+  background:rgba(255,255,255,.10);
+  box-shadow:0 0 0 3px rgba(255,255,255,.05);
+}
+.anaGEBox.anaGEPop{ animation:anaGEPop .45s cubic-bezier(.34,1.56,.64,1); }
+@keyframes anaGEPop{
+  0%{ transform:scale(1); } 45%{ transform:scale(1.16); } 100%{ transform:scale(1); }
+}
+</style>
+
+
 
 
 </body>
-                                                                                                                                                                                                 </html>
+                                                   </html>
