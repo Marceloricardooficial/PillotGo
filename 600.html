@@ -574,8 +574,70 @@
     }
 }
 </style>
+<!-- v593: splash no topo, aparece antes de qualquer layout -->
+<style>
+#appSplash {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  background: #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+#appSplash.hide {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+#appSplash .splash-logo {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  border-radius: 26px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+  animation: splashLogoIn 0.6s cubic-bezier(0.34,1.56,0.64,1);
+  margin-bottom: 22px;
+}
+@keyframes splashLogoIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+#appSplash .splash-txt {
+  font-family: 'Poppins', sans-serif;
+  font-size: 24px;
+  letter-spacing: 0.3px;
+  text-transform: none;
+  margin-bottom: 26px;
+  animation: splashTxtIn 0.6s ease 0.3s both;
+}
+@keyframes splashTxtIn {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+#appSplash .splash-spinner {
+  width: 34px;
+  height: 34px;
+  border: 4px solid rgba(0,0,0,0.15);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: splashSpin 0.8s linear infinite;
+}
+@keyframes splashSpin {
+  to { transform: rotate(360deg); }
+}
+</style>
 </head>
 <body>
+<!-- v593: splash estatica - cobre a tela desde o primeiro pixel ate os patches terminarem -->
+<div id="appSplash">
+  <img src="512.png" class="splash-logo" alt="Logo" onerror="this.style.display='none'">
+  <div class="splash-txt"><span style="color:#1e293b;font-weight:900;">DIRIJA</span><span style="color:#000;font-weight:300;">COM</span><span style="color:#000;font-weight:900;">META</span></div>
+  <div class="splash-spinner"></div>
+</div>
 <div class="container" id="dashboard">
 <!-- BARRA DE STATUS ONLINE -->
 <div id="onlineStatusBar">
@@ -3797,7 +3859,7 @@ header {
 // ================================================================
 // VERSÃO DO APP - atualizada a cada patch
 // ================================================================
-window.APP_VERSAO = 'v534';
+window.APP_VERSAO = 'v586';
 
 // ================================================================
 // PATCH MOTORIZZE v2 - 3 Correções
@@ -9074,7 +9136,8 @@ function cfgRestaurarBackup(input) {
     for(var i=0;i<all.length;i++){
       var el=all[i];
       var cs;
-      try { cs=window.getComputedStyle(el); } catch(e){ continue; }
+      var view = doc.defaultView || window;   // precisa ser a view DO documento clonado
+      try { cs=view.getComputedStyle(el); } catch(e){ continue; }
       var props=['color','backgroundColor','borderColor','borderTopColor','borderRightColor','borderBottomColor','borderLeftColor','fill','stroke','outlineColor','boxShadow','background','backgroundImage'];
       props.forEach(function(p){
         var v=cs[p];
@@ -9085,6 +9148,15 @@ function cfgRestaurarBackup(input) {
           } catch(e) {}
         }
       });
+      // Sombras e animacoes com funcoes de cor modernas nao sao convertiveis:
+      // removidas no clone para nao travarem o parser (nao afetam a tela real).
+      try {
+        var sh = cs.boxShadow;
+        if(sh && (sh.indexOf('color-mix')>-1 || sh.indexOf('oklch')>-1 || sh.indexOf('color(')>-1)){
+          el.style.boxShadow='none';
+        }
+        if(cs.animationName && cs.animationName!=='none'){ el.style.animation='none'; }
+      } catch(e){}
     }
   }
 
@@ -9544,7 +9616,8 @@ function cfgRestaurarBackup(input) {
     for(var i=0;i<all.length;i++){
       var el=all[i];
       var cs;
-      try { cs=window.getComputedStyle(el); } catch(e){ continue; }
+      var view = doc.defaultView || window;   // precisa ser a view DO documento clonado
+      try { cs=view.getComputedStyle(el); } catch(e){ continue; }
       var props=['color','backgroundColor','borderColor','borderTopColor','borderRightColor','borderBottomColor','borderLeftColor','fill','stroke','outlineColor','boxShadow','background','backgroundImage'];
       props.forEach(function(p){
         var v=cs[p];
@@ -14182,61 +14255,7 @@ var _eficIv2 = setInterval(function(){
 </script>
 
 <!-- ============ SPLASH SCREEN CUSTOMIZADA ============ -->
-<style>
-#appSplash {
-  position: fixed;
-  inset: 0;
-  z-index: 2147483647;
-  background: #f3f4f6;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  transition: opacity 0.5s ease, visibility 0.5s ease;
-}
-#appSplash.hide {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-#appSplash .splash-logo {
-  width: 120px;
-  height: 120px;
-  object-fit: contain;
-  border-radius: 26px;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
-  animation: splashLogoIn 0.6s cubic-bezier(0.34,1.56,0.64,1);
-  margin-bottom: 22px;
-}
-@keyframes splashLogoIn {
-  0% { transform: scale(0.5); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-}
-#appSplash .splash-txt {
-  font-family: 'Poppins', sans-serif;
-  font-size: 24px;
-  letter-spacing: 0.3px;
-  text-transform: none;
-  margin-bottom: 26px;
-  animation: splashTxtIn 0.6s ease 0.3s both;
-}
-@keyframes splashTxtIn {
-  0% { transform: translateY(10px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
-}
-#appSplash .splash-spinner {
-  width: 34px;
-  height: 34px;
-  border: 4px solid rgba(0,0,0,0.15);
-  border-top-color: #000;
-  border-radius: 50%;
-  animation: splashSpin 0.8s linear infinite;
-}
-@keyframes splashSpin {
-  to { transform: rotate(360deg); }
-}
-</style>
+<!-- v593: CSS da splash movido para o <head> -->
 
 <script>
 (function(){
@@ -14278,14 +14297,16 @@ var _eficIv2 = setInterval(function(){
     criarSplash();
   }
 
-  // Esconde quando carregar (mínimo 1s pra não piscar, máximo ~1.8s)
-  var splashStart = Date.now();
+  // v593: so some depois do 'load' + tempo para os patches aplicarem.
+  // Minimo 1s desde a abertura (nao pisca), maximo 5s (nunca trava o app).
   var MIN_MS = 1000;
-  var MAX_MS = 1800;
-
+  var ESPERA_PATCHES = 1300;
+  var MAX_MS = 5000;
+  function desdeAbertura(){
+    try { return performance.now(); } catch(e){ return 0; }
+  }
   function tentarEsconder(){
-    var decorrido = Date.now() - splashStart;
-    var restante = Math.max(0, MIN_MS - decorrido);
+    var restante = Math.max(ESPERA_PATCHES, MIN_MS - desdeAbertura());
     setTimeout(esconderSplash, restante);
   }
 
@@ -14295,7 +14316,7 @@ var _eficIv2 = setInterval(function(){
     window.addEventListener('load', tentarEsconder);
   }
   // Fallback - garante que some mesmo se 'load' não disparar
-  setTimeout(esconderSplash, MAX_MS);
+  setTimeout(esconderSplash, Math.max(0, MAX_MS - desdeAbertura()));
 })();
 </script>
 
@@ -15382,6 +15403,7 @@ var _eficIv2 = setInterval(function(){
     var kids = box.children;
     for(var i=0; i<kids.length; i++){
       var el = kids[i];
+      if(el.id === 'anaMetaBalao') continue; // nunca esconder o balão da meta
       var t = (el.textContent||'').toLowerCase();
       // Header tem "meta" e "%"
       if(t.indexOf('meta') >= 0 && t.indexOf('%') >= 0){
@@ -15525,6 +15547,8 @@ var _eficIv2 = setInterval(function(){
       box.appendChild(balao);
     }
 
+    balao.style.display = 'flex';
+
     var v = pegarValores();
     var cont = document.getElementById('anaMetaBalaoConteudo');
     if(cont){
@@ -15535,16 +15559,19 @@ var _eficIv2 = setInterval(function(){
         num = Math.round(parseFloat(raw)||0);
       } catch(e){}
       var numStr = num.toLocaleString('pt-BR');
+      // abaixo de 70% da meta, o circulo fica vermelho (vale para dia, semana, mes e ano)
+      var pctNum = parseFloat(String(v.pct||'').replace('%','').replace(',','.'));
+      var corCirculo = (!isNaN(pctNum) && pctNum < 70) ? '#ef4444' : 'var(--secondary)';
       cont.innerHTML = ''
         + '<i class="fa-solid fa-bullseye" style="color:var(--secondary);font-size:16px;"></i>'
         + '<div style="display:flex;flex-direction:column;line-height:1;gap:1px;">'
-        +   '<span style="font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.4px;">Sua meta é de:</span>'
+        +   '<span style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;">Sua meta é de:</span>'
         +   '<div style="display:flex;align-items:baseline;gap:2px;">'
         +     '<span style="font-size:10px;font-weight:700;color:#64748b;">R$</span>'
-        +     '<span style="font-size:15px;font-weight:800;color:#0f172a;">' + numStr + '</span>'
+        +     '<span style="font-size:17px;font-weight:800;color:#0f172a;">' + numStr + '</span>'
         +   '</div>'
         + '</div>'
-        + '<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--secondary);color:#fff;font-size:10px;font-weight:900;">' + v.pct + '</span>';
+        + '<span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:' + corCirculo + ';color:#fff;font-size:14px;font-weight:900;margin:-6px -6px -6px 2px;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.15);">' + v.pct + '</span>';
     }
     return true;
   }
@@ -15669,7 +15696,7 @@ var _eficIv2 = setInterval(function(){
     if(bloco) return bloco;
     bloco = document.createElement('div');
     bloco.id = 'anaDesempenho';
-    bloco.style.cssText = 'background:#fff;padding:12px 20px 16px;border-bottom:1px solid #f1f5f9;font-family:inherit;';
+    bloco.style.cssText = 'background:#fff;padding:30px 20px 4px;font-family:inherit;';
     grid.parentNode.insertBefore(bloco, grid.nextSibling);
     return bloco;
   }
@@ -15737,7 +15764,13 @@ var _eficIv2 = setInterval(function(){
     bloco._chave = novaChave;
 
     bloco.innerHTML = ''
-      + '<div style="font-weight:800;font-size:11px;text-transform:uppercase;color:#1e293b;letter-spacing:.5px;margin-bottom:10px;"><i class="fa-solid fa-gauge-high" style="color:var(--secondary);margin-right:6px;"></i>Desempenho</div>'
+      + '<div class="glxCabecalho glxCentro" style="margin-bottom:14px;">'
+      +   '<div class="glxTopo">'
+      +     '<span class="glxIcone"><i class="fa-solid fa-gauge-high"></i></span>'
+      +     '<span class="glxTitulo">Desempenho</span>'
+      +   '</div>'
+      +   '<div class="glxSub">Acompanhe seus ganhos</div>'
+      + '</div>'
       + '<div style="display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;">'
       // Coluna 1: Donut de score
       +   '<div style="position:relative;width:110px;height:110px;">'
@@ -15804,6 +15837,1912 @@ var _eficIv2 = setInterval(function(){
   }, 800);
 })();
 
+// ============ v538: Resumo em 2 colunas (lucro | incluir ganho extra) ============
+(function(){
+  function lerLucro(){
+    var el = document.getElementById('anaValLucro');
+    if(!el) return null;
+    var s = (el.textContent||'').replace(/[^0-9,.-]/g,'').replace(/\./g,'').replace(',','.');
+    var n = parseFloat(s);
+    return isNaN(n) ? null : n;
+  }
+
+  function totalGE(){
+    try {
+      if(typeof carregarGanhosExtrasList !== 'function') return 0;
+      var ini = (document.getElementById('anaDataInicio')||{}).value || '';
+      var fim = (document.getElementById('anaDataFim')||{}).value || '';
+      var t = 0;
+      carregarGanhosExtrasList().forEach(function(g){
+        if(ini && g.data < ini) return;
+        if(fim && g.data > fim) return;
+        t += parseFloat(g.valor||0);
+      });
+      return t;
+    } catch(e){ return 0; }
+  }
+
+  // Monta a estrutura uma vez; refaz se algo tiver sido desmontado
+  function montar(){
+    var chk = document.getElementById('anaIncluirGE');
+    if(!chk) return null;
+    var label = chk.closest('label');
+    if(!label) return null;
+
+    var grid = document.getElementById('anaResumoGrid');
+    var linha = document.getElementById('anaGELinha');
+    var colL  = document.getElementById('anaColLucro');
+
+    var divi = document.getElementById('anaDivisor');
+
+    // estrutura intacta? nada a fazer
+    var swOk = document.getElementById('anaSwitchUI');
+    if(grid && linha && colL && divi && swOk && grid.contains(label) && linha.contains(chk)
+       && linha.contains(swOk) && grid.contains(colL) && grid.contains(divi)){
+      return { grid:grid, linha:linha, colL:colL, label:label };
+    }
+
+    if(!grid){
+      if(!label.parentNode) return null;
+      grid = document.createElement('div');
+      grid.id = 'anaResumoGrid';
+      label.parentNode.insertBefore(grid, label);
+    }
+
+    if(!colL){
+      colL = document.createElement('div');
+      colL.id = 'anaColLucro';
+      colL.className = 'anaCol';
+    }
+    if(colL.parentNode !== grid) grid.appendChild(colL);
+
+    // divisor pontilhado entre as colunas
+    if(!divi){
+      divi = document.createElement('div');
+      divi.id = 'anaDivisor';
+    }
+    if(divi.parentNode !== grid) grid.appendChild(divi);
+
+    // o proprio label vira a coluna da direita
+    label.removeAttribute('style');
+    label.className = 'anaCol anaColGE';
+    if(label.parentNode !== grid) grid.appendChild(label);
+
+    // esconde o texto original do label
+    Array.prototype.forEach.call(label.children, function(el){
+      if(el.tagName === 'SPAN' && el.id !== 'anaGEValor') el.style.display = 'none';
+    });
+
+    // rotulo novo
+    var lbl = document.getElementById('anaGELbl');
+    if(!lbl){
+      lbl = document.createElement('div');
+      lbl.id = 'anaGELbl';
+      lbl.className = 'anaColLbl';
+    }
+    var htmlLbl = 'Acrescentar<br><span class="anaGEDestaque">GANHO EXTRA</span>';
+    if(lbl.innerHTML !== htmlLbl) lbl.innerHTML = htmlLbl;
+    if(lbl.parentNode !== label) label.insertBefore(lbl, label.firstChild);
+
+    // linha com switch + valor
+    if(!linha){
+      linha = document.createElement('div');
+      linha.id = 'anaGELinha';
+    }
+    if(linha.parentNode !== label) label.appendChild(linha);
+    if(chk.parentNode !== linha) linha.appendChild(chk);
+    chk.removeAttribute('style');
+    chk.className = 'anaSwitchInput';
+
+    // visual do switch em elementos reais (html2canvas nao lida bem com
+    // pseudo-elemento aplicado em <input>)
+    var sw = document.getElementById('anaSwitchUI');
+    if(!sw){
+      sw = document.createElement('span');
+      sw.id = 'anaSwitchUI';
+      sw.className = 'anaSwitchUI';
+      var dot = document.createElement('span');
+      dot.className = 'anaSwitchDot';
+      sw.appendChild(dot);
+    }
+    if(sw.previousSibling !== chk || sw.parentNode !== linha){
+      linha.insertBefore(sw, chk.nextSibling);
+    }
+
+    var box = document.getElementById('anaGEValor');
+    if(!box){
+      box = document.createElement('span');
+      box.id = 'anaGEValor';
+      box.className = 'anaGEBox';
+    }
+    if(box.parentNode !== linha) linha.appendChild(box);
+
+    return { grid:grid, linha:linha, colL:colL, label:label };
+  }
+
+  function atualizar(){
+    // durante o compartilhamento existe um clone do modal no documento;
+    // mexer no DOM nesse momento corrompe a captura
+    if(document.querySelectorAll('#anaResumoGrid').length > 1) return;
+
+    var st = montar();
+    if(!st) return;
+
+    // ---- coluna esquerda: lucro ----
+    var lucro = lerLucro();
+    var lucroStr = (lucro === null) ? '--' : lucro.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    if(st.colL._chave !== lucroStr){
+      st.colL._chave = lucroStr;
+      // numero longo (ex: filtro de ano) reduz a fonte para nao estourar a coluna
+      var n = lucroStr.length;
+      var clsNum = n >= 13 ? ' anaLucroNumXXS'
+                 : n >= 11 ? ' anaLucroNumXS'
+                 : n >= 9  ? ' anaLucroNumSm' : '';
+      // faixas calibradas para a coluna de ~154px (com divisor e margens)
+      st.colL.innerHTML = ''
+        + '<div class="anaColLbl">Seus ganhos foram de:</div>'
+        + '<div class="anaLucroVal"><span class="anaLucroCif">R$</span><span class="anaLucroNum' + clsNum + '">' + lucroStr + '</span></div>';
+    }
+
+    // ---- coluna direita: valor do ganho extra ----
+    var box = document.getElementById('anaGEValor');
+    var chk = document.getElementById('anaIncluirGE');
+    if(!box || !chk) return;
+    box.style.display = 'inline-flex';
+
+    var ativo = !!chk.checked;
+    var geStr = totalGE().toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    var chave = geStr + '|' + ativo;
+    if(box._chave === chave) return;
+    var mudouEstado = (box._chave !== undefined && box._estado !== ativo);
+    box._chave = chave;
+    box._estado = ativo;
+
+    box.innerHTML = '<span class="anaGECifrao">R$</span><span class="anaGENum">' + geStr + '</span>';
+    box.classList.toggle('ativo', ativo);
+    box.classList.remove('anaGEPop');
+    if(mudouEstado && ativo){
+      void box.offsetWidth;
+      box.classList.add('anaGEPop');
+    }
+  }
+
+  setInterval(atualizar, 500);
+  setTimeout(atualizar, 300);
+  document.addEventListener('change', function(e){
+    if(e.target && e.target.id === 'anaIncluirGE') setTimeout(atualizar, 0);
+  }, true);
+})();
+
+// ============ v547: Blindagem do html2canvas contra propriedade vazia ============
+// O parser do html2canvas 1.4.1 lanca "Error parsing CSS component value,
+// unexpected EOF" quando getComputedStyle devolve string vazia para alguma
+// propriedade que ele le. O caso classico em WebKit/iOS e paint-order.
+// A lista abaixo e proposital e curta: so propriedades cujo valor neutro NAO
+// altera o layout. Nada de display, position, margin ou padding aqui - se uma
+// dessas fosse sobrescrita por engano, a imagem sairia com o layout quebrado.
+(function(){
+  var PADROES = {
+    paintOrder:'normal',
+    letterSpacing:'normal',
+    fontVariant:'normal',
+    textDecorationLine:'none',
+    textDecorationColor:'rgb(0, 0, 0)',
+    listStyleType:'none',
+    listStylePosition:'outside',
+    listStyleImage:'none',
+    wordBreak:'normal',
+    overflowWrap:'normal',
+    direction:'ltr',
+    backgroundClip:'border-box',
+    backgroundOrigin:'padding-box'
+  };
+  var NOMES = Object.keys(PADROES);
+
+  function sanear(doc){
+    var win = doc.defaultView || window;
+    var els = doc.querySelectorAll('*');
+    var corrigidos = 0;
+    for(var i=0; i<els.length; i++){
+      var el = els[i], cs;
+      try { cs = win.getComputedStyle(el); } catch(e){ continue; }
+      if(!cs) continue;
+      for(var j=0; j<NOMES.length; j++){
+        var nome = NOMES[j], v;
+        try { v = cs[nome]; } catch(e){ continue; }
+        // so age em string vazia de verdade; undefined significa que o
+        // navegador nao tem a propriedade, e ai nao ha o que corrigir
+        if(v === ''){
+          try { el.style[nome] = PADROES[nome]; corrigidos++; } catch(e){}
+        }
+      }
+    }
+    return corrigidos;
+  }
+
+  function instalar(){
+    if(typeof window.html2canvas !== 'function'){ setTimeout(instalar, 400); return; }
+    if(window.html2canvas._blindado) return;
+    var orig = window.html2canvas;
+    var novo = function(elemento, opcoes){
+      opcoes = opcoes || {};
+      var onCloneUsuario = opcoes.onclone;
+      opcoes.onclone = function(docClonado, elClonado){
+        try { sanear(docClonado); } catch(e){}
+        if(typeof onCloneUsuario === 'function'){
+          return onCloneUsuario(docClonado, elClonado);
+        }
+      };
+      return orig.call(this, elemento, opcoes);
+    };
+    novo._blindado = true;
+    for(var k in orig){ if(orig.hasOwnProperty(k)) novo[k] = orig[k]; }
+    window.html2canvas = novo;
+  }
+  instalar();
+})();
+
+// ============ v548: Login com Google (identificacao + base para assinatura) ============
+(function(){
+  // ====================================================================
+  //  COLE AQUI O SEU ID DO CLIENTE (Google Cloud Console > Credenciais)
+  //  Ele termina com .apps.googleusercontent.com
+  // ====================================================================
+  var GOOGLE_CLIENT_ID = '281597167137-1ojqjk94f920f4md7aob0t1ljmmbjslb.apps.googleusercontent.com';
+  // ====================================================================
+
+  var CHAVE = 'motorizzeConta';
+
+  // ---------- armazenamento da conta ----------
+  function lerConta(){
+    try { return JSON.parse(localStorage.getItem(CHAVE) || 'null'); } catch(e){ return null; }
+  }
+  function gravarConta(c){
+    try { localStorage.setItem(CHAVE, JSON.stringify(c)); } catch(e){}
+  }
+  function apagarConta(){
+    try { localStorage.removeItem(CHAVE); } catch(e){}
+  }
+
+  // API publica, para usar depois no controle de assinatura
+  window.MZConta = {
+    get: lerConta,
+    logado: function(){ return !!lerConta(); },
+    plano: function(){ var c = lerConta(); return c && c.plano ? c.plano : 'gratis'; },
+    ehPremium: function(){ return window.MZConta.plano() === 'premium'; },
+    definirPlano: function(p){
+      var c = lerConta(); if(!c) return false;
+      c.plano = p; c.planoDesde = new Date().toISOString(); gravarConta(c); pintarPerfil(); return true;
+    },
+    sair: function(){ sair(); }
+  };
+
+  // ---------- le os dados do token do Google ----------
+  function lerToken(jwt){
+    try {
+      var base = jwt.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+      var txt = decodeURIComponent(escape(atob(base)));
+      return JSON.parse(txt);
+    } catch(e){ return null; }
+  }
+
+  function aoReceberCredencial(resp){
+    var d = resp && resp.credential ? lerToken(resp.credential) : null;
+    if(!d){ avisar('Nao foi possivel ler os dados da conta. Tente de novo.'); return; }
+    var anterior = lerConta();
+    gravarConta({
+      id: d.sub,
+      nome: d.name || '',
+      primeiroNome: d.given_name || '',
+      email: d.email || '',
+      foto: d.picture || '',
+      plano: (anterior && anterior.plano) ? anterior.plano : 'gratis',
+      entrouEm: new Date().toISOString()
+    });
+    fecharTela();
+    pintarPerfil();
+    if(window.MZSetup) setTimeout(function(){ MZSetup.verificar(); }, 350);
+  }
+
+  function sair(){
+    try { if(window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch(e){}
+    apagarConta();
+    pintarPerfil();
+    var m = document.getElementById('mzPerfilMenu');
+    if(m) m.style.display = 'none';
+    abrirTela();
+  }
+
+  // ---------- avatar no topo ----------
+  function pintarPerfil(){
+    var menu = document.getElementById('dropUpMenu');
+    if(!menu) return;
+    var c = lerConta();
+
+    var bloco = document.getElementById('mzPerfilMenuItem');
+    if(!c){
+      if(bloco){ try{ bloco.remove(); }catch(e){} }
+      return;
+    }
+
+    if(bloco && bloco.parentNode !== menu){ try{ bloco.remove(); }catch(e){} bloco = null; }
+    if(!bloco){
+      bloco = document.createElement('div');
+      bloco.id = 'mzPerfilMenuItem';
+      bloco.className = 'mzPerfilMenuItem';
+    }
+    // sempre como primeira linha do menu
+    if(bloco.parentNode !== menu || menu.firstChild !== bloco){
+      menu.insertBefore(bloco, menu.firstChild);
+    }
+
+    var iniciais = (c.nome || c.email || '?').trim().charAt(0).toUpperCase();
+    var avatar = c.foto
+      ? '<img src="' + c.foto + '" alt="" referrerpolicy="no-referrer">'
+      : '<span class="mzIniciais">' + iniciais + '</span>';
+    var primeiro = c.primeiroNome || (c.nome || '').split(' ')[0] || 'Motorista';
+
+    var novoHtml = ''
+      + '<div class="mzPerfilFoto">' + avatar + '</div>'
+      + '<div class="mzPerfilTexto">'
+      +   '<div class="mzPerfilSaudacao">Seja bem-vindo</div>'
+      +   '<div class="mzPerfilNome">' + primeiro + '</div>'
+      + '</div>'
+      + '<button type="button" id="mzSair" class="mzPerfilSair" title="Sair da conta">'
+      +   '<i class="fa-solid fa-right-from-bracket"></i>'
+      + '</button>';
+    if(bloco.innerHTML !== novoHtml) bloco.innerHTML = novoHtml;
+
+    var bs = document.getElementById('mzSair');
+    if(bs) bs.onclick = function(e){ e.stopPropagation(); sair(); };
+  }
+
+  // os itens do menu sao injetados por outros trechos; mantem a linha no topo
+  setInterval(function(){
+    if(lerConta()) pintarPerfil();
+  }, 1000);
+
+
+
+  // ---------- tela de entrada ----------
+  function montarTela(){
+    if(document.getElementById('mzLoginTela')) return;
+    var d = document.createElement('div');
+    d.id = 'mzLoginTela';
+    d.className = 'mzVidro';
+    // reaproveita as classes do modal "Jornada Finalizada" (jf-*)
+    d.innerHTML = ''
+      + '<div class="jf-card">'
+      +   '<div class="jf-header">'
+      +     '<div class="jf-check"><i class="fa-solid fa-user-large"></i></div>'
+      +     '<div class="jf-title">Acesso</div>'
+      +     '<div class="jf-sub">'
+      +       '<span class="mzM1">DIRIJA</span> <span class="mzM2">COM</span> <span class="mzM3">META</span>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div class="mzLinhaVerde"><div class="mzLinhaVerdeFill"></div></div>'
+      +   '<div class="mzLoginBody">'
+      +     '<div class="mzLoginTexto">Entre com sua conta Google para acessar seus resultados.</div>'
+      +     '<div class="mzGoogleWrap"><div id="mzGoogleBtn" class="mzGoogleBtn"></div></div>'
+      +     '<div id="mzLoginAviso" class="mzLoginAviso"></div>'
+      +   '</div>'
+      + '</div>';
+    document.body.appendChild(d);
+  }
+  function abrirTela(){
+    montarTela();
+    var t = document.getElementById('mzLoginTela');
+    if(t) t.style.display = 'flex';
+    iniciarGoogle();
+  }
+  function fecharTela(){
+    if(!lerConta()) return;   // acesso so com conta
+    var t = document.getElementById('mzLoginTela');
+    if(t) t.style.display = 'none';
+  }
+  function avisar(msg){
+    var a = document.getElementById('mzLoginAviso');
+    if(a){ a.textContent = msg; a.style.display = 'block'; }
+  }
+
+  // ---------- carrega a biblioteca do Google ----------
+  var carregando = false;
+  function carregarGIS(cb){
+    if(window.google && google.accounts && google.accounts.id){ cb(); return; }
+    if(carregando){ setTimeout(function(){ carregarGIS(cb); }, 300); return; }
+    carregando = true;
+    var s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true; s.defer = true;
+    s.onload = function(){ cb(); };
+    s.onerror = function(){ avisar('Nao foi possivel carregar o login do Google. Verifique sua conexao.'); };
+    document.head.appendChild(s);
+  }
+
+  function iniciarGoogle(){
+    if(!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.indexOf('COLE_AQUI') === 0){
+      avisar('Falta configurar o ID do cliente do Google no codigo do app.');
+      return;
+    }
+    carregarGIS(function(){
+      try {
+        google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: aoReceberCredencial,
+          auto_select: false,
+          cancel_on_tap_outside: true
+        });
+        var alvo = document.getElementById('mzGoogleBtn');
+        if(alvo){
+          alvo.innerHTML = '';
+          google.accounts.id.renderButton(alvo, {
+            type:'standard', theme:'filled_blue', size:'medium',
+            shape:'rectangular', text:'signin_with', locale:'pt-BR', width: 220
+          });
+        }
+      } catch(e){
+        avisar('Erro ao iniciar o login: ' + e.message);
+      }
+    });
+  }
+
+  // ---------- inicio ----------
+  function iniciar(){
+    pintarPerfil();
+    try { localStorage.removeItem('motorizzeLoginPulado'); } catch(e){}
+    if(!lerConta()){
+      setTimeout(abrirTela, 900);   // deixa a splash terminar
+    }
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(iniciar, 400); });
+  } else {
+    setTimeout(iniciar, 400);
+  }
+})();
+
+// ============ v556: Configuracao inicial (combustivel + meta diaria) ============
+(function(){
+  var CHAVE_COMB = 'motorizzeCombustivel';
+  var DIAS = [
+    ['segunda','Segunda'], ['terca','Terça'], ['quarta','Quarta'], ['quinta','Quinta'],
+    ['sexta','Sexta'], ['sabado','Sábado'], ['domingo','Domingo']
+  ];
+  var estado = { passo:1, tipo:null };
+
+  // ---------- utilidades ----------
+  function num(v){
+    v = String(v == null ? '' : v).replace(/R\$/g,'').replace(/\s/g,'');
+    if(v.indexOf(',') > -1) v = v.replace(/\./g,'').replace(',','.');
+    var n = parseFloat(v);
+    return isNaN(n) ? null : n;
+  }
+  function fmt(n){
+    return (n||0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  function campo(n){
+    if(n === null || n === undefined || n === '') return '';
+    return String(n).replace('.', ',');
+  }
+  function unidade(t){ return t === 'GNV' ? 'm³' : 'litro'; }
+  function unidadeCurta(t){ return t === 'GNV' ? 'm³' : 'L'; }
+
+  function chaveConta(){
+    var c = window.MZConta ? MZConta.get() : null;
+    return c && c.id ? 'motorizzeSetup_' + c.id : null;
+  }
+  function concluido(){
+    var k = chaveConta(); if(!k) return true;
+    try { return localStorage.getItem(k) === '1'; } catch(e){ return true; }
+  }
+  function marcarConcluido(){
+    var k = chaveConta(); if(!k) return;
+    try { localStorage.setItem(k, '1'); } catch(e){}
+  }
+
+  function lerTipo(){
+    try { var o = JSON.parse(localStorage.getItem(CHAVE_COMB) || 'null'); if(o && o.tipo) return o.tipo; } catch(e){}
+    try { var c = JSON.parse(localStorage.getItem('gnvConfigAtual_v1') || 'null'); if(c && c.tipo) return c.tipo; } catch(e){}
+    return null;
+  }
+
+  // ---------- grava no mesmo lugar que "Parametros do Combustivel" ----------
+  function salvarCombustivel(tipo, media, preco){
+    try { localStorage.setItem(CHAVE_COMB, JSON.stringify({ tipo:tipo, atualizadoEm:new Date().toISOString() })); } catch(e){}
+    // mesma chave que o modal "Parametros do Combustivel" usa como fonte da verdade
+    try {
+      localStorage.setItem('gnvConfigAtual_v1', JSON.stringify({
+        preco: preco, media: media, tipo: tipo, atualizadoEm: new Date().toISOString()
+      }));
+    } catch(e){}
+    try {
+      if(typeof relatoriosDiarios !== 'undefined' && relatoriosDiarios){
+        Object.keys(relatoriosDiarios).forEach(function(k){
+          relatoriosDiarios[k].precoGNV = preco;
+          relatoriosDiarios[k].mediaGNV = media;
+        });
+      }
+      if(typeof dadosDoDiaExibido !== 'undefined' && dadosDoDiaExibido){
+        dadosDoDiaExibido.precoGNV = preco;
+        dadosDoDiaExibido.mediaGNV = media;
+      }
+      if(typeof salvarDados === 'function') salvarDados();
+    } catch(e){ return false; }
+    return true;
+  }
+
+  // ---------- grava no mesmo lugar que "Defina suas Metas" ----------
+  function salvarMetasSetup(valores){
+    try {
+      if(typeof metas === 'undefined' || !metas) return false;
+      DIAS.forEach(function(d){
+        var v = valores[d[0]];
+        if(v === null || v === undefined) delete metas[d[0]];
+        else metas[d[0]] = v;
+      });
+      if(typeof salvarMetas === 'function') salvarMetas();
+    } catch(e){ return false; }
+    return true;
+  }
+
+  // ---------- valores atuais para preencher ----------
+  function atuais(){
+    var media = null, preco = null;
+    try {
+      var c = JSON.parse(localStorage.getItem('gnvConfigAtual_v1') || 'null');
+      if(c && c.preco > 0 && c.media > 0){ media = c.media; preco = c.preco; }
+    } catch(e){}
+    try {
+      if((media === null || preco === null) && typeof dadosDoDiaExibido !== 'undefined' && dadosDoDiaExibido){
+        media = dadosDoDiaExibido.mediaGNV; preco = dadosDoDiaExibido.precoGNV;
+      }
+    } catch(e){}
+    // valores de fabrica (18 / 4,79) nao sao do motorista: campo vazio
+    if(Number(media) === 18 && Number(preco) === 4.79){ media = null; preco = null; }
+    return { media:media, preco:preco };
+  }
+
+  // ---------- tela ----------
+  function montar(){
+    var d = document.getElementById('mzSetupTela');
+    if(d) return d;
+    d = document.createElement('div');
+    d.id = 'mzSetupTela';
+    d.className = 'mzVidro';
+    document.body.appendChild(d);
+    return d;
+  }
+
+  function cabecalho(icone, passo, rotulo){
+    return ''
+      + '<div class="jf-header">'
+      +   '<div class="jf-check"><i class="fa-solid ' + icone + '"></i></div>'
+      +   '<div class="jf-title">Vamos configurar</div>'
+      +   '<div class="mzSetupEtapa">' + rotulo + '</div>'
+      +   '<div class="jf-sub">Passo ' + passo + ' de 2</div>'
+      + '</div>'
+      + '<div class="mzLinhaVerde"><div class="mzLinhaVerdeFill"></div></div>';
+  }
+
+  function renderPasso1(){
+    var t = montar();
+    var a = atuais();
+    if(!estado.tipo) estado.tipo = lerTipo();
+    var tipo = estado.tipo;
+
+    var opc = ['Etanol','Gasolina','GNV'].map(function(x){
+      return '<button type="button" class="mzOpc' + (tipo === x ? ' ativo' : '') + '" data-tipo="' + x + '">' + x + '</button>';
+    }).join('');
+
+    t.innerHTML = ''
+      + '<div class="jf-card mzSetupCard">'
+      +   cabecalho('fa-gas-pump', 1, 'COMBUSTÍVEL')
+      +   '<div class="mzLoginBody mzSetupBody">'
+      +     '<div class="mzSetupCampo">'
+      +       '<label>Qual combustível você usa?</label>'
+      +       '<div class="mzOpcoes" id="mzOpcoes">' + opc + '</div>'
+      +     '</div>'
+      +     '<div class="mzSetupCampo">'
+      +       '<label id="mzLblMedia">Quantos km seu carro faz por ' + (tipo ? unidade(tipo) : 'litro ou m³') + '?</label>'
+      +       '<div class="mzInputWrap"><input type="text" inputmode="decimal" id="mzMedia" class="mzSetupInput" placeholder="Ex: 12,5" value="' + campo(a.media) + '"><span class="mzSufixo" id="mzSufMedia">km/' + (tipo ? unidadeCurta(tipo) : 'L') + '</span></div>'
+      +     '</div>'
+      +     '<div class="mzSetupCampo">'
+      +       '<label id="mzLblPreco">Quanto você paga no ' + (tipo ? unidade(tipo) : 'litro ou m³') + '?</label>'
+      +       '<div class="mzInputWrap"><span class="mzPrefixo">R$</span><input type="text" inputmode="decimal" id="mzPreco" class="mzSetupInput mzComPrefixo" placeholder="Ex: 5,89" value="' + campo(a.preco) + '"></div>'
+      +     '</div>'
+      +     '<div class="mzSetupErro" id="mzSetupErro"></div>'
+      +     '<button type="button" class="mzBtnPrim" id="mzProximo">PRÓXIMO</button>'
+      +   '</div>'
+      + '</div>';
+
+    var botoes = t.querySelectorAll ? t.querySelectorAll('.mzOpc') : [];
+    Array.prototype.forEach.call(botoes, function(b){
+      b.onclick = function(){
+        estado.tipo = b.getAttribute('data-tipo');
+        Array.prototype.forEach.call(botoes, function(x){ x.classList.remove('ativo'); });
+        b.classList.add('ativo');
+        var u = unidade(estado.tipo), uc = unidadeCurta(estado.tipo);
+        var l1 = document.getElementById('mzLblMedia'); if(l1) l1.textContent = 'Quantos km seu carro faz por ' + u + '?';
+        var l2 = document.getElementById('mzLblPreco'); if(l2) l2.textContent = 'Quanto você paga no ' + u + '?';
+        var s1 = document.getElementById('mzSufMedia'); if(s1) s1.textContent = 'km/' + uc;
+      };
+    });
+
+    document.getElementById('mzProximo').onclick = function(){
+      var media = num(document.getElementById('mzMedia').value);
+      var preco = num(document.getElementById('mzPreco').value);
+      var erro = validarPasso1(estado.tipo, media, preco);
+      if(erro){ mostrarErro(erro); return; }
+      salvarCombustivel(estado.tipo, media, preco);
+      estado.passo = 2;
+      renderPasso2();
+    };
+  }
+
+  function validarPasso1(tipo, media, preco){
+    if(!tipo) return 'Escolha o combustível que você usa.';
+    if(media === null || media <= 0) return 'Informe quantos km seu carro faz.';
+    if(media > 99.99) return 'A média parece alta demais. Confira o valor.';
+    if(preco === null || preco <= 0) return 'Informe o preço do combustível.';
+    if(preco > 99.99) return 'O preço parece alto demais. Confira o valor.';
+    return null;
+  }
+
+  function renderPasso2(){
+    var t = montar();
+    var linhas = DIAS.map(function(d){
+      var salvo = (typeof metas !== 'undefined' && metas && typeof metas[d[0]] === 'number') ? metas[d[0]] : null;
+      var v = (salvo === null) ? '250' : campo(salvo);   // padrao: R$ 250 de lucro por dia
+      return ''
+        + '<div class="mzMetaLinha">'
+        +   '<label for="mzMeta_' + d[0] + '">' + d[1] + '</label>'
+        +   '<div class="mzInputWrap"><span class="mzPrefixo">R$</span>'
+        +   '<input type="text" inputmode="decimal" id="mzMeta_' + d[0] + '" class="mzSetupInput mzComPrefixo mzMetaInput" placeholder="0" value="' + v + '"></div>'
+        + '</div>';
+    }).join('');
+
+    // o total ocupa a celula que sobra ao lado de domingo
+    linhas += ''
+      + '<div class="mzMetaLinha mzTotalCelula">'
+      +   '<label>Sua meta \u00E9 de:</label>'
+      +   '<div class="mzTotalValor" id="mzTotalMeta">R$ 0,00</div>'
+      + '</div>';
+
+    t.innerHTML = ''
+      + '<div class="jf-card mzSetupCard">'
+      +   cabecalho('fa-bullseye', 2, 'SUA META')
+      +   '<div class="mzLoginBody mzSetupBody">'
+      +     '<div class="mzSetupTexto">Quanto de <b>lucro</b> voc\u00EA quer ter em cada dia? \u00C9 o que sobra depois do combust\u00EDvel e das despesas.</div>'
+      +     '<div class="mzMetasGrid">' + linhas + '</div>'
+      +     '<div class="mzSetupErro" id="mzSetupErro"></div>'
+      +     '<div class="mzBotoes">'
+      +       '<button type="button" class="mzBtnSec" id="mzVoltar">VOLTAR</button>'
+      +       '<button type="button" class="mzBtnPrim" id="mzConcluir">CONCLUIR</button>'
+      +     '</div>'
+      +   '</div>'
+      + '</div>';
+
+    DIAS.forEach(function(d){
+      var el = document.getElementById('mzMeta_' + d[0]);
+      if(el) el.oninput = atualizarTotal;
+    });
+    atualizarTotal();
+
+    document.getElementById('mzVoltar').onclick = function(){ estado.passo = 1; renderPasso1(); };
+    document.getElementById('mzConcluir').onclick = function(){
+      var valores = {}, invalido = false;
+      DIAS.forEach(function(d){
+        var el = document.getElementById('mzMeta_' + d[0]);
+        var bruto = el ? String(el.value).trim() : '';
+        if(bruto === ''){ valores[d[0]] = null; return; }
+        var n = num(bruto);
+        if(n === null || n < 0){ invalido = true; return; }
+        valores[d[0]] = n;
+      });
+      if(invalido){ mostrarErro('Alguma meta tem um valor inválido.'); return; }
+      salvarMetasSetup(valores);
+      marcarConcluido();
+      fechar();
+      try { if(typeof atualizarUI === 'function') atualizarUI(); } catch(e){}
+      try { if(typeof mostrarFlashModerno === 'function') mostrarFlashModerno('Tudo pronto!', 'Seu app está configurado.'); } catch(e){}
+    };
+  }
+
+  function atualizarTotal(){
+    var total = 0;
+    DIAS.forEach(function(d){
+      var el = document.getElementById('mzMeta_' + d[0]);
+      var n = el ? num(el.value) : null;
+      if(n !== null && n > 0) total += n;
+    });
+    var out = document.getElementById('mzTotalMeta');
+    if(out) out.textContent = 'R$ ' + fmt(total);
+    return total;
+  }
+
+  function mostrarErro(msg){
+    var e = document.getElementById('mzSetupErro');
+    if(e){ e.textContent = msg; e.style.display = 'block'; }
+  }
+
+  function abrir(){
+    var t = montar();
+    estado.passo = 1;
+    estado.tipo = lerTipo();
+    renderPasso1();
+    t.style.display = 'flex';
+  }
+  function fechar(){
+    var t = document.getElementById('mzSetupTela');
+    if(t) t.style.display = 'none';
+  }
+
+  window.MZSetup = {
+    abrir: abrir,
+    // chamado logo apos cada login: sempre roda a configuracao,
+    // ja preenchida com o que estiver salvo no sistema
+    verificar: function(){
+      if(!window.MZConta || !MZConta.logado()) return;
+      var login = document.getElementById('mzLoginTela');
+      if(login && login.style.display === 'flex') return;
+      abrir();
+    },
+    // usado nos testes
+    _num: num, _validar: validarPasso1, _salvarComb: salvarCombustivel,
+    _salvarMetas: salvarMetasSetup, _total: atualizarTotal
+  };
+})();
+
+// ============ v558: "Parametros do Combustivel" lembra o tipo escolhido ============
+// O botao GNV vinha com 'active' fixo no HTML, gnvSalvar nao guardava o tipo e
+// abrirGNVNovo nao o restaurava: ao reabrir, sempre voltava para GNV.
+(function(){
+  var PADRAO = ['GNV','Gasolina','Etanol'];
+
+  function normaliza(t){
+    t = String(t||'').trim().toLowerCase();
+    if(t.indexOf('gasolina') > -1) return 'Gasolina';
+    if(t.indexOf('etanol')   > -1) return 'Etanol';
+    if(t.indexOf('gnv')      > -1) return 'GNV';
+    return null;
+  }
+  function tipoSalvo(){
+    try { var c = JSON.parse(localStorage.getItem('gnvConfigAtual_v1') || 'null'); if(c && c.tipo) return normaliza(c.tipo); } catch(e){}
+    try { var o = JSON.parse(localStorage.getItem('motorizzeCombustivel') || 'null'); if(o && o.tipo) return normaliza(o.tipo); } catch(e){}
+    return null;
+  }
+  function botoes(){
+    try { return Array.prototype.slice.call(document.querySelectorAll('.gnv-btn-tipo')); } catch(e){ return []; }
+  }
+  function tipoNaTela(){
+    var b = botoes();
+    for(var i=0;i<b.length;i++){
+      if(b[i].classList && b[i].classList.contains('active')) return normaliza(b[i].textContent);
+    }
+    return null;
+  }
+  function gravarTipo(tipo){
+    if(!tipo) return;
+    try {
+      var c = JSON.parse(localStorage.getItem('gnvConfigAtual_v1') || '{}') || {};
+      c.tipo = tipo;
+      localStorage.setItem('gnvConfigAtual_v1', JSON.stringify(c));
+    } catch(e){}
+    try {
+      var o = JSON.parse(localStorage.getItem('motorizzeCombustivel') || '{}') || {};
+      o.tipo = tipo;
+      localStorage.setItem('motorizzeCombustivel', JSON.stringify(o));
+    } catch(e){}
+  }
+  function aplicarNaTela(tipo){
+    if(!tipo) return;
+    var b = botoes();
+    for(var i=0;i<b.length;i++){
+      if(normaliza(b[i].textContent) === tipo){
+        try {
+          if(typeof window.gnvSelecionarTipo === 'function'){
+            window.gnvSelecionarTipo(tipo.toLowerCase(), b[i]);   // marca e ajusta os rotulos
+          }
+        } catch(e){}
+        return;
+      }
+    }
+  }
+
+  function instalar(){
+    if(typeof window.abrirGNVNovo !== 'function' || typeof window.gnvSalvar !== 'function'){
+      setTimeout(instalar, 600); return;
+    }
+    if(window._gnvTipoV558) return;
+    window._gnvTipoV558 = true;
+
+    var abrirOrig = window.abrirGNVNovo;
+    window.abrirGNVNovo = function(){
+      var r = abrirOrig.apply(this, arguments);
+      var t = tipoSalvo();
+      if(t){ setTimeout(function(){ aplicarNaTela(t); }, 0); }
+      return r;
+    };
+
+    var salvarOrig = window.gnvSalvar;
+    window.gnvSalvar = function(){
+      var t = tipoNaTela();
+      var r = salvarOrig.apply(this, arguments);
+      gravarTipo(t);      // depois do original, que reescreve a chave inteira
+      return r;
+    };
+  }
+  setTimeout(instalar, 900);
+  setTimeout(instalar, 2500);
+})();
+
+// ============ v561: Metas por dia (expansivel) entre os 4 dados e o Desempenho ============
+(function(){
+  var aberto = false;
+  var DIAS_ABREV = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
+  var MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  function fmt(n){ return (n||0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+  function ymd(d){
+    return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2);
+  }
+
+  function ganhosExtrasDoDia(k){
+    try {
+      var chk = document.getElementById('anaIncluirGE');
+      if(!chk || !chk.checked) return 0;
+      if(typeof carregarGanhosExtrasList !== 'function') return 0;
+      var t = 0;
+      carregarGanhosExtrasList().forEach(function(g){ if(g.data === k) t += parseFloat(g.valor||0); });
+      return t;
+    } catch(e){ return 0; }
+  }
+
+  function lucroDoDia(k){
+    try {
+      var d = (typeof relatoriosDiarios !== 'undefined') ? relatoriosDiarios[k] : null;
+      if(!d) return 0;
+      var t = (typeof calcularTotaisDoDia === 'function') ? calcularTotaisDoDia(d) : null;
+      return (t && typeof t.lucroLiquido === 'number' ? t.lucroLiquido : 0) + ganhosExtrasDoDia(k);
+    } catch(e){ return 0; }
+  }
+
+  function metaDoDia(k){
+    try { return (typeof obterMetaDoDia === 'function') ? (obterMetaDoDia(k) || 0) : 0; }
+    catch(e){ return 0; }
+  }
+
+  // qual aba esta ativa: dia | semana | mes | ano (null quando e filtro manual)
+  function abaAtiva(){
+    try {
+      var cont = document.getElementById('anaFiltrosRapidos');
+      if(!cont) return null;
+      var bts = cont.querySelectorAll('.qfBtnAna');
+      for(var i=0;i<bts.length;i++){
+        if(bts[i].classList && bts[i].classList.contains('ativo')){
+          var t = (bts[i].textContent || bts[i].getAttribute('data-label-orig') || '').trim().toLowerCase();
+          if(t.indexOf('dia') === 0) return 'dia';
+          if(t.indexOf('semana') === 0) return 'semana';
+          if(t.indexOf('m') === 0) return 'mes';
+          if(t.indexOf('ano') === 0) return 'ano';
+        }
+      }
+    } catch(e){}
+    return null;
+  }
+
+  // evita reler o localStorage a cada dia somado
+  function comCacheDeMetas(fn){
+    var orig = window.carregarMetasDiarias, cache = null;
+    if(typeof orig === 'function'){
+      window.carregarMetasDiarias = function(){ if(cache === null) cache = orig(); return cache; };
+    }
+    try { return fn(); }
+    finally { if(typeof orig === 'function') window.carregarMetasDiarias = orig; }
+  }
+
+  function somarIntervalo(d1, d2){
+    var meta = 0, lucro = 0, d = new Date(d1);
+    while(d <= d2){
+      var k = ymd(d);
+      meta  += metaDoDia(k);
+      lucro += lucroDoDia(k);
+      d.setDate(d.getDate()+1);
+    }
+    return { meta:meta, lucro:lucro };
+  }
+
+  function anosComDados(){
+    var anos = [];
+    try {
+      Object.keys(relatoriosDiarios || {}).forEach(function(k){
+        var a = parseInt(String(k).slice(0,4), 10);
+        if(a && anos.indexOf(a) === -1) anos.push(a);
+      });
+    } catch(e){}
+    return anos;
+  }
+
+  // monta as linhas conforme a aba
+  function coletar(){
+    var aba = abaAtiva();
+    if(aba === 'dia') return null;   // na aba dia nao ha o que expandir
+
+    var ini = (document.getElementById('anaDataInicio')||{}).value || '';
+    var fim = (document.getElementById('anaDataFim')||{}).value || '';
+    if(!ini || !fim) return null;
+
+    var d1 = new Date(ini+'T00:00:00'), d2 = new Date(fim+'T00:00:00');
+    if(isNaN(d1) || isNaN(d2) || d2 < d1) return null;
+
+    return comCacheDeMetas(function(){
+      var linhas = [];
+      var hoje = new Date(); hoje.setHours(0,0,0,0);
+      var hojeK = ymd(hoje);
+
+      // ---- aba MES: os 12 meses do ano selecionado ----
+      if(aba === 'mes'){
+        var ano = d1.getFullYear();
+        for(var m=0; m<12; m++){
+          var t = somarIntervalo(new Date(ano, m, 1), new Date(ano, m+1, 0));
+          linhas.push({ rotulo: MESES_ABREV[m], sub: String(ano), meta:t.meta, lucro:t.lucro,
+                        atual: (m === d1.getMonth()), futuro: (new Date(ano, m, 1) > hoje) });
+        }
+        return linhas;
+      }
+
+      // ---- aba ANO: do primeiro ano com dados ate o ano selecionado ----
+      if(aba === 'ano'){
+        var anoSel = d1.getFullYear();
+        var anos = anosComDados();
+        var primeiro = anos.length ? Math.min.apply(null, anos) : anoSel;
+        var ultimo = Math.max(anoSel, anos.length ? Math.max.apply(null, anos) : anoSel);
+        if(ultimo - primeiro > 12) primeiro = ultimo - 12;   // limite de seguranca
+        for(var a=primeiro; a<=ultimo; a++){
+          var ta = somarIntervalo(new Date(a, 0, 1), new Date(a, 11, 31));
+          linhas.push({ rotulo: String(a), sub: '', meta:ta.meta, lucro:ta.lucro, atual:(a === anoSel), futuro:(a > hoje.getFullYear()) });
+        }
+        return linhas;
+      }
+
+      // ---- aba SEMANA (e filtro manual curto): dia a dia ----
+      var dias = Math.round((d2 - d1) / 86400000) + 1;
+      if(dias <= 31){
+        var d = new Date(d1);
+        while(d <= d2){
+          var k = ymd(d);
+          linhas.push({
+            rotulo: DIAS_ABREV[d.getDay()],
+            sub: ('0'+d.getDate()).slice(-2) + '/' + ('0'+(d.getMonth()+1)).slice(-2),
+            meta: metaDoDia(k),
+            lucro: lucroDoDia(k),
+            atual: (k === hojeK),
+            futuro: (k > hojeK)
+          });
+          d.setDate(d.getDate()+1);
+        }
+        return linhas;
+      }
+
+      // filtro manual longo: agrupa por mes
+      var mapa = {}, ordem = [], dd = new Date(d1);
+      while(dd <= d2){
+        var kk = ymd(dd);
+        var id = dd.getFullYear() + '-' + dd.getMonth();
+        if(!mapa[id]){
+          mapa[id] = { rotulo: MESES_ABREV[dd.getMonth()], sub: String(dd.getFullYear()), meta:0, lucro:0 };
+          ordem.push(id);
+        }
+        mapa[id].meta  += metaDoDia(kk);
+        mapa[id].lucro += lucroDoDia(kk);
+        dd.setDate(dd.getDate()+1);
+      }
+      ordem.forEach(function(id){ linhas.push(mapa[id]); });
+      return linhas;
+    });
+  }
+
+  function desenharLinhas(){
+    var painel = document.getElementById('anaMetasDiasPainel');
+    if(!painel) return;
+    var linhas = coletar();
+    if(!linhas || !linhas.length){
+      painel.innerHTML = '<div class="amdVazio">Nenhum periodo selecionado.</div>';
+      return;
+    }
+    // so redesenha quando algo muda (senao a animacao reiniciaria a cada ciclo)
+    var chave = linhas.map(function(l){ return l.rotulo + ':' + l.meta + ':' + l.lucro + ':' + (l.atual?1:0) + (l.futuro?1:0); }).join('|');
+    if(painel._chave === chave) return;
+    painel._chave = chave;
+
+    var html = linhas.map(function(l, i){
+      var pct = l.meta > 0 ? Math.round((l.lucro / l.meta) * 100) : null;
+      var largura = pct === null ? 0 : Math.max(0, Math.min(100, pct));
+      var bateu = (pct !== null && pct >= 100);
+      var futuro = !!l.futuro && !(l.lucro > 0);
+      var pctTxt = futuro ? '—' : (pct === null ? 'Sem meta' : pct + '%');
+      var cls = 'amdLinha' + (l.atual ? ' amdAtual' : '') + (futuro ? ' amdFuturo' : '') + (bateu ? ' amdBateu' : '');
+      return ''
+        + '<div class="' + cls + '">'
+        +   '<div class="amdRotulo">'
+        +     '<span class="amdDia">' + l.rotulo + '</span>'
+        +     (l.sub ? '<span class="amdData">' + l.sub + '</span>' : '')
+        +   '</div>'
+        +   '<div class="amdConteudo">'
+        +     '<div class="amdTopo">'
+        +       '<span class="amdValores">'
+        +         '<b>R$ ' + fmt(l.lucro) + '</b>'
+        +         (l.meta > 0 ? '<span class="amdMeta">de R$ ' + fmt(l.meta) + '</span>' : '')
+        +       '</span>'
+        +       '<span class="amdPct' + (bateu ? ' bateu' : '') + '">'
+        +         pctTxt
+        +         (bateu ? '<i class="fa-solid fa-star amdEstrela"></i>' : '')
+        +       '</span>'
+        +     '</div>'
+        +     '<div class="amdBarra">'
+        +       '<div class="amdFill' + (bateu ? ' bateu' : '') + '" data-largura="' + largura + '"'
+        +         ' style="width:0%;transition-delay:' + (i * 60) + 'ms"></div>'
+        +     '</div>'
+        +   '</div>'
+        + '</div>';
+    }).join('');
+    painel.innerHTML = '<div class="amdLista">' + html + '</div>';
+    animarBarras(painel);
+  }
+
+  // as barras crescem do zero, uma apos a outra
+  function animarBarras(painel){
+    setTimeout(function(){
+      var fills = painel.querySelectorAll ? painel.querySelectorAll('.amdFill') : [];
+      Array.prototype.forEach.call(fills, function(f){
+        f.style.width = (f.getAttribute('data-largura') || 0) + '%';
+      });
+    }, 30);
+  }
+
+  function garantir(){
+    var grid = document.querySelector('.ana-stats-grid');
+    if(!grid || !grid.parentNode) return null;
+
+    var wrap = document.getElementById('anaMetasDiasWrap');
+    if(wrap && wrap.parentNode !== grid.parentNode){ try{ wrap.remove(); }catch(e){} wrap = null; }
+    if(!wrap){
+      wrap = document.createElement('div');
+      wrap.id = 'anaMetasDiasWrap';
+      wrap.innerHTML = ''
+        + '<div class="amdDivisor">'
+        +   '<button type="button" id="anaMetasDiasBtn" class="amdBtn" aria-label="Ver metas por dia">'
+        +     '<i class="fa-solid fa-plus"></i>'
+        +   '</button>'
+        + '</div>'
+        + '<div id="anaMetasDiasPainel" class="amdPainel"></div>';
+      grid.parentNode.insertBefore(wrap, grid.nextSibling);
+
+      var btn = document.getElementById('anaMetasDiasBtn');
+      if(btn){
+        btn.onclick = function(e){
+          e.stopPropagation();
+          aberto = !aberto;
+          aplicarEstado();
+          if(aberto){
+            var painel = document.getElementById('anaMetasDiasPainel');
+            if(painel) painel._chave = null;   // reanima ao abrir
+            desenharLinhas();
+          }
+        };
+      }
+      aplicarEstado();
+    }
+    // o botao fica sempre logo apos os 4 dados
+    if(grid.nextSibling !== wrap) grid.parentNode.insertBefore(wrap, grid.nextSibling);
+    return wrap;
+  }
+
+  function aplicarEstado(){
+    var painel = document.getElementById('anaMetasDiasPainel');
+    var btn = document.getElementById('anaMetasDiasBtn');
+    if(painel) painel.style.display = aberto ? 'block' : 'none';
+    if(btn){
+      btn.innerHTML = '<i class="fa-solid ' + (aberto ? 'fa-minus' : 'fa-plus') + '"></i>';
+      btn.className = 'amdBtn' + (aberto ? ' aberto' : '');
+    }
+  }
+
+  setInterval(function(){
+    // nao mexer no DOM enquanto o compartilhamento clona a tela
+    if(document.querySelectorAll('#anaMetasDiasWrap').length > 1) return;
+    var grid = document.querySelector('.ana-stats-grid');
+    if(!grid || grid.offsetParent === null) return;
+    var wrap = garantir();
+    if(!wrap) return;
+    if(abaAtiva() === 'dia'){
+      wrap.style.display = 'none';        // aba dia nao tem o que expandir
+      return;
+    }
+    wrap.style.display = '';
+    if(aberto) desenharLinhas();
+  }, 700);
+})();
+
+// ============ v566: hora atual ja preenchida ao encerrar a jornada ============
+// Ao inserir, o app ja sugere a hora atual no campo inicial. Ao encerrar, o campo
+// final vinha vazio (a jornada aberta nao tem horaFinal): agora sugere a hora de agora.
+(function(){
+  function instalar(){
+    if(typeof window.abrirModalRegistro !== 'function'){ setTimeout(instalar, 600); return; }
+    if(window._horaFimV566) return;
+    window._horaFimV566 = true;
+
+    var orig = window.abrirModalRegistro;
+    window.abrirModalRegistro = function(index){
+      var r = orig.apply(this, arguments);
+      // so no modo encerrar/editar (index diferente de -1)
+      if(String(index) !== '-1'){
+        var tentativas = 0;
+        var preencher = function(){
+          var campo = document.getElementById('horaFinalTrecho');
+          if(!campo){
+            if(++tentativas < 12) setTimeout(preencher, 60);
+            return;
+          }
+          if(!campo.value){
+            var agora = new Date();
+            campo.value = agora.toTimeString().slice(0,5);
+            try { campo.dispatchEvent(new Event('change', { bubbles:true })); } catch(e){}
+          }
+        };
+        setTimeout(preencher, 120);   // depois que o modal termina de montar
+      }
+      return r;
+    };
+  }
+  setTimeout(instalar, 900);
+  setTimeout(instalar, 2500);
+})();
+
+// ============ v567: confirmacao real da gravacao ao salvar a jornada ============
+// Antes: salvava e fechava o modal sem checar nada. Se a gravacao falhasse
+// (memoria cheia, navegador bloqueando), o motorista nao era avisado.
+// Agora: le de volta do armazenamento e so confirma se o registro estiver la.
+(function(){
+  var CHAVE = 'dailyReportsData_v4';
+
+  function lerCampo(id){
+    var e = document.getElementById(id);
+    return e ? String(e.value || '').trim() : '';
+  }
+
+  // procura o registro recem salvo dentro do que ficou gravado
+  function gravou(data, kmI, hI){
+    try {
+      var bruto = localStorage.getItem(CHAVE);
+      if(!bruto) return false;
+      var dados = JSON.parse(bruto);
+      var dia = dados && dados[data];
+      if(!dia || !dia.trechos || !dia.trechos.length) return false;
+      var alvoKm = parseFloat(String(kmI).replace(',', '.'));
+      for(var i = 0; i < dia.trechos.length; i++){
+        var t = dia.trechos[i];
+        if(parseFloat(t.kmInicial) === alvoKm && String(t.horaInicial) === String(hI)) return true;
+      }
+      return false;
+    } catch(e){ return false; }
+  }
+
+  function areaDoModal(){
+    return document.querySelector('.modal-jornada-content')
+        || document.getElementById('flashOverlay');
+  }
+
+  function mostrarAviso(texto, erro){
+    var area = areaDoModal();
+    if(!area) return null;
+    var v = document.getElementById('jrSalvandoAviso');
+    if(!v){
+      v = document.createElement('div');
+      v.id = 'jrSalvandoAviso';
+      area.appendChild(v);
+    }
+    if(v.parentNode !== area) area.appendChild(v);
+    v.className = 'jrAviso' + (erro ? ' jrErro' : '');
+    v.innerHTML = ''
+      + '<div class="jrCartao">'
+      +   (erro
+            ? '<div class="jrIconeErro"><i class="fa-solid fa-triangle-exclamation"></i></div>'
+            : '<div class="jrSpinner"></div>')
+      +   '<div class="jrTexto">' + texto + '</div>'
+      + '</div>';
+    v.style.display = 'flex';
+    return v;
+  }
+  function esconderAviso(){
+    var v = document.getElementById('jrSalvandoAviso');
+    if(v) v.style.display = 'none';
+  }
+
+  // ---- v600: abertura em video ao INICIAR jornada, dentro do modal (sem loop, sem ampliar) ----
+  // let.mp4 fica na mesma pasta do app (igual ao 512.png)
+  var INTRO_MS = 10000;
+  var introTimer = null, introFim = null;
+  function introCriar(){
+    var el = document.getElementById('introJornada');
+    if(el) return el;
+    el = document.createElement('div');
+    el.id = 'introJornada';
+    el.setAttribute('aria-live', 'polite');
+    el.innerHTML = ''
+      + '<video class="ijVideo" src="let.mp4" muted playsinline webkit-playsinline preload="auto"></video>'
+      + '<div class="ijVeu"></div>'
+      + '<div class="ijTempo"><div class="ijTempoFill"></div></div>'
+      + '<div class="ijCentro">'
+      +   '<div class="ijFase ijCarregando"><div class="ijSpinner"></div><div class="ijTexto">Iniciando jornada</div></div>'
+      +   '<div class="ijFase ijGo">LET\'S GO!!!</div>'
+      + '</div>'
+      + '<div class="ijDica">Toque para fechar</div>';
+    document.body.appendChild(el);
+    var vid = el.querySelector('video');
+    // sem o arquivo, fica so o fundo escuro com o texto
+    vid.addEventListener('error', function(){ vid.style.display = 'none'; });
+    // toque encerra antes do tempo
+    el.addEventListener('click', function(){ if(el.classList.contains('go') && introFim) introFim(); });
+    return el;
+  }
+  function introMostrar(aoTerminar){
+    var el = introCriar();
+    var area = areaDoModal();
+    if(area && el.parentNode !== area) area.appendChild(el);
+    el.classList.remove('go', 'visivel');
+    el.style.display = 'block';
+    var vid = el.querySelector('video');
+    try { vid.currentTime = 0; var p = vid.play(); if(p && p.catch) p.catch(function(){}); } catch(e){}
+    // linha de tempo: reinicia a animacao de 10s
+    var fill = el.querySelector('.ijTempoFill');
+    if(fill){
+      fill.style.animation = 'none';
+      void fill.offsetWidth;
+      fill.style.animation = 'ijTempo ' + (INTRO_MS/1000) + 's linear forwards';
+    }
+    requestAnimationFrame(function(){ el.classList.add('visivel'); });
+    var feito = false;
+    introFim = function(){
+      if(feito) return;
+      feito = true;
+      clearTimeout(introTimer);
+      introFim = null;
+      if(typeof aoTerminar === 'function') aoTerminar();
+      introEsconder();
+    };
+    clearTimeout(introTimer);
+    introTimer = setTimeout(introFim, INTRO_MS);
+  }
+  function introLetsGo(){
+    var el = document.getElementById('introJornada');
+    if(el) el.classList.add('go');
+    try { if(navigator.vibrate) navigator.vibrate([30, 40, 60]); } catch(e){}
+  }
+  function introEsconder(){
+    var el = document.getElementById('introJornada');
+    if(!el) return;
+    clearTimeout(introTimer);
+    el.classList.remove('visivel');
+    setTimeout(function(){
+      el.style.display = 'none';
+      el.classList.remove('go');
+      try { el.querySelector('video').pause(); } catch(e){}
+      document.body.appendChild(el);      // volta para o body, pronto para a proxima vez
+    }, 380);
+  }
+  // pre-carrega o video para ele ja estar pronto no primeiro toque
+  if(document.readyState === 'complete') setTimeout(introCriar, 1500);
+  else window.addEventListener('load', function(){ setTimeout(introCriar, 1500); });
+
+  function envolver(nome, mensagemOk){
+    var orig = window[nome];
+    if(typeof orig !== 'function') return false;
+
+    window[nome] = function(){
+      var data = lerCampo('dataJornada');
+      var kmI  = lerCampo('kmInicialTrecho');
+      var hI   = lerCampo('horaInicialTrecho');
+
+      // segura o fechamento do modal para mostrar o resultado dentro dele
+      var fecharOrig = window.fecharModalRegistro;
+      var pediuFechar = false;
+      window.fecharModalRegistro = function(){ pediuFechar = true; };
+
+      var falhou = null;
+      try {
+        orig.apply(this, arguments);
+      } catch(e){
+        falhou = e;
+      } finally {
+        window.fecharModalRegistro = fecharOrig;
+      }
+
+      // o original nao chegou ao fim (validacao barrou): segue o fluxo normal
+      if(!pediuFechar && !falhou) return;
+
+      // v600: iniciar jornada mostra o video dentro do modal por 10s
+      if(nome === 'salvarRascunho'){
+        var t0 = Date.now();
+        introMostrar(function(){
+          if(typeof fecharOrig === 'function') fecharOrig();     // fecha o modal no fim da linha de tempo
+        });
+        setTimeout(function(){
+          var ok = !falhou && gravou(data, kmI, hI);
+          if(!ok){
+            introFim = null;
+            introEsconder();
+            mostrarAviso('Não foi possível salvar. Confira o espaço do aparelho e tente de novo.', true);
+            setTimeout(esconderAviso, 3600);
+            return;
+          }
+          // "Iniciando jornada" fica pelo menos 1,4s; depois LET'S GO!!! ate o fim
+          setTimeout(introLetsGo, Math.max(0, 1400 - (Date.now() - t0)));
+        }, 450);
+        return;
+      }
+
+      mostrarAviso('Salvando...', false);
+
+      setTimeout(function(){
+        var ok = !falhou && gravou(data, kmI, hI);
+        if(ok){
+          mostrarAviso(mensagemOk, false);
+          setTimeout(function(){
+            esconderAviso();
+            if(typeof fecharOrig === 'function') fecharOrig();
+          }, 1100);
+        } else {
+          mostrarAviso('Não foi possível salvar. Confira o espaço do aparelho e tente de novo.', true);
+          setTimeout(esconderAviso, 3600);   // modal continua aberto para nova tentativa
+        }
+      }, 450);
+    };
+    return true;
+  }
+
+  function instalar(){
+    if(typeof window.salvarRascunho !== 'function' || typeof window.fecharModalRegistro !== 'function'){
+      setTimeout(instalar, 600); return;
+    }
+    if(window._confirmaSalvarV567) return;
+    window._confirmaSalvarV567 = true;
+    envolver('salvarRascunho', 'Jornada iniciada com sucesso');
+    envolver('publicarJornada', 'Jornada encerrada com sucesso');
+  }
+  setTimeout(instalar, 1200);
+  setTimeout(instalar, 3000);
+})();
+
+// ============ v572: comparativo de lucro em linhas retas, solto na tela ============
+(function(){
+  var grafico = null, assinatura = '';
+  var DIAS = ['SEG','TER','QUA','QUI','SEX','SAB','DOM'];
+  var MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  function corTema(){
+    try { return (getComputedStyle(document.documentElement).getPropertyValue('--secondary')||'').trim() || '#22c55e'; }
+    catch(e){ return '#22c55e'; }
+  }
+  function rgba(cor, a){
+    var c = String(cor||'').trim();
+    try {
+      if(c.charAt(0) === '#'){
+        if(c.length === 4) c = '#'+c[1]+c[1]+c[2]+c[2]+c[3]+c[3];
+        return 'rgba('+parseInt(c.substr(1,2),16)+','+parseInt(c.substr(3,2),16)+','+parseInt(c.substr(5,2),16)+','+a+')';
+      }
+      if(c.indexOf('rgb') === 0){
+        var n = c.replace(/[^0-9,.]/g,'').split(',');
+        return 'rgba('+n[0]+','+n[1]+','+n[2]+','+a+')';
+      }
+    } catch(e){}
+    return 'rgba(34,197,94,'+a+')';
+  }
+  // sombra suave sob a linha: degrade vertical da cor do tema ate transparente
+  function gradiente(cor){
+    try {
+      var c = document.getElementById('anaLinhaCanvas');
+      if(!c || !c.getContext) return rgba(cor, 0.10);
+      var alt = c.offsetHeight || c.height || 190;
+      var g = c.getContext('2d').createLinearGradient(0, 0, 0, alt);
+      g.addColorStop(0,    rgba(cor, 0.42));   // logo abaixo da linha
+      g.addColorStop(0.45, rgba(cor, 0.24));
+      g.addColorStop(0.80, rgba(cor, 0.10));
+      g.addColorStop(1,    rgba(cor, 0.03));   // chega suave ate a base
+      return g;
+    } catch(e){ return rgba(cor, 0.10); }
+  }
+
+  function ymd(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+
+  function abaAtiva(){
+    try {
+      var c = document.getElementById('anaFiltrosRapidos');
+      if(!c) return null;
+      var b = c.querySelectorAll('.qfBtnAna');
+      for(var i=0;i<b.length;i++){
+        if(b[i].classList && b[i].classList.contains('ativo')){
+          var t = (b[i].textContent || b[i].getAttribute('data-label-orig') || '').trim().toLowerCase();
+          if(t.indexOf('dia') === 0) return 'dia';
+          if(t.indexOf('semana') === 0) return 'semana';
+          if(t.indexOf('m') === 0) return 'mes';
+          if(t.indexOf('ano') === 0) return 'ano';
+        }
+      }
+    } catch(e){}
+    return null;
+  }
+
+  function extrasDoDia(k){
+    try {
+      var chk = document.getElementById('anaIncluirGE');
+      if(!chk || !chk.checked || typeof carregarGanhosExtrasList !== 'function') return 0;
+      var t = 0;
+      carregarGanhosExtrasList().forEach(function(g){ if(g.data === k) t += parseFloat(g.valor||0); });
+      return t;
+    } catch(e){ return 0; }
+  }
+  function lucro(k){
+    try {
+      var d = (typeof relatoriosDiarios !== 'undefined') ? relatoriosDiarios[k] : null;
+      if(!d) return 0;
+      var t = (typeof calcularTotaisDoDia === 'function') ? calcularTotaisDoDia(d) : null;
+      return ((t && t.lucroLiquido) || 0) + extrasDoDia(k);
+    } catch(e){ return 0; }
+  }
+  function somar(d1, d2){
+    var t = 0, d = new Date(d1);
+    while(d <= d2){ t += lucro(ymd(d)); d.setDate(d.getDate()+1); }
+    return t;
+  }
+  function segundaDa(data){
+    var r = new Date(data);
+    var n = r.getDay() === 0 ? 7 : r.getDay();
+    r.setDate(r.getDate() - n + 1);
+    r.setHours(0,0,0,0);
+    return r;
+  }
+
+  // ---- v593: ganho acumulado ao longo do dia, a partir dos trechos ----
+  function minutos(h){
+    if(!h) return null;
+    var p = String(h).split(':');
+    var m = parseInt(p[0],10)*60 + parseInt(p[1]||0,10);
+    return isNaN(m) ? null : m;
+  }
+  function trechosDoDia(k){
+    var out = [];
+    try {
+      var d = (typeof relatoriosDiarios !== 'undefined') ? relatoriosDiarios[k] : null;
+      if(!d || !d.trechos) return out;
+      d.trechos.forEach(function(t){
+        if(!t || !t.publicado) return;
+        var a = minutos(t.horaInicial), b = minutos(t.horaFinal);
+        if(a === null || b === null) return;
+        if(b < a) b += 1440;                      // virou a meia-noite
+        var v = (t.uber||0) + (t.n99||0) + (t.indrive||0) + (t.pf||0);
+        out.push({ a:a, b:b, v:v });
+      });
+    } catch(e){}
+    return out;
+  }
+  // o lucro do dia (ja com combustivel e extras) e distribuido no tempo
+  // na mesma proporcao em que o bruto de cada trecho foi entrando
+  function curvaDoDia(k, marcas){
+    var tr = trechosDoDia(k);
+    var bruto = tr.reduce(function(s,t){ return s + t.v; }, 0);
+    var total = lucro(k);
+    if(bruto <= 0){
+      return marcas.map(function(h, i){ return i === marcas.length-1 ? Number(total.toFixed(2)) : 0; });
+    }
+    var fator = total / bruto;
+    return marcas.map(function(h){
+      var s = 0;
+      tr.forEach(function(t){
+        if(h <= t.a) return;
+        var frac = t.b > t.a ? Math.min(1, (h - t.a) / (t.b - t.a)) : 1;
+        s += t.v * frac;
+      });
+      return Number((s * fator).toFixed(2));
+    });
+  }
+
+  // ---- monta os dados conforme a aba ----
+  function montar(aba, ini, fim){
+    var cor = corTema();
+    var d1 = new Date(ini+'T00:00:00'), d2 = new Date(fim+'T00:00:00');
+    if(isNaN(d1) || isNaN(d2)) return null;
+
+    if(aba === 'semana'){
+      // 4 semanas: a atual e as 3 anteriores, cada uma num tom
+      var base = segundaDa(d2);
+      var tons = [0.22, 0.42, 0.68, 1];   // mais antiga -> mais recente
+      var sets = [];
+      for(var s = 3; s >= 0; s--){
+        var seg = new Date(base); seg.setDate(base.getDate() - s*7);
+        var vals = [];
+        for(var i = 0; i < 7; i++){
+          var d = new Date(seg); d.setDate(seg.getDate()+i);
+          vals.push(Number(lucro(ymd(d)).toFixed(2)));
+        }
+        var atual = (s === 0);
+        sets.push({
+          label: ('0'+seg.getDate()).slice(-2)+'/'+('0'+(seg.getMonth()+1)).slice(-2),
+          data: vals,
+          borderColor: rgba(cor, tons[3-s]),
+          backgroundColor: atual ? gradiente(cor) : 'transparent',
+          borderWidth: atual ? 2.4 : 1.4,
+          pointRadius: atual ? 3 : 2,
+          pointBackgroundColor: rgba(cor, tons[3-s]),
+          tension: 0,
+          fill: atual ? 'origin' : false      // area acompanha a curva da semana atual
+        });
+      }
+      return { rotulos: DIAS, sets: sets, legenda: false, titulo: 'Lucro por dia', sub: 'Comparativo 4 semanas' };
+    }
+
+    if(aba === 'dia'){
+      // o dia escolhido e o mesmo dia da semana nas 3 semanas anteriores
+      var dias = [];
+      for(var w = 3; w >= 0; w--){
+        var dd = new Date(d1); dd.setDate(d1.getDate() - w*7);
+        dias.push(dd);
+      }
+      // janela de horas: do primeiro inicio ao ultimo fim entre os 4 dias
+      var minA = null, maxB = null;
+      dias.forEach(function(dd){
+        trechosDoDia(ymd(dd)).forEach(function(t){
+          if(minA === null || t.a < minA) minA = t.a;
+          if(maxB === null || t.b > maxB) maxB = t.b;
+        });
+      });
+      var hIni = minA === null ? 6  : Math.floor(minA / 60);
+      var hFim = maxB === null ? 22 : Math.ceil(maxB / 60);
+      if(hFim - hIni < 4) hFim = hIni + 4;
+      var passo = (hFim - hIni) > 14 ? 2 : 1;
+      var marcas = [], rotulos = [];
+      for(var h = hIni; h <= hFim; h += passo){
+        marcas.push(h * 60);
+        rotulos.push(('0' + (h % 24)).slice(-2) + 'h');
+      }
+      if(marcas[marcas.length-1] < hFim * 60){
+        marcas.push(hFim * 60);
+        rotulos.push(('0' + (hFim % 24)).slice(-2) + 'h');
+      }
+
+      // no dia de hoje a linha para na hora atual
+      var agora = new Date(), corte = null;
+      if(ymd(agora) === ymd(d1)){
+        corte = agora.getHours()*60 + agora.getMinutes();
+        // nunca corta antes do fim do ultimo trecho ja lancado hoje
+        trechosDoDia(ymd(d1)).forEach(function(t){
+          var fimH = Math.ceil(t.b / 60) * 60;
+          if(fimH > corte) corte = fimH;
+        });
+      }
+
+      var tonsD = [0.22, 0.42, 0.68, 1];
+      var setsD = dias.map(function(dd, i){
+        var vals = curvaDoDia(ymd(dd), marcas);
+        var atual = (i === 3);
+        if(atual && corte !== null){
+          vals = vals.map(function(v, j){ return marcas[j] > corte ? null : v; });
+        }
+        return {
+          label: ('0'+dd.getDate()).slice(-2)+'/'+('0'+(dd.getMonth()+1)).slice(-2),
+          data: vals,
+          borderColor: rgba(cor, tonsD[i]),
+          backgroundColor: atual ? gradiente(cor) : 'transparent',
+          borderWidth: atual ? 2.4 : 1.4,
+          pointRadius: atual ? 3 : 2,
+          pointBackgroundColor: rgba(cor, tonsD[i]),
+          tension: 0,
+          spanGaps: false,
+          fill: atual ? 'origin' : false
+        };
+      });
+      return { rotulos: rotulos, sets: setsD, legenda: false, titulo: 'Lucro ao longo do dia', sub: 'Comparativo 4 semanas' };
+    }
+
+    if(aba === 'mes'){
+      // v596: lucro ACUMULADO dia a dia no mes escolhido x 3 meses anteriores.
+      // Mostra o ritmo: em que ponto do mes voce esta a frente ou atras.
+      var hojeM = new Date(); hojeM.setHours(0,0,0,0);
+      var tonsM = [0.22, 0.42, 0.68, 1];
+      var rotDias = [];
+      for(var dn = 1; dn <= 31; dn++) rotDias.push(String(dn));
+      var setsM = [];
+      for(var q = 3; q >= 0; q--){
+        var ini_m = new Date(d1.getFullYear(), d1.getMonth() - q, 1);
+        var nDias = new Date(ini_m.getFullYear(), ini_m.getMonth() + 1, 0).getDate();
+        var atualM = (q === 0);
+        var acum = 0, valsM = [], ultimo = -1;
+        for(var di = 1; di <= 31; di++){
+          var dia_m = new Date(ini_m.getFullYear(), ini_m.getMonth(), di);
+          if(di > nDias || dia_m > hojeM){ valsM.push(null); continue; }
+          acum += lucro(ymd(dia_m));
+          valsM.push(Number(acum.toFixed(2)));
+          ultimo = di - 1;
+        }
+        var nomeM = MESES[ini_m.getMonth()] + (ini_m.getFullYear() !== hojeM.getFullYear() ? '/' + String(ini_m.getFullYear()).slice(-2) : '');
+        setsM.push({
+          label: nomeM,
+          data: valsM,
+          borderColor: rgba(cor, tonsM[3-q]),
+          backgroundColor: atualM ? gradiente(cor) : 'transparent',
+          borderWidth: atualM ? 2.4 : 1.4,
+          // linhas finas sem pontos; so o ultimo dia do mes atual ganha marcador
+          pointRadius: valsM.map(function(v, j){ return (atualM && j === ultimo) ? 4 : 0; }),
+          pointBackgroundColor: rgba(cor, tonsM[3-q]),
+          tension: 0.25,
+          spanGaps: false,
+          fill: atualM ? 'origin' : false
+        });
+      }
+      return {
+        rotulos: rotDias, sets: setsM, legenda: true,
+        titulo: 'Lucro acumulado no mês', sub: 'Comparativo 4 meses',
+        // eixo X so com alguns dias, para nao embolar no celular
+        xTick: function(v, i){ var d = i + 1; return (d === 1 || d % 5 === 0) ? String(d) : ''; },
+        yTick: function(v){ return v >= 1000 ? 'R$' + (v/1000).toLocaleString('pt-BR', { maximumFractionDigits:1 }) + 'k' : 'R$' + v; }
+      };
+    }
+
+    if(aba === 'ano'){
+      // v597: lucro ACUMULADO mes a mes no ano escolhido x ate 3 anos anteriores
+      var sel = d1.getFullYear();
+      var hojeA = new Date();
+      var primeiroAno = sel - 3;
+      // soma por mes percorrendo so os dias que tem registro (ou ganho extra)
+      var porMes = {};                   // 'AAAA-MM' -> lucro
+      var chaves = {};
+      try {
+        Object.keys(relatoriosDiarios || {}).forEach(function(k){ chaves[k] = 1; });
+        var chkGE = document.getElementById('anaIncluirGE');
+        if(chkGE && chkGE.checked && typeof carregarGanhosExtrasList === 'function'){
+          carregarGanhosExtrasList().forEach(function(g){ if(g && g.data) chaves[g.data] = 1; });
+        }
+      } catch(e){}
+      Object.keys(chaves).forEach(function(k){
+        var a = parseInt(String(k).slice(0,4), 10);
+        if(!a || a < primeiroAno || a > sel) return;
+        var ym = String(k).slice(0,7);
+        porMes[ym] = (porMes[ym] || 0) + lucro(k);
+      });
+
+      var anosA = [];
+      for(var ya = primeiroAno; ya <= sel; ya++){
+        var tem = false;
+        for(var mm = 1; mm <= 12; mm++){ if(porMes[ya + '-' + ('0'+mm).slice(-2)]){ tem = true; break; } }
+        if(tem || ya === sel) anosA.push(ya);    // ano sem nenhum registro nao entra
+      }
+      var tonsTodos = [0.22, 0.42, 0.68, 1];
+      var tonsA = tonsTodos.slice(tonsTodos.length - anosA.length);
+
+      var setsA = anosA.map(function(ya, i){
+        var atualA = (ya === sel);
+        var acum = 0, vals = [], ultimo = -1;
+        for(var mm = 0; mm < 12; mm++){
+          var futuro = (ya > hojeA.getFullYear()) || (ya === hojeA.getFullYear() && mm > hojeA.getMonth());
+          if(futuro){ vals.push(null); continue; }
+          acum += porMes[ya + '-' + ('0'+(mm+1)).slice(-2)] || 0;
+          vals.push(Number(acum.toFixed(2)));
+          ultimo = mm;
+        }
+        return {
+          label: String(ya),
+          data: vals,
+          borderColor: rgba(cor, tonsA[i]),
+          backgroundColor: atualA ? gradiente(cor) : 'transparent',
+          borderWidth: atualA ? 2.4 : 1.4,
+          pointRadius: vals.map(function(v, j){ return atualA ? (j === ultimo ? 4 : 2.5) : 0; }),
+          pointBackgroundColor: rgba(cor, tonsA[i]),
+          tension: 0.25,
+          spanGaps: false,
+          fill: atualA ? 'origin' : false
+        };
+      });
+      return {
+        rotulos: MESES, sets: setsA, legenda: setsA.length > 1,
+        titulo: 'Lucro acumulado no ano', sub: 'Comparativo ' + setsA.length + ' anos',
+        yTick: function(v){ return v >= 1000 ? 'R$' + (v/1000).toLocaleString('pt-BR', { maximumFractionDigits:1 }) + 'k' : 'R$' + v; }
+      };
+    }
+    return null;
+  }
+
+  function fmtBR(n){ return Math.round(n||0).toLocaleString('pt-BR'); }
+
+  // o grafico passa a viver dentro da secao DESEMPENHO: sem cabecalho proprio
+  function montarCabecalho(m, aba){
+    var cab = document.querySelector('.ana-chart-header');
+    if(!cab) return;
+    var novo = '<div id="anaTotalLucroBox" style="display:none"><span id="anaTotalLucro">R$ 0,00</span></div>';
+    if(cab.innerHTML !== novo) cab.innerHTML = novo;
+  }
+
+  // resumo das semanas, solto abaixo do grafico
+  function montarResumo(m, aba){
+    var canvas = document.getElementById('anaLinhaCanvas');
+    if(!canvas || !canvas.parentNode) return;
+    var box = document.getElementById('glxResumo');
+
+    if(aba !== 'semana' && aba !== 'dia' && aba !== 'mes' && aba !== 'ano'){
+      if(box) box.style.display = 'none';
+      return;
+    }
+    if(!box){
+      box = document.createElement('div');
+      box.id = 'glxResumo';
+    }
+    if(box.parentNode !== canvas.parentNode || canvas.nextSibling !== box){
+      canvas.parentNode.insertBefore(box, canvas.nextSibling);
+    }
+    box.style.display = '';
+
+    var cor = corTema();
+    // semana: soma dos dias; dia: valor acumulado no fim do dia
+    var totais = m.sets.map(function(s){
+      if(aba === 'dia' || aba === 'mes' || aba === 'ano'){
+        var ult = 0;
+        s.data.forEach(function(v){ if(v !== null && v !== undefined) ult = Number(v)||0; });
+        return ult;
+      }
+      return s.data.reduce(function(a,b){ return a + (Number(b)||0); }, 0);
+    });
+    var sel = m.sets.length - 1;
+
+    var html = m.sets.map(function(s, i){
+      var ativo = (i === sel);
+      return ''
+        + '<div class="glxRes' + (ativo ? ' glxResSel' : '') + '">'
+        +   '<span class="glxResBarra" style="background:' + (ativo ? cor : rgba(cor, 0.38)) + '"></span>'
+        +   '<span class="glxResTexto">'
+        +     '<span class="glxResData">' + s.label + '</span>'
+        +     '<span class="glxResValor"' + (ativo ? ' style="color:' + cor + '"' : '') + '>R$ ' + fmtBR(totais[i]) + '</span>'
+        +   '</span>'
+        + '</div>';
+    }).join('');
+    if(box.innerHTML !== html) box.innerHTML = html;
+    // v597: com menos de 4 itens (ex.: so 2 anos de dados) as colunas se ajustam
+    var n = m.sets.length;
+    box.style.gridTemplateColumns = (n > 0 && n < 4) ? 'repeat(' + n + ', 1fr)' : '';
+  }
+
+  function desenhar(){
+    var orig = document.getElementById('anaBarCanvas');
+    if(!orig || typeof Chart === 'undefined') return;
+
+    var aba = abaAtiva();
+    var ini = (document.getElementById('anaDataInicio')||{}).value || '';
+    var fim = (document.getElementById('anaDataFim')||{}).value || '';
+    if(!ini || !fim) return;
+
+    // filtro manual (busca) mantem o grafico original do app
+    if(!aba){
+      orig.style.display = '';
+      var meuD = document.getElementById('anaLinhaCanvas');
+      if(meuD) meuD.style.display = 'none';
+      assinatura = 'dia';
+      return;
+    }
+
+    var m = montar(aba, ini, fim);
+    if(!m) return;
+
+    var nova = aba + '|' + ini + '|' + fim + '|' + JSON.stringify(m.sets.map(function(s){ return s.data; }));
+    if(nova === assinatura) return;
+    assinatura = nova;
+
+    orig.style.display = 'none';
+    var meu = document.getElementById('anaLinhaCanvas');
+    if(!meu){
+      meu = document.createElement('canvas');
+      meu.id = 'anaLinhaCanvas';
+      orig.parentNode.insertBefore(meu, orig.nextSibling);
+    }
+    meu.style.display = '';
+
+    montarCabecalho(m, aba);
+    setTimeout(function(){ montarResumo(m, aba); }, 0);
+
+    if(grafico){ try{ grafico.destroy(); }catch(e){} grafico = null; }
+    grafico = new Chart(meu, {
+      type: 'line',
+      data: { labels: m.rotulos, datasets: m.sets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        events: [],                      // sem interacao ao tocar no grafico
+        layout: { padding: { top: 10, right: 6 } },
+        plugins: {
+          datalabels: { display: false },
+          legend: m.legenda ? {
+            display: true, position: 'top', align: 'end',
+            labels: { boxWidth: 14, boxHeight: 3, font:{ size:10, weight:'700' }, color:'#64748b', padding:10,
+                      // a amostra usa a cor da linha (o mes atual tem gradiente no preenchimento)
+                      generateLabels: function(ch){
+                        return ch.data.datasets.map(function(d, i){
+                          return { text: d.label, fillStyle: d.borderColor, strokeStyle: d.borderColor,
+                                   lineWidth: 0, hidden: !ch.isDatasetVisible(i), datasetIndex: i, fontColor: '#64748b' };
+                        });
+                      } }
+          } : { display: false },
+          tooltip: { enabled: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color:'rgba(148,163,184,0.16)', drawTicks:false },
+            border: { display:false },
+            ticks: { color:'#94a3b8', font:{ size:10, weight:'700' }, padding:6,
+                     callback: m.yTick || function(v){ return 'R$'+v; } }
+          },
+          x: {
+            grid: { display:false },
+            border: { display:false },
+            ticks: m.xTick
+              ? { color:'#94a3b8', font:{ size:10, weight:'700' }, maxRotation:0, autoSkip:false, callback: m.xTick }
+              : { color:'#94a3b8', font:{ size:10, weight:'700' }, maxRotation:0, autoSkip:false }
+          }
+        }
+      }
+    });
+  }
+
+  function instalar(){
+    if(typeof window.gerarAnalytics !== 'function'){ setTimeout(instalar, 600); return; }
+    if(window._linhaV572) return;
+    window._linhaV572 = true;
+    var orig = window.gerarAnalytics;
+    window.gerarAnalytics = function(){
+      var r = orig.apply(this, arguments);
+      assinatura = '';            // forca redesenho com os dados novos
+      setTimeout(desenhar, 40);
+      return r;
+    };
+  }
+  setTimeout(instalar, 900);
+  setTimeout(instalar, 2500);
+
+  // acompanha a troca de aba
+  setInterval(function(){
+    if(document.querySelectorAll('#anaLinhaCanvas').length > 1) return;   // durante o compartilhamento
+    var c = document.getElementById('anaBarCanvas');
+    if(c && c.offsetParent !== null) desenhar();
+  }, 800);
+})();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -15832,8 +17771,950 @@ var _eficIv2 = setInterval(function(){
 </style>
 
 
+<style>
+/* v535: elimina a barra de rolagem horizontal do modal de Analise.
+   Os widgets de navegacao usam margin lateral negativa (full-bleed) e
+   sangravam alguns px; o modal so tinha overflow-y definido.
+   Corta apenas o eixo X - o balao da meta sangra na vertical, nao e afetado. */
+#modalAnalytics { overflow-x: hidden !important; }
+</style>
 
 
 
+
+
+<style>
+/* v538: resumo em 2 colunas - lucro do periodo | incluir ganho extra */
+#anaResumoGrid{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  gap:0;
+  align-items:center;
+  margin-top:14px;
+  margin-bottom:30px;      /* respiro de ~2 paragrafos antes da proxima secao */
+  font-family:inherit;
+}
+#anaDivisor{
+  align-self:center;
+  width:0;
+  height:46px;
+  border-left:1px dotted rgba(255,255,255,.55);
+}
+#anaColLucro{ text-align:right; padding-right:16px; }
+#anaResumoGrid .anaColGE{ text-align:left; padding-left:16px; }
+#anaResumoGrid .anaLucroVal{ justify-content:flex-end; }
+#anaGELinha{ justify-content:flex-start; }
+#anaResumoGrid .anaCol{ min-width:0; }
+#anaResumoGrid .anaColLbl{
+  font-family:'Roboto', sans-serif !important;  /* Poppins so tem 600/700 carregados */
+  font-size:11.5px;
+  font-weight:400 !important;
+  color:#fff;
+  letter-spacing:.2px;
+  line-height:1.35;
+  opacity:.92;
+  margin-bottom:4px;
+}
+#anaResumoGrid .anaLucroVal{
+  display:flex; align-items:baseline; gap:3px;
+  color:var(--secondary); line-height:1;
+  white-space:nowrap;
+}
+#anaResumoGrid .anaLucroCif{ font-size:13px; font-weight:700; color:#fff; }
+/* tamanhos fixos por faixa de tela - clamp() quebra o parser do html2canvas */
+#anaResumoGrid .anaLucroNum{ font-size:25px; font-weight:900; letter-spacing:0; }
+#anaResumoGrid .anaLucroNum.anaLucroNumSm{ font-size:20px; }
+#anaResumoGrid .anaLucroNum.anaLucroNumXS{ font-size:17px; }
+#anaResumoGrid .anaLucroNum.anaLucroNumXXS{ font-size:14px; }
+@media (max-width:374px){
+  #anaResumoGrid .anaLucroNum{ font-size:23px; }
+  #anaResumoGrid .anaLucroNum.anaLucroNumSm{ font-size:18px; }
+  #anaResumoGrid .anaLucroNum.anaLucroNumXS{ font-size:15px; }
+  #anaResumoGrid .anaLucroNum.anaLucroNumXXS{ font-size:13px; }
+}
+@media (max-width:339px){
+  #anaResumoGrid .anaLucroNum{ font-size:19px; }
+  #anaResumoGrid .anaLucroNum.anaLucroNumSm{ font-size:15px; }
+  #anaResumoGrid .anaLucroNum.anaLucroNumXS{ font-size:13px; }
+  #anaResumoGrid .anaLucroNum.anaLucroNumXXS{ font-size:11px; }
+}
+
+#anaResumoGrid .anaColGE{ cursor:pointer; display:block; }
+#anaGELbl{ font-size:13px !important; margin-bottom:6px; white-space:nowrap; }
+#anaGELbl .anaGEDestaque{ color:var(--secondary); font-weight:700; letter-spacing:.3px; }
+#anaGELinha{ display:flex; align-items:center; gap:9px; width:100%; }
+
+/* switch de ligar/desligar - elementos reais, sem pseudo-elemento em input */
+input.anaSwitchInput{
+  display:none;   /* o clique continua vindo do <label>; fora do alcance do html2canvas */
+}
+.anaSwitchUI{
+  display:inline-block;
+  position:relative;
+  width:40px; height:23px;
+  flex:0 0 auto;
+  border-radius:999px;
+  background:rgba(255,255,255,.22);
+  cursor:pointer;
+  transition:background-color .25s ease;
+}
+.anaSwitchDot{
+  display:block;
+  position:absolute;
+  top:3px; left:3px;
+  width:17px; height:17px;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.3);
+  transition:transform .25s ease;
+}
+input.anaSwitchInput:checked + .anaSwitchUI{ background:var(--secondary); }
+input.anaSwitchInput:checked + .anaSwitchUI .anaSwitchDot{ transform:translateX(17px); }
+
+/* caixinha do valor do ganho extra */
+.anaGEBox{
+  flex-shrink:0;
+  display:inline-flex; align-items:baseline; gap:3px;
+  padding:5px 10px; border-radius:999px;
+  background:rgba(255,255,255,.06);
+  border:2px solid rgba(255,255,255,.14);
+  color:#94a3b8; white-space:nowrap;
+  transition:border-color .25s ease, color .25s ease, background-color .25s ease, box-shadow .25s ease;
+}
+.anaGEBox .anaGECifrao{ font-size:9px; font-weight:700; opacity:.85; }
+.anaGEBox .anaGENum{ font-size:12px; font-weight:900; letter-spacing:.2px; }
+.anaGEBox.ativo{
+  border-color:var(--secondary); color:var(--secondary);
+  background:rgba(255,255,255,.10);
+  box-shadow:0 0 0 3px rgba(255,255,255,.05);
+}
+.anaGEBox.anaGEPop{ animation:anaGEPop .45s cubic-bezier(.34,1.56,.64,1); }
+@keyframes anaGEPop{
+  0%{ transform:scale(1); } 45%{ transform:scale(1.16); } 100%{ transform:scale(1); }
+}
+</style>
+
+
+<style>
+/* v548: login com Google */
+/* linha do perfil dentro do menu preto */
+.mzPerfilMenuItem{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:14px 16px;
+  border-bottom:1px solid rgba(255,255,255,0.15);
+  cursor:default;
+}
+.mzPerfilFoto{
+  width:38px; height:38px; flex:0 0 38px;
+  border-radius:50%;
+  overflow:hidden;
+  background:rgba(255,255,255,0.10);
+  display:flex; align-items:center; justify-content:center;
+}
+.mzPerfilFoto img{ width:100%; height:100%; object-fit:cover; display:block; }
+.mzIniciais{ color:#fff; font-family:inherit; font-weight:800; font-size:15px; }
+.mzPerfilTexto{ min-width:0; flex:1; }
+.mzPerfilSaudacao{
+  font-family:'Roboto', sans-serif; font-size:10px; font-weight:400;
+  color:#94a3b8; line-height:1.2;
+}
+.mzPerfilNome{
+  font-family:'Poppins', sans-serif; font-size:14px; font-weight:700;
+  color:#fff; line-height:1.25;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.mzPerfilSair{
+  flex:0 0 auto;
+  width:36px; height:36px;
+  background:rgba(255,255,255,0.06);
+  border:none; border-radius:8px;
+  color:#94a3b8; font-size:14px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.mzPerfilSair:hover{ background:rgba(239,68,68,0.15); color:#ef4444; }
+
+.mzVidro{
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  z-index:999999;                              /* acima do menu (99999) */
+  background:rgba(255,255,255,0.06);           /* vidro, sem escurecer */
+  backdrop-filter:blur(16px) saturate(120%);
+  -webkit-backdrop-filter:blur(16px) saturate(120%);
+  display:none; align-items:center; justify-content:center;
+  padding:20px;
+}
+
+/* cabecalho: imagem de fundo do app + overlay preto + brilho verde */
+.mzVidro .jf-header{
+  background-color:#000;
+  background-image:url('https://marceloricardooficial.github.io/PillotGo/fundos.png');
+  background-size:cover;
+  background-position:center;
+  padding:32px 20px 26px;
+}
+.mzVidro .jf-header::before{
+  content:''; position:absolute; top:0; left:0; right:0; bottom:0;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(34,197,94,0.42), transparent 60%),
+    rgba(0,0,0,0.74);
+}
+.mzVidro .jf-check{
+  box-shadow:
+    0 0 0 6px rgba(34,197,94,0.20),
+    0 0 26px 6px rgba(34,197,94,0.55),
+    0 0 60px 12px rgba(34,197,94,0.30);
+}
+.mzVidro .jf-title{
+  text-shadow:0 0 18px rgba(34,197,94,0.55);
+}
+.mzVidro .jf-sub .mzM1{ font-family:'Poppins',sans-serif; font-weight:700; color:#fff; }
+.mzVidro .jf-sub .mzM2{ font-family:'Roboto',sans-serif; font-weight:400; color:var(--secondary); }
+.mzVidro .jf-sub .mzM3{ font-family:'Poppins',sans-serif; font-weight:700; color:var(--secondary); }
+
+.mzLoginBody{ background:#fff; padding:26px 22px 30px; text-align:center; }
+.mzLoginTexto{
+  font-family:'Roboto', sans-serif; font-size:13px; font-weight:400;
+  color:#475569; line-height:1.5; margin-bottom:22px;
+}
+.mzGoogleWrap{
+  display:flex; justify-content:center;
+  margin:8px 0 10px;
+}
+
+/* linha verde correndo na divisao entre o preto e o branco */
+.mzLinhaVerde{
+  height:3px; width:100%;
+  background:rgba(255,255,255,0.08);
+  overflow:hidden; position:relative;
+}
+.mzLinhaVerdeFill{
+  position:absolute; top:0; left:-40%;
+  height:100%; width:40%;
+  background:var(--secondary);
+  box-shadow:0 0 12px 3px rgba(34,197,94,0.85), 0 0 22px 6px rgba(34,197,94,0.45);
+  animation:mzCorre 1.5s ease-in-out infinite;
+}
+.mzLinhaVerde{ box-shadow:0 0 14px rgba(34,197,94,0.25); }
+@keyframes mzCorre{
+  0%   { left:-40%; }
+  100% { left:100%; }
+}
+.mzGoogleBtn{ display:flex; justify-content:center; min-height:44px; }
+.mzLoginAviso{
+  display:none; margin-top:18px; font-size:12px; color:#b91c1c; line-height:1.45;
+}
+</style>
+
+<style>
+/* v556: configuracao inicial - usa o mesmo visual .mzVidro do login */
+#mzSetupTela .mzSetupCard{
+  max-height:calc(100vh - 40px);
+  display:flex; flex-direction:column;
+}
+#mzSetupTela .mzSetupBody{ overflow-y:auto; text-align:left; padding:22px 20px 24px; }
+.mzSetupTexto{
+  font-family:'Roboto',sans-serif; font-size:13px; color:#475569;
+  line-height:1.45; margin-bottom:14px;
+}
+.mzSetupCampo{ margin-bottom:16px; }
+.mzSetupCampo label{
+  display:block; font-family:'Roboto',sans-serif; font-size:13px;
+  font-weight:500; color:#334155; margin-bottom:7px;
+}
+.mzOpcoes{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.mzOpc{
+  height:44px; border:2px solid #e2e8f0; border-radius:8px;
+  background:#fff; color:#0f172a; font-family:inherit;
+  font-size:13px; font-weight:700; cursor:pointer;
+  transition:border-color .2s, color .2s, background-color .2s;
+}
+.mzOpc.ativo{ border-color:var(--secondary); color:var(--secondary); background:rgba(34,197,94,0.07); }
+.mzInputWrap{ position:relative; display:flex; align-items:center; }
+.mzSetupInput{
+  width:100%; height:46px; box-sizing:border-box;
+  border:1px solid #e2e8f0; border-radius:8px;
+  padding:0 12px; font-family:inherit;
+  font-size:16px; font-weight:700; color:#0f172a; background:#fff;
+}
+.mzSetupInput:focus{ outline:none; border-color:var(--secondary); }
+.mzSetupInput.mzComPrefixo{ padding-left:36px; }
+.mzPrefixo{
+  position:absolute; left:12px; font-size:12px; font-weight:700;
+  color:#94a3b8; pointer-events:none;
+}
+.mzSufixo{
+  position:absolute; right:12px; font-size:12px; font-weight:700;
+  color:#94a3b8; pointer-events:none;
+}
+.mzMetasGrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px 10px; }
+.mzMetaLinha label{
+  display:block; font-family:'Roboto',sans-serif; font-size:12px;
+  font-weight:500; color:#334155; margin-bottom:5px;
+}
+.mzMetaLinha .mzSetupInput{ height:42px; font-size:15px; }
+.mzTotalCelula{
+  display:flex; flex-direction:column; justify-content:flex-end;
+  padding-left:10px; border-left:1px dashed #cbd5e1;
+}
+.mzTotalCelula label{ color:#475569; margin-bottom:2px; }
+.mzTotalValor{
+  font-family:'Poppins',sans-serif; font-size:20px; font-weight:900;
+  color:var(--secondary); line-height:1.1; height:42px;
+  display:flex; align-items:center;
+}
+.mzSetupEtapa{
+  font-family:'Poppins',sans-serif; font-size:12px; font-weight:700;
+  letter-spacing:1.6px; color:var(--secondary);
+  margin-top:4px; text-shadow:0 0 14px rgba(34,197,94,0.45);
+}
+.mzSetupErro{ display:none; margin:4px 0 12px; font-size:12px; color:#b91c1c; line-height:1.4; }
+.mzBtnPrim{
+  width:100%; height:48px; border:none; border-radius:8px;
+  background:#000; color:#fff; font-family:inherit;
+  font-size:14px; font-weight:800; letter-spacing:1px; cursor:pointer;
+}
+.mzBtnSec{
+  height:48px; border:1px solid #cbd5e1; border-radius:8px;
+  background:#fff; color:#475569; font-family:inherit;
+  font-size:13px; font-weight:700; letter-spacing:1px; cursor:pointer;
+}
+.mzBotoes{ display:grid; grid-template-columns:1fr 2fr; gap:10px; margin-top:16px; }
+</style>
+
+<style>
+/* v561: metas por dia, expansivel */
+#anaMetasDiasWrap{ background:#fff; font-family:inherit; }
+.amdDivisor{
+  position:relative; height:1px; background:#f1f5f9;
+  display:flex; align-items:center; justify-content:center;
+}
+.amdBtn{
+  position:absolute; top:-15px;
+  width:30px; height:30px;
+  border:none; border-radius:8px;
+  background:var(--secondary); color:#fff;
+  font-size:12px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.14);
+}
+/* sem recuo a esquerda: a coluna cinza encosta na borda da tela */
+.amdPainel{ display:none; padding:0 20px 0 0; border-bottom:1px solid #f1f5f9; }
+.amdLista{ overflow:hidden; }
+.amdLinha{ display:flex; align-items:stretch; }
+/* coluna cinza continua, de cima a baixo, sem cortes */
+.amdRotulo{
+  flex:0 0 76px; width:76px;
+  background:#f8fafc;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:12px 6px; gap:1px;
+}
+/* a divisao entre as linhas fica so no conteudo, para nao quebrar a coluna */
+.amdLinha + .amdLinha .amdConteudo{ border-top:1px solid #f1f5f9; }
+.amdDia{
+  font-family:'Poppins',sans-serif; font-size:12px; font-weight:700;
+  color:#334155; text-transform:uppercase; letter-spacing:.4px;
+  text-align:center; line-height:1.15;
+}
+.amdData{
+  font-family:'Roboto',sans-serif; font-size:11px; font-weight:400;
+  color:#94a3b8; text-align:center; line-height:1.15;
+}
+.amdConteudo{ flex:1; min-width:0; padding:12px 0 12px 14px; display:flex; flex-direction:column; justify-content:center; }
+.amdTopo{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; gap:8px; }
+.amdValores{ font-family:inherit; font-size:14px; color:#94a3b8; }
+.amdValores b{ font-size:15px; font-weight:800; color:#0f172a; }
+.amdMeta{ font-size:13px; }
+.amdBarra{
+  position:relative; height:4px; width:100%;
+  background:#f1f5f9; border-radius:999px; overflow:hidden;
+}
+.amdFill{
+  height:100%; border-radius:999px;
+  background:var(--secondary);
+  transition:width .7s cubic-bezier(.22,.9,.3,1);
+}
+.amdFill.bateu{ box-shadow:0 0 8px rgba(34,197,94,0.45); }
+.amdPct{
+  font-family:inherit; font-size:12px; font-weight:800;
+  color:var(--secondary); white-space:nowrap;
+}
+.amdPct.bateu{ color:var(--secondary); }
+.amdEstrela{ color:#facc15; font-size:12px; margin-left:3px; }
+.amdLinha.amdAtual .amdRotulo{ background:var(--secondary); }
+.amdLinha.amdAtual .amdDia{ color:#fff; }
+.amdLinha.amdAtual .amdData{ color:rgba(255,255,255,.85); }
+.amdLinha.amdAtual .amdValores b{ color:var(--secondary); }
+.amdVazio{ font-family:'Roboto',sans-serif; font-size:14px; color:#94a3b8; text-align:center; }
+</style>
+
+<style>
+/* v567: aviso de gravacao dentro do modal da jornada */
+.jrAviso{
+  position:absolute; top:0; left:0; right:0; bottom:0;
+  display:none; align-items:center; justify-content:center;
+  background:rgba(255,255,255,0.94);
+  z-index:40;
+}
+.jrCartao{
+  display:flex; flex-direction:column; align-items:center;
+  gap:16px; padding:24px 28px; text-align:center; max-width:280px;
+}
+.jrSpinner{
+  width:54px; height:54px; border-radius:50%;
+  border:5px solid rgba(0,0,0,0.08);
+  border-top-color:var(--secondary);
+  animation:jrGira .8s linear infinite;
+}
+@keyframes jrGira{ to{ transform:rotate(360deg); } }
+.jrIconeErro{
+  width:54px; height:54px; border-radius:50%;
+  background:#fef2f2; color:#ef4444;
+  display:flex; align-items:center; justify-content:center; font-size:24px;
+}
+.jrTexto{
+  font-family:'Poppins',sans-serif; font-size:15px; font-weight:700;
+  color:#0f172a; line-height:1.35;
+}
+.jrAviso.jrErro .jrTexto{ font-size:13px; font-weight:600; color:#b91c1c; }
+</style>
+
+
+
+<style>
+/* v572: grafico solto, sem cartao */
+#modalAnalytics .ana-chart-section{
+  background:#fff;
+  margin:0;
+  padding:4px 40px 18px;    /* continua a secao de desempenho, sem corte */
+  border-radius:0;
+  box-shadow:none;
+  border-bottom:1px solid #f1f5f9;
+}
+#modalAnalytics .ana-chart-header{ display:none; }
+/* o wrap tem altura fixa (140px): sem isso o resumo transborda
+   e invade a secao seguinte */
+#modalAnalytics .ana-chart-wrap{ height:auto; }
+#modalAnalytics .ana-chart-wrap > canvas{ height:150px !important; }
+#anaLinhaCanvas{ width:100% !important; display:block; }
+</style>
+
+<style>
+/* v573: cabecalho do grafico de lucro */
+#modalAnalytics .ana-chart-header{ display:block; margin-bottom:10px; }
+.glxCabecalho{ font-family:inherit; text-align:center; }
+.glxTopo{ display:flex; align-items:center; justify-content:center; gap:8px; }
+.glxIcone{
+  width:30px; height:30px; flex:0 0 30px;
+  display:flex; align-items:center; justify-content:center;
+  color:var(--secondary); font-size:17px;
+}
+.glxTitulo{
+  font-family:'Poppins',sans-serif; font-size:16px; font-weight:800;
+  color:#0f172a; letter-spacing:.4px; text-transform:uppercase;
+}
+.glxSub{
+  font-family:'Roboto',sans-serif; font-size:10px; font-weight:400;
+  color:var(--secondary); margin:-1px 0 0;
+  text-transform:uppercase; letter-spacing:.5px;
+  line-height:1.1;
+}
+/* resumo das semanas, solto abaixo do grafico */
+#glxResumo{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:10px;
+  margin-top:16px;
+  text-align:left;
+}
+.glxRes{ display:flex; align-items:center; gap:7px; min-width:0; }
+.glxResBarra{ width:4px; flex:0 0 4px; height:26px; border-radius:3px; }
+.glxResTexto{ display:flex; flex-direction:column; justify-content:center; min-width:0; }
+.glxResData{
+  font-family:'Roboto',sans-serif; font-size:11px; font-weight:500;
+  color:#94a3b8; line-height:1.2;
+}
+.glxResValor{
+  font-family:'Poppins',sans-serif; font-size:12px; font-weight:800;
+  color:#1e293b; line-height:1.2; white-space:nowrap;
+}
+@media (max-width:359px){
+  #glxResumo{ grid-template-columns:repeat(2, 1fr); gap:10px; }
+}
+</style>
+
+
+
+<style>
+/* v587: Desempenho, grafico e resumo alinhados com os 4 dados (Distancia ... R$/HR).
+   As margens laterais sao medidas no texto do 1o e do 4o dado e aplicadas aqui. */
+#modalAnalytics{ --anaAlinE:20px; --anaAlinD:20px; }
+#anaDesempenho,
+#modalAnalytics .ana-chart-section{
+  padding-left:var(--anaAlinE) !important;
+  padding-right:var(--anaAlinD) !important;
+}
+/* o anel do score tem 8px de folga interna no SVG: compensa para a borda visivel alinhar */
+#anaDesempenho > div[style*="grid-template-columns:110px"] > div:first-child{ margin-left:-8px; }
+</style>
+<script>
+// v587: mede onde comeca o texto do 1o dado e onde termina o do 4o
+(function(){
+  function bordaTexto(el, lado){
+    if(!el) return null;
+    var r = document.createRange();
+    r.selectNodeContents(el);
+    var b = r.getBoundingClientRect();
+    if(!b.width) return null;
+    return lado === 'e' ? b.left : b.right;
+  }
+  function alinhar(){
+    var modal = document.getElementById('modalAnalytics');
+    var grid = document.querySelector('.ana-stats-grid');
+    if(!modal || !grid || grid.offsetParent === null) return;
+    var st = grid.querySelectorAll('.ana-stat');
+    if(st.length < 4) return;
+    var g = grid.getBoundingClientRect();
+    var p = st[0], u = st[st.length-1];
+    var esq = Math.min.apply(null, [
+      bordaTexto(p.querySelector('.ana-stat-val'),'e'),
+      bordaTexto(p.querySelector('.ana-stat-lbl'),'e')
+    ].filter(function(v){ return v !== null; }));
+    var dir = Math.max.apply(null, [
+      bordaTexto(u.querySelector('.ana-stat-val'),'d'),
+      bordaTexto(u.querySelector('.ana-stat-lbl'),'d')
+    ].filter(function(v){ return v !== null; }));
+    if(!isFinite(esq) || !isFinite(dir)) return;
+    var pe = Math.max(8, Math.round(esq - g.left));
+    var pd = Math.max(8, Math.round(g.right - dir));
+    // v588: mesmo padding dos dois lados (usa o menor para nao apertar)
+    var pad = Math.min(pe, pd); pe = pad; pd = pad;
+    if(modal._alinE === pe && modal._alinD === pd) return;
+    modal._alinE = pe; modal._alinD = pd;
+    modal.style.setProperty('--anaAlinE', pe + 'px');
+    modal.style.setProperty('--anaAlinD', pd + 'px');
+  }
+  setInterval(alinhar, 800);
+  window.addEventListener('resize', function(){ setTimeout(alinhar, 100); });
+})();
+</script>
+
+<style>
+/* v588: resumo das semanas - col 1 encostada na esquerda, 2 e 3 centralizadas, 4 encostada na direita */
+#glxResumo > .glxRes{ justify-self:center; }
+#glxResumo > .glxRes:nth-child(4n+1){ justify-self:start; }
+#glxResumo > .glxRes:nth-child(4n){ justify-self:end; }
+@media (max-width:359px){
+  #glxResumo > .glxRes:nth-child(odd){ justify-self:start; }
+  #glxResumo > .glxRes:nth-child(even){ justify-self:end; }
+}
+</style>
+<style>
+/* ============ v589: acabamento da tela de Analise ============ */
+#modalAnalytics{ font-variant-numeric:tabular-nums; }
+#modalAnalytics::after{ content:''; display:block; height:96px; } /* folga para o botao flutuante */
+
+/* 4 dados: label com contraste AA e espaco para o botao de metas */
+#modalAnalytics .ana-stats-grid{ padding-bottom:26px !important; border-bottom:none !important; }
+#modalAnalytics .ana-stat-lbl{ color:#64748b; letter-spacing:.4px; }
+
+/* Botao "metas por dia": pilula com rotulo, em vez de um + sem contexto */
+#modalAnalytics .amdDivisor{ background:#eef2f6; }
+#modalAnalytics .amdBtn{
+  top:-16px; width:auto; height:32px; padding:0 14px 0 12px; gap:8px;
+  border-radius:999px; background:#fff; color:#334155;
+  border:1px solid #e2e8f0; box-shadow:0 2px 6px rgba(15,23,42,.08);
+  font:600 12px/1 'Poppins',sans-serif; white-space:nowrap;
+}
+#modalAnalytics .amdBtn i{ color:var(--secondary); font-size:11px; }
+#modalAnalytics .amdBtn::after{ content:'Metas por dia'; }
+#modalAnalytics .amdBtn.aberto::after{ content:'Ocultar metas'; }
+
+/* Cabecalho unico para todas as secoes: chip do icone + titulo + subtitulo */
+#modalAnalytics .glxCabecalho{
+  display:grid !important; grid-template-columns:36px 1fr; column-gap:12px; row-gap:2px;
+  align-items:center; text-align:left !important; margin:0 0 20px !important;
+}
+#modalAnalytics .glxCabecalho .glxTopo{ display:contents; }
+#modalAnalytics .glxCabecalho .glxIcone{
+  grid-column:1; grid-row:1 / span 2; width:36px; height:36px; border-radius:10px;
+  background:#dcfce7; background:color-mix(in srgb, var(--secondary) 14%, #fff);
+  color:var(--secondary); font-size:16px;
+}
+#modalAnalytics .glxCabecalho .glxTitulo{ grid-column:2; grid-row:1; align-self:end; font-size:15px; line-height:1.2; letter-spacing:.3px; }
+#modalAnalytics .glxCabecalho .glxSub{
+  grid-column:2; grid-row:2; align-self:start; margin:0;
+  font-size:12px; color:#64748b; text-transform:none; letter-spacing:0; line-height:1.3;
+}
+
+/* Ritmo vertical igual em todas as secoes, sem cartao solto no meio */
+#anaDesempenho{ padding-top:28px !important; }
+#modalAnalytics .ana-chart-section{ padding-bottom:24px !important; border-bottom:1px solid #eef2f6 !important; }
+#anaAppSection{ padding-top:28px !important; }
+#modalAnalytics .ana-dist-section{
+  margin:0 !important; border-radius:0 !important; box-shadow:none !important;
+  padding:28px var(--anaAlinD,20px) 24px var(--anaAlinE,20px) !important;
+}
+
+/* Faturamento por app: lista com barra de participacao */
+#anaAppSection .ana-chart-wrap{ min-height:0 !important; }
+#anaAppSection .ana-chart-wrap > div:first-child{ grid-template-columns:1fr !important; padding:0 !important; }
+#anaAppSection .ana-chart-wrap > div:first-child > div{ padding:12px 0 !important; gap:12px !important; border-bottom:1px solid #f1f5f9 !important; }
+#anaAppSection .ana-chart-wrap > div:first-child > div > div:first-child{ width:40px !important; height:40px !important; border-radius:12px !important; }
+#anaAppSection .ana-chart-wrap > div:first-child > div > div:last-child{
+  flex:1; display:grid !important; grid-template-columns:1fr auto; column-gap:12px; row-gap:6px; align-items:center;
+}
+#anaAppSection .ana-chart-wrap > div:first-child > div > div:last-child > div:nth-child(1){
+  grid-column:1; grid-row:1; font-size:13px !important; font-weight:600 !important; color:#0f172a !important;
+  text-transform:none !important; letter-spacing:0 !important;
+}
+#anaAppSection .ana-chart-wrap > div:first-child > div > div:last-child > div:nth-child(2){
+  grid-column:2; grid-row:1; text-align:right; font-size:15px !important; font-weight:800 !important;
+}
+#anaAppSection .ana-chart-wrap > div:first-child > div > div:last-child > div:nth-child(3){
+  grid-column:2; grid-row:2; text-align:right; font-size:11px !important; font-weight:600 !important; color:#64748b !important;
+}
+#anaAppSection .anaAppBar{ grid-column:1; grid-row:2; height:6px; border-radius:3px; background:#eef2f6; overflow:hidden; }
+#anaAppSection .anaAppBar > span{ display:block; height:100%; border-radius:3px; background:var(--secondary); transition:width .6s ease; }
+#anaAppSection .ana-chart-wrap > div:nth-child(2){ padding:14px 0 0 !important; margin:0 !important; border-top:none !important; }
+#anaAppSection .ana-chart-wrap > div:nth-child(2) > span:last-child{ font-size:16px !important; font-weight:800 !important; }
+
+/* Distribuicao de custos: legenda com marcador de cor e numeros alinhados */
+#modalAnalytics .ana-donut-row{ gap:24px; }
+#modalAnalytics .ana-donut-wrap{ width:104px; height:104px; }
+#modalAnalytics .ana-donut-item{ margin:0; padding:9px 0; font-size:13px; border-bottom:1px solid #f1f5f9; }
+#modalAnalytics .ana-donut-item:last-child{ border-bottom:none; }
+#modalAnalytics .ana-donut-item > span:first-child{
+  display:flex; align-items:center; gap:8px; min-width:0;
+  text-transform:none; font-weight:600; color:#334155; white-space:nowrap;
+}
+#modalAnalytics .ana-donut-item > span:first-child::before{
+  content:''; width:8px; height:8px; border-radius:50%; flex:0 0 8px; background:var(--secondary);
+}
+#modalAnalytics .ana-donut-item:nth-child(2) > span:first-child::before{ background:#ef4444; }
+#modalAnalytics .ana-donut-item:nth-child(3) > span:first-child::before{ background:#cbd5e1; }
+#anaValLucro,#anaValGnv,#anaValOutros{ font-size:12px !important; color:#64748b !important; font-weight:500 !important; }
+#anaPctLucro,#anaPctGnv,#anaPctOutros{ min-width:36px; text-align:right; font-size:13px; }
+#anaPctOutros{ color:#64748b !important; }
+#modalAnalytics .ana-summary-row{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+  margin-top:18px; padding-top:16px; border-top:1px solid #eef2f6;
+}
+#modalAnalytics .ana-summary-item:nth-child(1){ text-align:left; }
+#modalAnalytics .ana-summary-item:nth-child(2){ text-align:center; }
+#modalAnalytics .ana-summary-item:nth-child(3){ text-align:right; }
+#modalAnalytics .ana-summary-lbl{ font-size:11px; color:#64748b; letter-spacing:.4px; margin-bottom:4px; }
+#modalAnalytics .ana-summary-val{ font-size:18px; font-weight:800; white-space:nowrap; }
+
+@media (max-width:359px){
+  #modalAnalytics .ana-summary-val{ font-size:15px; }
+  #modalAnalytics .ana-donut-row{ gap:16px; }
+  #modalAnalytics .ana-donut-wrap{ width:88px; height:88px; }
+  #anaAppSection .ana-chart-wrap > div:first-child > div > div:last-child > div:nth-child(2){ font-size:14px !important; }
+}
+</style>
+<script>
+// v589: cabecalhos padronizados, barras de participacao por app e anel mais fino
+(function(){
+  function cab(icone, titulo, sub){
+    return '<div class="glxTopo"><span class="glxIcone"><i class="fa-solid '+icone+'"></i></span>'
+      + '<span class="glxTitulo">'+titulo+'</span></div><div class="glxSub">'+sub+'</div>';
+  }
+  function ajustar(){
+    var modal = document.getElementById('modalAnalytics');
+    if(!modal || !modal.classList.contains('aberto')) return;
+
+    var h = document.querySelector('#anaAppSection .ana-chart-header');
+    if(h && !h.querySelector('.glxCabecalho')){
+      h.innerHTML = '<div class="glxCabecalho">' + cab('fa-mobile-screen','Faturamento por app','Quanto cada app rendeu no período') + '</div>';
+    }
+
+    var d = document.querySelector('#modalAnalytics .ana-dist-section');
+    var t = d && d.firstElementChild;
+    if(t && !t.classList.contains('glxCabecalho') && !t.classList.contains('ana-donut-row')){
+      t.removeAttribute('style');
+      t.className = 'glxCabecalho';
+      t.innerHTML = cab('fa-chart-pie','Distribuição de custos','Para onde foi o seu faturamento bruto');
+    }
+
+    var grid = document.querySelector('#anaAppSection .ana-chart-wrap > div:first-child');
+    if(grid){
+      Array.prototype.forEach.call(grid.children, function(cell){
+        var txt = cell.lastElementChild;
+        if(!txt || txt.children.length < 3) return;
+        var pct = parseInt(txt.children[2].textContent, 10) || 0;
+        var bar = txt.querySelector('.anaAppBar');
+        if(!bar){
+          bar = document.createElement('div');
+          bar.className = 'anaAppBar';
+          bar.innerHTML = '<span style="width:0"></span>';
+          txt.appendChild(bar);
+        }
+        var s = bar.firstElementChild, w = pct + '%';
+        if(s.style.width !== w) setTimeout(function(){ s.style.width = w; }, 30);
+      });
+    }
+
+    try {
+      var c = (window.Chart && Chart.getChart) ? Chart.getChart('anaDonutCanvas') : null;
+      if(c && !c._v589){
+        c._v589 = true;
+        c.options.cutout = '78%';
+        var ds = c.data.datasets[0];
+        ds.borderWidth = 2; ds.borderColor = '#fff';
+        c.update('none');
+      }
+    } catch(e){}
+  }
+  setInterval(ajustar, 600);
+})();
+</script>
+
+<style>
+/* ============ v591: metas por periodo - coluna cinza ate a borda, estrela na meta batida ============ */
+#modalAnalytics .amdPainel{ padding:0 var(--anaAlinD,20px) 0 0 !important; border-bottom:1px solid #eef2f6; }
+#modalAnalytics .amdLinha{ align-items:stretch; }
+/* a coluna cinza sobe ate o divisor; so o conteudo da 1a linha desce para a pilula nao cobrir */
+#modalAnalytics .amdLinha:first-child .amdRotulo{ padding-top:28px; }
+#modalAnalytics .amdLinha:first-child .amdConteudo{ padding-top:28px; }
+#modalAnalytics .amdRotulo{ flex:0 0 72px; width:72px; background:#f4f6f9; gap:2px; }
+#modalAnalytics .amdDia{ font-size:12px; font-weight:700; color:#334155; letter-spacing:.4px; }
+#modalAnalytics .amdData{ font-size:11px; color:#64748b; }
+#modalAnalytics .amdConteudo{ padding-left:16px; }
+#modalAnalytics .amdLinha + .amdLinha .amdConteudo{ border-top:1px solid #f1f5f9; }
+
+#modalAnalytics .amdTopo{ align-items:baseline; margin-bottom:8px; gap:10px; }
+#modalAnalytics .amdValores{ display:flex; align-items:baseline; flex-wrap:wrap; column-gap:6px; min-width:0; }
+#modalAnalytics .amdValores b{ font-size:15px; font-weight:800; color:#0f172a; }
+#modalAnalytics .amdMeta{ font-size:12px; font-weight:500; color:#64748b; }
+#modalAnalytics .amdPct{ display:flex; align-items:center; gap:5px; font-size:13px; font-weight:700; color:#334155; }
+#modalAnalytics .amdEstrela{ color:#facc15; font-size:13px; margin:0; filter:drop-shadow(0 1px 1px rgba(161,98,7,.25)); }
+#modalAnalytics .amdBarra{ height:6px; background:#eef2f6; }
+#modalAnalytics .amdFill.bateu{ box-shadow:none; }
+
+/* meta batida */
+#modalAnalytics .amdBateu .amdPct{ color:var(--secondary); }
+/* hoje: a celula da coluna fica na cor do tema */
+#modalAnalytics .amdAtual .amdRotulo{ background:var(--secondary); }
+#modalAnalytics .amdAtual .amdDia{ color:#fff; }
+#modalAnalytics .amdAtual .amdData{ color:rgba(255,255,255,.9); }
+#modalAnalytics .amdAtual .amdValores b{ color:#0f172a; }
+#modalAnalytics .amdAtual .amdPct{ color:var(--secondary); }
+/* dias que ainda nao chegaram */
+#modalAnalytics .amdFuturo .amdDia{ color:#94a3b8; }
+#modalAnalytics .amdFuturo .amdData{ color:#a3adbb; }
+#modalAnalytics .amdFuturo .amdValores b{ color:#94a3b8; font-weight:700; }
+#modalAnalytics .amdFuturo .amdPct{ color:#94a3b8; font-weight:600; }
+
+@media (max-width:359px){
+  #modalAnalytics .amdRotulo{ flex-basis:62px; width:62px; }
+  #modalAnalytics .amdConteudo{ padding-left:12px; }
+  #modalAnalytics .amdValores b{ font-size:14px; }
+}
+</style>
+
+<style>
+/* ============ v594: KM inicial ja focado ao inserir jornada ============ */
+#kmInicialTrecho:focus{ outline:none; box-shadow:0 0 0 2px var(--secondary); }
+#kmInicialTrecho.kmFocoPulso{ animation:kmPulso 1.1s ease-in-out infinite; }
+@keyframes kmPulso{
+  0%,100%{ box-shadow:0 0 0 2px var(--secondary), 0 0 0 0 transparent; }
+  50%    { box-shadow:0 0 0 2px color-mix(in srgb, var(--secondary) 20%, transparent),
+                      0 0 0 6px color-mix(in srgb, var(--secondary) 22%, transparent); }
+}
+@media (prefers-reduced-motion: reduce){
+  #kmInicialTrecho.kmFocoPulso{ animation:none; }
+}
+</style>
+<script>
+// v594: ao tocar em INSERIR JORNADA o campo KM inicial ja abre focado,
+// com o teclado aberto e a borda piscando na cor do tema ate o usuario digitar.
+(function(){
+  function ativarPulso(campo){
+    campo.classList.add('kmFocoPulso');
+    var parar = function(){
+      campo.classList.remove('kmFocoPulso');
+      campo.removeEventListener('input', parar);
+      campo.removeEventListener('blur', parar);
+    };
+    campo.addEventListener('input', parar);
+    campo.addEventListener('blur', parar);
+  }
+
+  function focarKm(isca){
+    var tent = 0;
+    (function tentar(){
+      var campo = document.getElementById('kmInicialTrecho');
+      var modal = document.getElementById('modalRegistroJornada');
+      var visivel = campo && modal && modal.style.display !== 'none' && campo.offsetParent !== null;
+      if(!visivel){
+        if(++tent < 40) { setTimeout(tentar, 50); return; }
+        if(isca && isca.parentNode) isca.remove();
+        return;
+      }
+      try { campo.focus({ preventScroll:true }); } catch(e){ campo.focus(); }
+      try { if(campo.value) campo.select(); } catch(e){}
+      ativarPulso(campo);
+      if(isca && isca.parentNode) isca.remove();
+      // se algum script do modal roubar o foco logo em seguida, devolve uma vez
+      setTimeout(function(){
+        var m = document.getElementById('modalRegistroJornada');
+        if(m && m.style.display !== 'none' && document.activeElement !== campo && !campo.value){
+          try { campo.focus({ preventScroll:true }); } catch(e){ campo.focus(); }
+          if(!campo.classList.contains('kmFocoPulso')) ativarPulso(campo);
+        }
+      }, 450);
+    })();
+  }
+
+  function instalar(){
+    if(typeof window.abrirModalRegistro !== 'function'){ setTimeout(instalar, 500); return; }
+    if(window._kmFocoV594) return;
+    window._kmFocoV594 = true;
+    var orig = window.abrirModalRegistro;
+    window.abrirModalRegistro = function(index){
+      var nova = String(index) === '-1';
+      var isca = null;
+      if(nova){
+        // "isca": recebe o foco ainda dentro do toque, para o celular abrir o teclado
+        // (o modal so aparece alguns ms depois); depois o foco passa para o KM
+        try {
+          isca = document.createElement('input');
+          isca.type = 'number';
+          isca.setAttribute('aria-hidden', 'true');
+          isca.tabIndex = -1;
+          isca.style.cssText = 'position:fixed;top:40%;left:0;width:1px;height:1px;opacity:0;'
+                             + 'font-size:16px;border:0;padding:0;margin:0;pointer-events:none;';
+          document.body.appendChild(isca);
+          isca.focus({ preventScroll:true });
+        } catch(e){}
+      }
+      var r = orig.apply(this, arguments);
+      if(nova) focarKm(isca);
+      return r;
+    };
+  }
+  if(document.readyState === 'complete') setTimeout(instalar, 0);
+  else window.addEventListener('load', function(){ setTimeout(instalar, 0); });
+})();
+</script>
+
+<style>
+/* ============ v595: modal da jornada sobe junto com o teclado ============ */
+#flashOverlay.modal-jornada .modal-content{ transition:transform .3s ease, bottom .22s ease !important; }
+#flashOverlay.modal-jornada.tecladoAberto .modal-content{
+  bottom:var(--kbH, 0px) !important;
+  min-height:min(40vh, calc(var(--vvH, 100vh) - 12px)) !important;
+  max-height:calc(var(--vvH, 100vh) - 12px) !important;
+  overflow-y:auto; -webkit-overflow-scrolling:touch;
+}
+</style>
+<script>
+// v595: o teclado do celular encolhe so a "area visivel" (visualViewport) e o modal,
+// preso no rodape da tela, ficava escondido atras dele. Aqui o rodape do modal
+// passa a acompanhar o topo do teclado enquanto o modal da jornada estiver aberto.
+(function(){
+  var vv = window.visualViewport;
+  function ajustar(){
+    var ov = document.getElementById('flashOverlay');
+    var m  = document.getElementById('modalRegistroJornada');
+    if(!ov || !m) return;
+    var aberto = ov.classList.contains('modal-jornada') && ov.style.display !== 'none' && m.style.display !== 'none';
+    var tecl = 0, alt = window.innerHeight;
+    if(aberto && vv){
+      alt  = Math.round(vv.height);
+      tecl = Math.round(window.innerHeight - vv.height - vv.offsetTop);
+      if(tecl < 80) tecl = 0;            // barras do navegador, nao e teclado
+    }
+    ov.style.setProperty('--kbH', tecl + 'px');
+    ov.style.setProperty('--vvH', alt + 'px');
+    ov.classList.toggle('tecladoAberto', tecl > 0);
+    // garante o campo focado visivel dentro do modal
+    if(tecl > 0){
+      var a = document.activeElement;
+      if(a && m.contains(a) && a.scrollIntoView){
+        try { a.scrollIntoView({ block:'nearest' }); } catch(e){}
+      }
+    }
+  }
+  if(vv){
+    vv.addEventListener('resize', ajustar);
+    vv.addEventListener('scroll', ajustar);
+  }
+  window.addEventListener('resize', ajustar);
+  document.addEventListener('focusin', function(){ setTimeout(ajustar, 60); setTimeout(ajustar, 350); });
+  document.addEventListener('focusout', function(){ setTimeout(ajustar, 120); });
+  // alguns teclados abrem em etapas: confere por 1,5s depois de abrir o modal
+  function instalar(){
+    if(typeof window.abrirModalRegistro !== 'function'){ setTimeout(instalar, 500); return; }
+    if(window._tecladoV595) return;
+    window._tecladoV595 = true;
+    var orig = window.abrirModalRegistro;
+    window.abrirModalRegistro = function(){
+      var r = orig.apply(this, arguments);
+      [100, 300, 600, 1000, 1500].forEach(function(t){ setTimeout(ajustar, t); });
+      return r;
+    };
+  }
+  if(document.readyState === 'complete') setTimeout(instalar, 0);
+  else window.addEventListener('load', function(){ setTimeout(instalar, 0); });
+})();
+</script>
+
+<style>
+/* v597: resumo com menos de 4 itens - ultimo encosta na direita */
+#glxResumo > .glxRes:last-child:not(:first-child){ justify-self:end; }
+</style>
+<style>
+/* ============ v600: abertura em video dentro do modal da jornada ============ */
+#introJornada{
+  position:absolute; inset:0; z-index:45; display:none;
+  background:#000; opacity:0; transition:opacity .35s ease;
+  overflow:hidden; border-radius:inherit; cursor:pointer;
+}
+#introJornada.visivel{ opacity:1; }
+/* v600: video no tamanho real, centralizado; so diminui se nao couber, nunca amplia nem corta */
+#introJornada .ijVideo{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:auto; height:auto; max-width:100%; max-height:100%; object-fit:contain;
+}
+#introJornada .ijVeu{ position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.25) 0%, rgba(0,0,0,.55) 100%); }
+/* linha de tempo correndo no topo, com brilho na cor do tema */
+#introJornada .ijTempo{ position:absolute; top:0; left:0; right:0; height:3px; background:rgba(255,255,255,.10); z-index:2; }
+#introJornada .ijTempoFill{
+  position:absolute; left:0; top:0; height:100%; width:100%;
+  background:var(--secondary);
+  box-shadow:0 0 6px var(--secondary), 0 0 14px var(--secondary);
+  border-radius:0 3px 3px 0;
+}
+@keyframes ijTempo{ from{ width:100%; } to{ width:0%; } }
+#introJornada .ijCentro{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:24px; }
+#introJornada .ijFase{
+  position:absolute; display:flex; flex-direction:column; align-items:center; gap:14px;
+  transition:opacity .3s ease, transform .4s cubic-bezier(.2,.9,.3,1.3);
+}
+#introJornada .ijSpinner{
+  width:42px; height:42px; border-radius:50%;
+  border:4px solid rgba(255,255,255,.22); border-top-color:var(--secondary);
+  animation:ijGira .8s linear infinite;
+}
+@keyframes ijGira{ to{ transform:rotate(360deg); } }
+#introJornada .ijTexto{ color:#fff; font:600 15px/1.2 'Poppins',sans-serif; letter-spacing:.6px; text-shadow:0 2px 10px rgba(0,0,0,.35); }
+#introJornada .ijGo{
+  opacity:0; transform:scale(.8);
+  color:#fff; font:900 40px/1 'Poppins',sans-serif; letter-spacing:1px; text-align:center;
+  text-shadow:0 4px 22px rgba(0,0,0,.45);
+}
+#introJornada.go .ijCarregando{ opacity:0; transform:translateY(-10px); }
+#introJornada.go .ijGo{ opacity:1; transform:scale(1); }
+#introJornada .ijDica{
+  position:absolute; left:0; right:0; bottom:14px; text-align:center;
+  color:rgba(255,255,255,.7); font:500 11px/1 'Poppins',sans-serif; letter-spacing:.4px;
+  opacity:0; transition:opacity .4s ease .6s;
+}
+#introJornada.go .ijDica{ opacity:1; }
+@media (max-width:340px){ #introJornada .ijGo{ font-size:34px; } }
+@media (prefers-reduced-motion: reduce){ #introJornada .ijFase{ transition:opacity .2s; } }
+</style>
 </body>
-  </html>
+                                                                                                                                                            </html>
